@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Features — JoesProxy</title>
+  <meta name="description" content="Explore JoesProxy features: Live HTTP/HTTPS capture, Explorer & Timeline views, Map Local & Rewrites, AI Agent MCP server, and Advanced Wire Diagnostics.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="canonical" href="https://www.joesproxy.com/features/">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="../index.html" class="brand">
+        JoesProxy <span class="brand-badge">Features</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-link active">Features</a></li>
+          <li><a href="../quick-start/index.html" class="nav-link">Quick Start</a></li>
+          <li><a href="../how-it-works/index.html" class="nav-link">How It Works</a></li>
+          <li><a href="../help/index.html" class="nav-link">Help</a></li>
+          <li><a href="../project/index.html" class="nav-link">Project</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" data-theme-toggle title="Toggle Dark/Light Mode">Theme</button>
+        <a href="../download/index.html" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Features Hero -->
+    <section class="hero" style="padding-bottom: 48px;">
+      <div class="container">
+        <span class="hero-eyebrow">Product Capabilities</span>
+        <h1 class="hero-title">Inspect traffic. Test behavior. Work with an agent.</h1>
+        <p class="hero-support">
+          JoesProxy combines live HTTP/HTTPS capture, local traffic mutations, repeatable evidence, and supervised AI agent workflows in one native macOS workbench.
+        </p>
+      </div>
+    </section>
+
+    <!-- 1. Live Capture & Request Inspector -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="grid-2">
+          <div>
+            <span class="hero-eyebrow">Capture & Inspect</span>
+            <h2 class="section-title">See each request in full context</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+              Capture routed HTTP and eligible HTTPS traffic as it happens. Select a session to inspect its request, response, timing, source device, and inspection status.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--text-secondary);">
+              <li><strong>Live Session Stream:</strong> Chronological arrival list with Follow Live auto-scrolling.</li>
+              <li><strong>Three JSON Modes:</strong> Interactive Folder Tree, Prettified JSON, and Raw text.</li>
+              <li><strong>Source Attribution:</strong> Tagged automatically as Mac, iOS Simulator, iPhone, Apple TV, or Docker.</li>
+              <li><strong>Copy as cURL:</strong> Copy portable, sanitized cURL commands for terminal reproduction.</li>
+            </ul>
+          </div>
+          <div class="showcase-stage" style="margin: 0;">
+            <img src="../assets/screenshots/workspace.png" alt="Live session table with formatted JSON inspector" width="520" height="340">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Explorer & Timeline Views -->
+    <section class="section">
+      <div class="container">
+        <div class="grid-2">
+          <div class="showcase-stage" style="margin: 0;">
+            <img src="../assets/screenshots/explorer.png" alt="Explorer view grouping traffic by host into a folder tree" width="520" height="340">
+          </div>
+          <div>
+            <span class="hero-eyebrow">Navigation & Findings</span>
+            <h2 class="section-title">Group busy traffic and detect anomalies</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+              Switch between Explorer view for structural hierarchy and Timeline view for temporal pattern recognition.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--text-secondary);">
+              <li><strong>Host & Endpoint Tree:</strong> Domain rollups with request counts and folder summaries.</li>
+              <li><strong>Timeline Lanes:</strong> Visual request sequencing, duration bars, and concurrency gaps.</li>
+              <li><strong>Automated Findings:</strong> Proactive callouts for buffering risks, retry storms, and clustered failures.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Local Overrides & Mutations -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <span class="hero-eyebrow">Traffic Mutation</span>
+          <h2 class="section-title">Reshape responses on the wire</h2>
+          <p class="section-subhead">Test client edge cases without redeploying backend services.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="card-title">Map Local</h3>
+            <p class="card-body">Replace any upstream response with a local file, inline JSON draft, or an entire mock directory tree served as a mock API.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Block & Drop</h3>
+            <p class="card-body">Simulate server outages by returning synthetic error codes (404, 500, 503) or abruptly dropping TCP connections.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Map Remote</h3>
+            <p class="card-body">Forward matching traffic to alternate hosts, ports, or schemes while preserving, replacing, or rewriting destination paths.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Live Response Rewrites</h3>
+            <p class="card-body">Patch specific JSON fields in live responses in place without altering any other part of the upstream payload.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Network Throttling</h3>
+            <p class="card-body">Apply presets from 56k modem to flaky 3G, LTE, or custom bandwidth and latency simulation limits.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Cache Stripping</h3>
+            <p class="card-body">Strip cache headers globally or per-domain to force fresh upstream responses during active debugging.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. AI Agent Workflows -->
+    <section class="section">
+      <div class="container">
+        <div class="grid-2">
+          <div>
+            <span class="hero-eyebrow">AI Agent Collaboration</span>
+            <h2 class="section-title">Supervised AI Agent Diagnostics</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+              JoesProxy includes a built-in Model Context Protocol (MCP) server on port 9091 for Claude Code, Cursor, and Codex.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--text-secondary);">
+              <li><strong>In-App Approvals:</strong> Every mutation or sensitive read waits for human confirmation.</li>
+              <li><strong>Durable Diagnostic Runs:</strong> Structured hypothesis → observation → conclusion → regression re-check lifecycle.</li>
+              <li><strong>Multi-Fault Scenarios:</strong> Compose multiple Map Local, Block, and throttling faults into an atomic test pass.</li>
+            </ul>
+          </div>
+          <div class="showcase-stage" style="margin: 0;">
+            <p class="screenshot-note">Screenshot omitted from this source snapshot: the earlier image has not been cleared for public distribution.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Advanced Wire Diagnostics Suite (Workstream AG) -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <span class="hero-eyebrow">Advanced Wire Harness</span>
+          <h2 class="section-title">Autonomous Graph Diagnostics</h2>
+          <p class="section-subhead">Cutting-edge diagnostic engines built for multi-step reasoning and automated fault isolation.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="card-title">Hypothesis DAG Bisection</h3>
+            <p class="card-body">Build multi-branch hypothesis trees; automatically prune disproven theories and bisect root causes across complex distributed flows.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">LLM Stream Wire Inspector</h3>
+            <p class="card-body">Parse SSE token deltas, measure TTFT, throughput (tok/s), and inter-token jitter; detect canary prompt leakage and inject stream faults.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Async Race Fuzzing</h3>
+            <p class="card-body">Permute concurrent API arrival orderings using micro-delays to expose timing-dependent crashes and race conditions.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Resilience Optimizer</h3>
+            <p class="card-body">Mutate upstream JSON fields (nullify, omit, type-coerce) to locate minimal breaking points and recommend defensive Swift fixes.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Trajectory Diffing</h3>
+            <p class="card-body">Align two capture traces (working baseline vs broken nightly) to isolate the exact step and payload delta where execution diverged.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Semantic Wire Mocking</h3>
+            <p class="card-body">Intercept natural language search and chat queries, matching them against mock pools using zero-dependency local vector cosine similarity.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Media & Streaming Inspection -->
+    <section class="section">
+      <div class="container">
+        <div class="grid-2">
+          <div class="showcase-stage" style="margin: 0;">
+            <p class="screenshot-note">Screenshot omitted from this source snapshot: the earlier image has not been cleared for public distribution.</p>
+          </div>
+          <div>
+            <span class="hero-eyebrow">Streaming & Devices</span>
+            <h2 class="section-title">HLS Media & Device Guides</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+              Deep inspection for streaming media protocols and guided setup wizards for all Apple and container platforms.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--text-secondary);">
+              <li><strong>HLS Manifest Inspection:</strong> Master playlist variants, audio/subtitle tracks, segments, and ad markers.</li>
+              <li><strong>Synthetic HLS Fixtures:</strong> Test player edge cases with encoded media fixtures missing codecs or inserting discontinuities.</li>
+              <li><strong>Guided Device Setup:</strong> Step-by-step trust wizards for macOS, iOS Simulator, physical iPhone/iPad, Apple TV, and Docker.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="hero" style="background-color: var(--bg-surface);">
+      <div class="container">
+        <h2 class="hero-title" style="font-size: 2.5rem;">Start exploring your traffic today</h2>
+        <div class="hero-actions">
+          <a href="../download/index.html" class="btn btn-primary btn-lg">Download JoesProxy</a>
+          <a href="../quick-start/index.html" class="btn btn-secondary btn-lg">Read Quick Start</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="footer-brand">JoesProxy</div>
+          <p class="footer-desc">A native macOS HTTP/HTTPS debugging proxy built for developers and AI coding agents.</p>
+        </div>
+        <div>
+          <div class="footer-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="index.html">Features</a></li>
+            <li><a href="../quick-start/index.html">Quick Start</a></li>
+            <li><a href="../download/index.html">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Architecture</div>
+          <ul class="footer-links">
+            <li><a href="../how-it-works/index.html">How It Works</a></li>
+            <li><a href="../help/index.html">Help Hub</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Open Source</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/SerialForBreakfast/JoesProxy-Mac" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="../project/index.html">Project Story</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 JoesProxy Contributors. MIT Licensed.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

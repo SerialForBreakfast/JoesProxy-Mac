@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated build and Git database bytes are outside the current source-directory scan"
+paths = [
+  '''(^|/)(build|\.build|\.git)/'''
+]

@@ -1,0 +1,9 @@
+{
+  "profiles": ["baseline-aligned-codecs"],
+  "offsetsSeconds": [0.1],
+  "trialsPerCell": 1,
+  "audioTarget": "ad",
+  "playAtSeconds": 0.1,
+  "trialDurationSeconds": 22,
+  "faults": []
+}

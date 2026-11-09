@@ -1,0 +1,335 @@
+# Fastfile for JoesProxy
+#
+# Prerequisites (one-time setup, documented in RELEASE.md):
+#   - Xcode with Developer ID Application certificate in Keychain
+#   - JoesProxyNotary keychain profile created with xcrun notarytool store-credentials
+#   - Use the existing Fastlane runtime documented in RELEASE.md. Do not install or
+#     update Ruby, Bundler, Fastlane, or gems as part of running a lane.
+#
+# Common lanes (see RELEASE.md for the canonical workstation invocation):
+#   ./bump_version.sh ...  — update MARKETING_VERSION, build number, and changelog
+#   fastlane mac test      — run the unit test suite
+#   fastlane mac build     — debug build only (no signing)
+#   fastlane mac release   — build, sign, notarize, staple, and verify repo-local DMG
+#   fastlane mac verify_release dmg_path:PATH — re-check any DMG's stapled notarization ticket +
+#                             Gatekeeper assessment on demand (same checks `release` runs at the end;
+#                             use this to confirm a DMG already sitting in memlog/releases/ is
+#                             actually ready before calling a release done — see RELEASE.md)
+#   fastlane mac screenshots — capture UI test screenshots
+#   fastlane mac ui_performance — capture UI performance metrics
+
+REPO_ROOT                 = File.expand_path("..", File.dirname(__FILE__))
+PROJECT                   = "JoesProxy.xcodeproj"
+PROJECT_PATH              = File.join(REPO_ROOT, PROJECT)
+SCHEME                    = "JoesProxy"
+APP_ID                    = "com.ShowBlender.JoesProxy"
+TEAM_ID                   = "RWZ25NGH8K"
+EXPORT_OPTIONS_PLIST     = File.join(REPO_ROOT, "Config/ExportOptions-DeveloperID.plist")
+VERSION_CONFIG           = File.join(REPO_ROOT, "Config/Version.xcconfig")
+BUILD_DIR                 = File.expand_path(ENV.fetch("JOESPROXY_BUILD_DIRECTORY", File.join(REPO_ROOT, "build")))
+DERIVED_DATA_DIR          = File.join(BUILD_DIR, "DevelopmentDerivedData")
+PACKAGES_DIR              = File.join(BUILD_DIR, "SourcePackages")
+RELEASES_DIR              = File.join(REPO_ROOT, "memlog/releases")
+UI_PERFORMANCE_SCRIPT     = File.join(REPO_ROOT, "memlog/utility_scripts/run_ui_performance.sh")
+NOTARY_KEYCHAIN_PROFILE   = ENV.fetch("NOTARY_KEYCHAIN_PROFILE", "JoesProxyNotary")
+DEVELOPER_ID_IDENTITY     = ENV.fetch("DEVELOPER_ID_IDENTITY", "FAB86847B551171ADD5723109A68A4CA454E2B5A")
+
+def version_config_value(key)
+  line = File.read(VERSION_CONFIG).lines.find { |entry| entry.match?(/\A\s*#{Regexp.escape(key)}\s*=/) }
+  UI.user_error!("Missing #{key} in #{VERSION_CONFIG}") if line.nil?
+
+  line.split("=", 2).last.strip
+end
+
+default_platform(:mac)
+
+platform :mac do
+
+  before_all do
+    # Keep the curated release-runtime guidance; generated docs advertise installs and Bundler.
+    skip_docs
+  end
+
+  # ---------------------------------------------------------------------------
+  # test — run the full unit test suite; used as gate in release lane
+  # ---------------------------------------------------------------------------
+  desc "Run unit tests"
+  lane :test do |options|
+    run_id = Time.now.strftime("%Y%m%d-%H%M%S")
+    scan(
+      project: PROJECT_PATH,
+      scheme: SCHEME,
+      destination: "platform=macOS",
+      testplan: "JoesProxy-Policy",
+      parallel_testing: false,
+      derived_data_path: DERIVED_DATA_DIR,
+      cloned_source_packages_path: PACKAGES_DIR,
+      output_directory: File.join(BUILD_DIR, "release-test-results", run_id),
+      buildlog_path: File.join(BUILD_DIR, "release-test-logs", run_id),
+      result_bundle: true,
+      # `test` builds its products; avoid a second, differently instrumented `build` action.
+      skip_build: true,
+      skip_package_dependencies_resolution: true,
+      disable_package_automatic_updates: true,
+      skip_package_repository_fetches: true,
+      xcargs: "-onlyUsePackageVersionsFromResolvedFile -jobs 2 -enableAddressSanitizer NO -enableThreadSanitizer NO -enableUndefinedBehaviorSanitizer NO",
+      only_testing: ["JoesProxyTests"],
+      clean: options.fetch(:clean, false),
+      output_style: "raw",
+      xcodebuild_formatter: ""
+    )
+  end
+
+  # ---------------------------------------------------------------------------
+  # build — debug build for local verification; no signing, no artifact
+  # ---------------------------------------------------------------------------
+  desc "Debug build (no signing)"
+  lane :build do
+    xcodebuild(
+      project: PROJECT_PATH,
+      scheme: SCHEME,
+      destination: "platform=macOS",
+      configuration: "Debug",
+      clean: true
+    )
+  end
+
+  # ---------------------------------------------------------------------------
+  # verify_release — hard-fail unless a DMG has a stapled notarization ticket and passes
+  # Gatekeeper's own assessment. This is the single implementation of "what counts as
+  # verified" — the release lane below calls into it instead of duplicating these checks,
+  # and it can also be re-run standalone against any DMG already sitting in memlog/releases/
+  # to confirm it's actually distributable, not just signed.
+  #
+  # A signed-but-unnotarized DMG is exactly what produces macOS's "Apple could not verify
+  # this app is free of malware" dialog on a machine other than the one that built it — see
+  # RELEASE.md documents the rule: only a verified artifact is ready for handoff.
+  # Retain the single final DMG in BUILD_DIR; do not duplicate it into source documentation.
+  # ---------------------------------------------------------------------------
+  desc "Verify a DMG has a stapled notarization ticket and passes Gatekeeper assessment"
+  lane :verify_release do |options|
+    dmg_path = options[:dmg_path]
+    UI.user_error!("verify_release requires dmg_path: (e.g. fastlane mac verify_release dmg_path:memlog/releases/JoesProxy-X.Y.Z.dmg)") if dmg_path.nil?
+    dmg_path = File.expand_path(dmg_path, REPO_ROOT)
+    UI.user_error!("No file at #{dmg_path}") unless File.exist?(dmg_path)
+
+    UI.message("Verifying #{dmg_path} has a stapled, valid notarization ticket...")
+    sh("xcrun stapler validate '#{dmg_path}'")
+    UI.message("Verifying #{dmg_path} passes Gatekeeper assessment...")
+    sh("spctl --assess --type open --context context:primary-signature --verbose '#{dmg_path}'")
+
+    UI.success("#{dmg_path} is notarized, stapled, and Gatekeeper-clean — safe to distribute.")
+  end
+
+  # ---------------------------------------------------------------------------
+  # release — repo-local Developer ID release candidate
+  #
+  # Steps:
+  #   1. Run tests (gate)
+  #   2. Read version/build from Config/Version.xcconfig
+  #   3. Archive Release build
+  #   4. Export with Developer ID signing
+  #   5. Create drag-to-Applications DMG
+  #   6. Sign, notarize, and staple the DMG
+  #   7. Verify with codesign, stapler, and Gatekeeper
+  #   8. Retain one verified DMG in BUILD_DIR; publication is maintainer-owned.
+  # ---------------------------------------------------------------------------
+  desc "Build, sign, notarize, staple, and verify a repo-local Developer ID DMG"
+  lane :release do |options|
+    version      = version_config_value("MARKETING_VERSION")
+    build_number = version_config_value("CURRENT_PROJECT_VERSION")
+    UI.user_error!("Invalid release version") unless version.match?(/\A\d+\.\d+\.\d+\z/)
+    UI.user_error!("Invalid build number") unless build_number.match?(/\A[1-9]\d*\z/)
+    archive_path = File.join(BUILD_DIR, "JoesProxy-#{version}.xcarchive")
+    export_path  = File.join(BUILD_DIR, "developer-id-export-#{version}")
+    app_path     = File.join(export_path, "JoesProxy.app")
+    staging_dir  = File.join(BUILD_DIR, "dmg-staging-#{version}-developer-id")
+    dmg_name     = "JoesProxy-#{version}.dmg"
+    dmg_path     = File.join(BUILD_DIR, dmg_name)
+    release_path = File.join(RELEASES_DIR, dmg_name)
+    [archive_path, export_path, staging_dir, dmg_path, release_path].each do |path|
+      UI.user_error!("Release output already exists; review it before retrying: #{path}") if File.exist?(path) || File.symlink?(path)
+    end
+
+    UI.message("Releasing JoesProxy #{version} (build #{build_number})")
+    UI.message("Using Developer ID identity #{DEVELOPER_ID_IDENTITY}")
+    UI.message("Using notary keychain profile #{NOTARY_KEYCHAIN_PROFILE}")
+
+    # 1. Gate: tests must pass; reuse compatible storage unless explicitly cleaning.
+    test(clean: options.fetch(:clean, false))
+
+    FileUtils.mkdir_p(BUILD_DIR)
+
+    sh("xcodebuild archive " \
+       "-project '#{PROJECT_PATH}' " \
+       "-scheme '#{SCHEME}' " \
+       "-configuration Release " \
+       "-derivedDataPath '#{DERIVED_DATA_DIR}' -clonedSourcePackagesDirPath '#{PACKAGES_DIR}' " \
+       "-disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates " \
+       "-jobs 2 -enableAddressSanitizer NO -enableThreadSanitizer NO -enableUndefinedBehaviorSanitizer NO " \
+       "-destination 'generic/platform=macOS' " \
+       "-archivePath '#{archive_path}'")
+
+    sh("xcodebuild -exportArchive " \
+       "-archivePath '#{archive_path}' " \
+       "-exportPath '#{export_path}' " \
+       "-exportOptionsPlist '#{EXPORT_OPTIONS_PLIST}' " \
+       "-allowProvisioningUpdates")
+
+    sh("codesign --verify --deep --strict --verbose=2 '#{app_path}'")
+
+    FileUtils.mkdir_p(staging_dir)
+    FileUtils.cp_r(app_path, File.join(staging_dir, "JoesProxy.app"))
+    FileUtils.ln_s("/Applications", File.join(staging_dir, "Applications"))
+
+    sh("hdiutil create " \
+       "-volname JoesProxy " \
+       "-srcfolder '#{staging_dir}' " \
+       "-ov -format UDZO " \
+       "'#{dmg_path}'")
+
+    sh("codesign --force " \
+       "--sign '#{DEVELOPER_ID_IDENTITY}' " \
+       "--timestamp " \
+       "'#{dmg_path}'")
+
+    sh("codesign --verify --verbose=4 '#{dmg_path}'")
+    sh("xcrun notarytool submit '#{dmg_path}' " \
+       "--keychain-profile '#{NOTARY_KEYCHAIN_PROFILE}' " \
+       "--wait")
+    sh("xcrun stapler staple '#{dmg_path}'")
+
+    # Single gate, reused: verify_release raises (halting this lane) unless the ticket is
+    # actually stapled and Gatekeeper accepts it. A failed check leaves an unverified
+    # artifact for diagnosis, never a completed release.
+    verify_release(dmg_path: dmg_path)
+
+    UI.success("Created notarized Developer ID DMG: #{dmg_path}")
+  end
+
+  # Maps XCTAttachment names from ScreenshotUITests to memlog/ui-review filename stems.
+  SCREENSHOT_ATTACHMENT_TO_STEM = {
+    "JoesProxy Table Mode" => "table",
+    "JoesProxy Explorer Mode" => "explorer",
+    "JoesProxy Table Mode Accessibility Text" => "table-accessibility",
+    "JoesProxy Explorer Mode Accessibility Text" => "explorer-accessibility",
+    "JoesProxy Guided Setup First Run" => "guided-setup-first-run"
+  }.freeze
+
+  SCREENSHOT_TEST_TO_STEM = {
+    "ScreenshotUITests/testCaptureTableScreenshotWithDemoSessions()" => "table",
+    "ScreenshotUITests/testCaptureExplorerScreenshotWithDemoSessions()" => "explorer",
+    "ScreenshotUITests/testCaptureTableScreenshotWithAccessibilityTextSize()" => "table-accessibility",
+    "ScreenshotUITests/testCaptureExplorerScreenshotWithAccessibilityTextSize()" => "explorer-accessibility",
+    "ScreenshotUITests/testCaptureGuidedSetupFirstRunScreenshot()" => "guided-setup-first-run"
+  }.freeze
+
+  def copy_screenshots_to_ui_review!(attachments_dir)
+    ui_review_dir = File.join(REPO_ROOT, "memlog/ui-review")
+    FileUtils.mkdir_p(ui_review_dir)
+    timestamp = Time.now.strftime("%Y%m%d-%H%M%S")
+    copied = []
+    attachment_prefixes = SCREENSHOT_ATTACHMENT_TO_STEM.sort_by { |prefix, _| -prefix.length }
+
+    manifest_path = File.join(attachments_dir, "manifest.json")
+    if File.exist?(manifest_path)
+      manifest = JSON.parse(File.read(manifest_path))
+      manifest.each do |entry|
+        (entry["attachments"] || []).each do |attachment|
+          next if attachment["isAssociatedWithFailure"]
+
+          suggested = attachment["suggestedHumanReadableName"].to_s
+          stem = attachment_prefixes.find { |prefix, _| suggested.start_with?(prefix) }&.last
+          stem ||= SCREENSHOT_TEST_TO_STEM[entry["testIdentifier"].to_s]
+
+          exported = attachment["exportedFileName"]
+          next if stem.nil? || exported.nil?
+
+          src = File.join(attachments_dir, exported)
+          next unless File.exist?(src)
+
+          dest = File.join(ui_review_dir, "joesproxy-screenshot-#{stem}-#{timestamp}.png")
+          FileUtils.cp(src, dest)
+          copied << dest
+          UI.message("Copied #{exported} -> #{dest}")
+        end
+      end
+    end
+
+    if copied.empty?
+      Dir.glob(File.join(attachments_dir, "**", "*.png")).each do |png_path|
+        base_name = File.basename(png_path, ".png")
+        stem = SCREENSHOT_ATTACHMENT_TO_STEM[base_name]
+        if stem.nil?
+          UI.important("Skipping unrecognized screenshot attachment: #{base_name}")
+          next
+        end
+
+        dest = File.join(ui_review_dir, "joesproxy-screenshot-#{stem}-#{timestamp}.png")
+        FileUtils.cp(png_path, dest)
+        copied << dest
+        UI.message("Copied #{base_name} -> #{dest}")
+      end
+    end
+
+    copied
+  end
+
+  # ---------------------------------------------------------------------------
+  # screenshots — capture UI test screenshots
+  # ---------------------------------------------------------------------------
+  desc "Capture deterministic JoesProxy UI screenshots with pre-populated demo sessions (no network)"
+  lane :screenshots do
+    output_dir = File.expand_path("screenshots", File.dirname(__FILE__))
+    attachments_dir = File.join(output_dir, "attachments")
+    FileUtils.mkdir_p(output_dir)
+    FileUtils.rm_rf(attachments_dir)
+
+    result_bundle_path = File.join(output_dir, "JoesProxy.xcresult")
+    FileUtils.rm_rf(result_bundle_path) if File.exist?(result_bundle_path)
+
+    scan(
+      project:       PROJECT_PATH,
+      scheme:        SCHEME,
+      destination:   "platform=macOS",
+      only_testing:  [
+        "JoesProxyUITests/ScreenshotUITests/testCaptureTableScreenshotWithDemoSessions",
+        "JoesProxyUITests/ScreenshotUITests/testCaptureExplorerScreenshotWithDemoSessions",
+        "JoesProxyUITests/ScreenshotUITests/testCaptureTableScreenshotWithAccessibilityTextSize",
+        "JoesProxyUITests/ScreenshotUITests/testCaptureExplorerScreenshotWithAccessibilityTextSize"
+      ],
+      output_directory:  output_dir,
+      output_types:      "html,junit",
+      result_bundle:     true,
+      result_bundle_path: result_bundle_path,
+      clean: true,
+      output_style: "raw",
+      xcodebuild_formatter: ""
+    )
+
+    xcresult_path = lane_context[SharedValues::SCAN_GENERATED_XCRESULT_PATH] || result_bundle_path
+    UI.user_error!("No .xcresult bundle found at #{result_bundle_path}") unless File.exist?(xcresult_path)
+
+    FileUtils.mkdir_p(attachments_dir)
+    sh("xcrun xcresulttool export attachments --path '#{xcresult_path}' --output-path '#{attachments_dir}'")
+
+    png_count = Dir.glob(File.join(attachments_dir, "**", "*.png")).count
+    UI.user_error!("Expected at least 4 screenshot PNGs in #{attachments_dir}, found #{png_count}") if png_count < 4
+
+    copied = copy_screenshots_to_ui_review!(attachments_dir)
+    UI.user_error!("Expected 4 ui-review PNG copies, got #{copied.count}") if copied.count < 4
+
+    UI.success("Screenshots extracted to #{attachments_dir}")
+    UI.success("Screenshots copied to memlog/ui-review (#{copied.count} files)")
+    UI.success("Screenshots lane complete. Output: #{output_dir}")
+  end
+
+  # ---------------------------------------------------------------------------
+  # ui_performance — capture deterministic UI performance metrics
+  # ---------------------------------------------------------------------------
+  desc "Capture deterministic JoesProxy UI performance metrics from xcresult"
+  lane :ui_performance do
+    sh("'#{UI_PERFORMANCE_SCRIPT}'")
+  end
+
+end

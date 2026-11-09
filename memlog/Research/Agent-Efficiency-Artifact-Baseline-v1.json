@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "fixtureVersion": "artifact-calculate-v1",
+  "date": "2026-11-06",
+  "status": "acceptance_thresholds_not_measurement_results",
+  "priority": ["correctness", "completeness", "agent_visible_response_bytes"],
+  "numericSummary": {
+    "rows": 1000,
+    "pricePerRow": "0.1",
+    "expectedSum": "100",
+    "minimumRawInputBytes": 32768,
+    "maximumResultBytes": 4096,
+    "warmCalculationCalls": 1,
+    "analysisExecutions": 1
+  },
+  "workflowAccounting": {
+    "cold": "Include discovery, registration, all approval polls, retries, failures and calculation envelopes.",
+    "warm": "One query on an already approved source or existing live sensitive-read grant; no result cache.",
+    "equivalence": "Compare identical selected bytes, question, numeric semantics and complete evidence; source kinds are separate cohorts.",
+    "unchangedBaselines": ["Agent-Efficiency-Baseline-v1.json", "Agent-Efficiency-Busy-Baseline-v1.json", "Agent-Efficiency-Edge-Baseline-v1.json"]
+  },
+  "reportSeparately": ["coldWarmLatency", "peakMemory", "ownedBuffers", "cancellationDrain", "calls", "retries", "failedAttempts", "responseBytes"],
+  "providerTokens": null,
+  "providerCost": null,
+  "energy": null
+}

@@ -1,0 +1,34 @@
+{
+  "configurations" : [
+    {
+      "id" : "889311B6-45C9-4216-97A1-91E37B73116C",
+      "name" : "Policy Tests",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:JoesProxy.xcodeproj",
+      "identifier" : "4498EC182CDAED9900844D6D",
+      "name" : "JoesProxy"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "skippedTests" : [
+        "JoesProxyTests",
+        "ProxyServerTests\/testSSLHandshake()"
+      ],
+      "target" : {
+        "containerPath" : "container:JoesProxy.xcodeproj",
+        "identifier" : "4498EC292CDAED9B00844D6D",
+        "name" : "JoesProxyTests"
+      }
+    }
+  ],
+  "version" : 1
+}

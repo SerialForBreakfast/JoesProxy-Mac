@@ -1,0 +1,19 @@
+{
+  "id" : "00000000-0000-0000-0000-000000000102",
+  "payload" : {
+    "accepted" : true,
+    "clockOffsetMs" : 42,
+    "latestSupportedSchemaVersion" : 1,
+    "minimumSupportedSchemaVersion" : 1,
+    "rejectReason" : null,
+    "selectedSchemaVersion" : 1,
+    "serverAppVersion" : "1.0.0",
+    "serverTimestamp" : "2026-06-28T17:00:00.167Z",
+    "supportedSchemaVersions" : [
+      1
+    ]
+  },
+  "sentAt" : "2026-06-28T17:00:00.167Z",
+  "type" : "handshakeAck",
+  "version" : 1
+}

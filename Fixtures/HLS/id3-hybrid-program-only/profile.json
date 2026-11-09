@@ -1,0 +1,56 @@
+{
+  "id": "id3-hybrid-program-only",
+  "version": "1",
+  "displayName": "ID3 Hybrid Program Only",
+  "purpose": "Hybrid in-band program audio with ID3 metadata where alternate AD carries no metadata.",
+  "featureTags": ["id3", "hybrid", "metadata-availability", "sdr", "avc", "aac"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 265164, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 359164, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 497925, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "English Program",
+      "language": "en",
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "inBand",
+      "variantsCarryingInBand": ["video-360", "video-720", "video-1080"],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    },
+    {
+      "name": "English Audio Description",
+      "language": "en",
+      "channels": "2",
+      "isDefault": false,
+      "isAutoSelect": true,
+      "characteristics": ["public.accessibility.describes-video"],
+      "audibleSignature": "880 Hz synthetic AD tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "id3Schedule": {
+    "carrier": "mpeg2TS",
+    "version": "id3v2.3",
+    "allowedFrameIDs": ["TIT2", "TXXX"],
+    "events": [
+      {"id": "evt-000", "eventClass": "segmentStart", "mediaTime": 0.0, "segmentIndex": 0, "frameID": "TIT2", "label": "Segment 000"}
+    ]
+  },
+  "audioTopology": "hybridInBandProgramAD",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "stressCase",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Metadata availability should follow the active in-band program audio track."
+}

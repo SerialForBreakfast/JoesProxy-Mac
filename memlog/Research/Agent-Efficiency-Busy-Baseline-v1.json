@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-11-05",
+  "extends": "Agent-Efficiency-Baseline-v1.json",
+  "fixture": "busy-collection-200-v1",
+  "definition": "Same 200-row collection and selected /items. Eight append/update/remove cycles on unrelated completed sessions, with one repeat after each cycle. Compare nine full reads against one full plus eight conditional reads. Shared initial read in the harness; independent workflow counts are nine each.",
+  "callsPerWorkflow": 9,
+  "baselineAnalysisExecutions": 9,
+  "candidateAnalysisExecutions": 1,
+  "conditionalHits": 8,
+  "conditionalAttempts": 8,
+  "candidateBytesMaximumPercentOfFullReads": 60,
+  "providerTokens": null,
+  "limitations": "Synthetic warm repeated selection; no wall-clock gate or claim about all live workloads. Selected-source mutation, stripping and reappearance remain misses. Prior baseline remains immutable."
+}

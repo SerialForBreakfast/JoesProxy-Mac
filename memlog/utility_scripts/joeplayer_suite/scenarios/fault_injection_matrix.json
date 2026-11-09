@@ -1,0 +1,9 @@
+{
+  "profiles": ["discontinuity-cross-rendition-drift"],
+  "offsetsSeconds": [0.1],
+  "trialsPerCell": 3,
+  "audioTarget": "ad",
+  "playAtSeconds": 0.1,
+  "trialDurationSeconds": 22,
+  "faults": ["throttle", "block-segment", "slow-and-drop"]
+}

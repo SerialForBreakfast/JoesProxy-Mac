@@ -1,0 +1,94 @@
+{
+  "baseline-aligned-codecs": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en",
+      "es": "audio-es"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 8.0,
+      "en": 8.0,
+      "es": 8.0
+    },
+    "notes": "No playlist discontinuity; boundary reference is start of segment index 3 on 4s grid."
+  },
+  "discontinuity-cross-rendition-drift": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en",
+      "es": "audio-es"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 9.009345,
+      "en": 12.004745,
+      "es": 9.009345
+    },
+    "notes": "Cumulative EXTINF before per-rendition discontinuity (audio-ad@4, audio-en@5, video@3)."
+  },
+  "combined-defects": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 9.009345,
+      "en": 9.009345
+    }
+  },
+  "misaligned-audio-boundary": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 8.0,
+      "en": 8.0
+    }
+  },
+  "param-aligned-4s": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en",
+      "es": "audio-es"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 8.0,
+      "en": 8.0,
+      "es": 8.0
+    }
+  },
+  "param-misaligned-v4-a3": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en",
+      "es": "audio-es"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 9.009345,
+      "en": 9.009345,
+      "es": 9.009345
+    }
+  },
+  "param-cross-disc-v3-aen5-aes4": {
+    "audioRenditionForTarget": {
+      "ad": "audio-ad",
+      "en": "audio-en",
+      "es": "audio-es"
+    },
+    "discontinuityBoundarySeconds": {
+      "ad": 9.009345,
+      "en": 12.004745,
+      "es": 9.009345
+    }
+  },
+  "param-lang-en-es": {
+    "audioRenditionForTarget": {
+      "en": "audio-en",
+      "es": "audio-es"
+    },
+    "discontinuityBoundarySeconds": {
+      "en": 8.0,
+      "es": 8.0
+    }
+  }
+}

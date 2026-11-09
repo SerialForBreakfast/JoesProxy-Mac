@@ -1,0 +1,54 @@
+{
+  "configurations" : [
+    {
+      "id" : "C4B111F5-0E80-4868-8504-BC6974F730BF",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "commandLineArgumentEntries" : [
+      {
+        "argument" : "--verbose-https-logging "
+      },
+      {
+        "argument" : "--debug-ui-lifecycle"
+      }
+    ],
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:JoesProxy.xcodeproj",
+      "identifier" : "4498EC182CDAED9900844D6D",
+      "name" : "JoesProxy"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "skippedTests" : [
+        "JoesProxyTests",
+        "ProxyServerTests\/testSSLHandshake()"
+      ],
+      "target" : {
+        "containerPath" : "container:JoesProxy.xcodeproj",
+        "identifier" : "4498EC292CDAED9B00844D6D",
+        "name" : "JoesProxyTests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "skippedTests" : [
+        "JoesProxyUITests\/testExample()",
+        "JoesProxyUITests\/testLaunchPerformance()"
+      ],
+      "target" : {
+        "containerPath" : "container:JoesProxy.xcodeproj",
+        "identifier" : "4498EC332CDAED9B00844D6D",
+        "name" : "JoesProxyUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

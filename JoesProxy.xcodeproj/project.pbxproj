@@ -1,0 +1,1206 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		44AA00082E10000100844D6D /* NIOTLS in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00262E10000100844D6D /* NIOTLS */; };
+		44AA00092E10000100844D6D /* NIOTLS in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00262E10000100844D6D /* NIOTLS */; };
+		44AA000A2E10000100844D6D /* NIOTLS in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00262E10000100844D6D /* NIOTLS */; };
+		44AA00012E10000100844D6D /* NIOPosix in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00212E10000100844D6D /* NIOPosix */; };
+		44AA00022E10000100844D6D /* NIOHTTP1 in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00222E10000100844D6D /* NIOHTTP1 */; };
+		44AA00032E10000100844D6D /* NIOSSL in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00232E10000100844D6D /* NIOSSL */; };
+		44AA00042E10000100844D6D /* NIOPosix in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00212E10000100844D6D /* NIOPosix */; };
+		44AA00052E10000100844D6D /* NIOHTTP1 in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00222E10000100844D6D /* NIOHTTP1 */; };
+		44AA00062E10000100844D6D /* NIOSSL in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00232E10000100844D6D /* NIOSSL */; };
+		44AA00072E10000100844D6D /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00242E10000100844D6D /* Sparkle */; };
+		44B91ADA305126490063E53C /* NIOEmbedded in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00252E10000100844D6D /* NIOEmbedded */; };
+		A2B300032F20000100844D6D /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = A2B300022F20000100844D6D /* Fixtures */; };
+		C11000012F00000100844D6D /* joesproxyctl in Embed CLI */ = {isa = PBXBuildFile; fileRef = C11000102F00000100844D6D /* joesproxyctl */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		C400000B2F00000100844D6D /* NIOPosix in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00212E10000100844D6D /* NIOPosix */; };
+		C400000C2F00000100844D6D /* NIOHTTP1 in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00222E10000100844D6D /* NIOHTTP1 */; };
+		C400000D2F00000100844D6D /* NIOSSL in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00232E10000100844D6D /* NIOSSL */; };
+		C400000E2F00000100844D6D /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 44AA00242E10000100844D6D /* Sparkle */; };
+		C40000112F00000100844D6D /* joesproxyctl in Embed CLI */ = {isa = PBXBuildFile; fileRef = C11000102F00000100844D6D /* joesproxyctl */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		C40000162F00000100844D6D /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = A2B300022F20000100844D6D /* Fixtures */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4498EC2B2CDAED9B00844D6D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4498EC112CDAED9900844D6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4498EC182CDAED9900844D6D;
+			remoteInfo = JoesProxy;
+		};
+		4498EC352CDAED9B00844D6D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4498EC112CDAED9900844D6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4498EC182CDAED9900844D6D;
+			remoteInfo = JoesProxy;
+		};
+		C11000022F00000100844D6D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4498EC112CDAED9900844D6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C11000182F00000100844D6D;
+			remoteInfo = joesproxyctl;
+		};
+		C40000122F00000100844D6D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4498EC112CDAED9900844D6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C11000182F00000100844D6D;
+			remoteInfo = joesproxyctl;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C110000A2F00000100844D6D /* Embed CLI */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				C11000012F00000100844D6D /* joesproxyctl in Embed CLI */,
+			);
+			name = "Embed CLI";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C40000132F00000100844D6D /* Embed CLI */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				C40000112F00000100844D6D /* joesproxyctl in Embed CLI */,
+			);
+			name = "Embed CLI";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		4442E5722F99DD5700908FAF /* JoesProxy.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = JoesProxy.xctestplan; sourceTree = "<group>"; };
+		4442E5732F99DD5700908FAF /* JoesProxy-Policy.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "JoesProxy-Policy.xctestplan"; sourceTree = "<group>"; };
+		4442E5742F99DD5700908FAF /* JoesProxy-UI.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "JoesProxy-UI.xctestplan"; sourceTree = "<group>"; };
+		4442E5752F99DD5700908FAF /* JoesProxy-Smoke.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "JoesProxy-Smoke.xctestplan"; sourceTree = "<group>"; };
+		4498EC192CDAED9900844D6D /* JoesProxy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JoesProxy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4498EC2A2CDAED9B00844D6D /* JoesProxyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4498EC342CDAED9B00844D6D /* JoesProxyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2B300022F20000100844D6D /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fixtures; sourceTree = "<group>"; };
+		C11000102F00000100844D6D /* joesproxyctl */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = joesproxyctl; sourceTree = BUILT_PRODUCTS_DIR; };
+		C40000012F00000100844D6D /* JoesProxyAgentPrototype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JoesProxyAgentPrototype.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EEEE10012E10000100844D6D /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		44F1AA412EEC100100844D6D /* Exceptions for "JoesProxy" folder in "JoesProxy" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Info-MenuBarOnly.plist",
+				Info.plist,
+			);
+			target = 4498EC182CDAED9900844D6D /* JoesProxy */;
+		};
+		C11000502F00000100844D6D /* Exceptions for "JoesProxyCLI" folder in "JoesProxyTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				EntryPoint.swift,
+			);
+			target = 4498EC292CDAED9B00844D6D /* JoesProxyTests */;
+		};
+		C40000022F00000100844D6D /* Exceptions for "JoesProxy" folder in "JoesProxyAgentPrototype" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				About/AboutView.swift,
+				AgenticHarness/HypothesisGraphCardView.swift,
+				App/AppPresentationState.swift,
+				App/InspectorWorkspaceHost.swift,
+				App/ProxyViewModel.swift,
+				App/TrafficModificationsWindowView.swift,
+				App/UtilityWindowView.swift,
+				BookmarkPanelView.swift,
+				CertificateSetupSheet.swift,
+				Configuration/CaptionPlayerUITestView.swift,
+				Configuration/UITestLaunchConfiguration.swift,
+				ContentView.swift,
+				ContractDiff/ContractDiffCardView.swift,
+				DataLineage/DataLineageInspectorView.swift,
+				Devices/DeviceAliasManagerView.swift,
+				EffectBundles/CapturedMockAuthoringView.swift,
+				EffectBundles/EffectBundleActivationReviewView.swift,
+				EffectBundles/EffectBundleEvidenceView.swift,
+				FaultBisection/FaultBisectionCardView.swift,
+				FaultBisection/FaultBisectionSheet.swift,
+				GuidedSetupRepairView.swift,
+				HelpHubView.swift,
+				"Info-MenuBarOnly.plist",
+				Info.plist,
+				iOSSetupWalkthroughView.swift,
+				macOSSetupWalkthroughView.swift,
+				MainStatusTitleBar.swift,
+				MainWindowHelpSupport.swift,
+				MediaFixture/HLSTestStreamViews.swift,
+				MediaInfo/ByteRangeEfficiencyCardView.swift,
+				MediaInfo/CMCDTelemetryCardView.swift,
+				MediaInfo/DiscontinuityAlignmentCardView.swift,
+				MediaInfo/DRMHandshakeCardView.swift,
+				MediaInfo/ImageViewer.swift,
+				MediaInfo/MediaInfoAVInspectionView.swift,
+				MediaInfo/MediaInfoSheet.swift,
+				MediaInfo/MediaInfoTransportVideoAnalysisView.swift,
+				MediaInfo/MediaInfoWindowView.swift,
+				MediaInfo/MediaParserDiagnosticsView.swift,
+				MediaInfo/StreamingQualityWaterfallView.swift,
+				MediaInfo/VisualWireInspectorTileView.swift,
+				MediaInfo/WebVTTInspectorView.swift,
+				OpenAPIMock/OpenAPIMockPackViews.swift,
+				Repro/ReproPackageSheet.swift,
+				ResponseOverrideManagerView.swift,
+				SemanticMock/SemanticMockCardView.swift,
+				SessionDetailView.swift,
+				SessionExplorerFolderDetailView.swift,
+				SessionFilterControlsView.swift,
+				SessionFindPanelView.swift,
+				SessionIconLegendView.swift,
+				SessionListPlaceholderView.swift,
+				Sessions/RollingCaptureRestoreSheetView.swift,
+				Sessions/VisualizationExportPNGExportCoordinator.swift,
+				Sessions/VisualizationExportPNGRenderer.swift,
+				Sessions/WireWaterfallInspectorView.swift,
+				SessionTimelineView.swift,
+				SessionToolbarViews.swift,
+				SettingsView.swift,
+				SimulatorSetupWalkthroughView.swift,
+				StatefulMock/StatefulMockEntityBrowserView.swift,
+				StatefulMock/StatefulMockManagerView.swift,
+				SyntheticInjection/SyntheticInjectionCardView.swift,
+				SystemProxyMenuBarView.swift,
+				TrajectoryDiff/TrajectoryDiffCardView.swift,
+				tvOSSetupWalkthroughView.swift,
+				VisualizationExportRenderView.swift,
+				VisualizationExportSheet.swift,
+				Workspaces/CaptureWorkspaceViewModel.swift,
+			);
+			target = C40000032F00000100844D6D /* JoesProxyAgentPrototype */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		4498EC1B2CDAED9900844D6D /* JoesProxy */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				44F1AA412EEC100100844D6D /* Exceptions for "JoesProxy" folder in "JoesProxy" target */,
+				C40000022F00000100844D6D /* Exceptions for "JoesProxy" folder in "JoesProxyAgentPrototype" target */,
+			);
+			path = JoesProxy;
+			sourceTree = "<group>";
+		};
+		4498EC2D2CDAED9B00844D6D /* JoesProxyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JoesProxyTests;
+			sourceTree = "<group>";
+		};
+		4498EC372CDAED9B00844D6D /* JoesProxyUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JoesProxyUITests;
+			sourceTree = "<group>";
+		};
+		C110001B2F00000100844D6D /* JoesProxyCLI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C11000502F00000100844D6D /* Exceptions for "JoesProxyCLI" folder in "JoesProxyTests" target */,
+			);
+			path = JoesProxyCLI;
+			sourceTree = "<group>";
+		};
+		C40000152F00000100844D6D /* JoesProxyAgentPrototypeResources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JoesProxyAgentPrototypeResources;
+			sourceTree = "<group>";
+		};
+		D0C000012F00000100844D6D /* DocumentationShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DocumentationShared;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4498EC162CDAED9900844D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44AA00022E10000100844D6D /* NIOHTTP1 in Frameworks */,
+				44AA00032E10000100844D6D /* NIOSSL in Frameworks */,
+				44AA00082E10000100844D6D /* NIOTLS in Frameworks */,
+				44AA00012E10000100844D6D /* NIOPosix in Frameworks */,
+				44AA00072E10000100844D6D /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4498EC272CDAED9B00844D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44B91ADA305126490063E53C /* NIOEmbedded in Frameworks */,
+				44AA00052E10000100844D6D /* NIOHTTP1 in Frameworks */,
+				44AA00062E10000100844D6D /* NIOSSL in Frameworks */,
+				44AA00092E10000100844D6D /* NIOTLS in Frameworks */,
+				44AA00042E10000100844D6D /* NIOPosix in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4498EC312CDAED9B00844D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C11000162F00000100844D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C40000052F00000100844D6D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C400000C2F00000100844D6D /* NIOHTTP1 in Frameworks */,
+				C400000D2F00000100844D6D /* NIOSSL in Frameworks */,
+				44AA000A2E10000100844D6D /* NIOTLS in Frameworks */,
+				C400000B2F00000100844D6D /* NIOPosix in Frameworks */,
+				C400000E2F00000100844D6D /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4498EC102CDAED9900844D6D = {
+			isa = PBXGroup;
+			children = (
+				4442E5722F99DD5700908FAF /* JoesProxy.xctestplan */,
+				4442E5732F99DD5700908FAF /* JoesProxy-Policy.xctestplan */,
+				4442E5742F99DD5700908FAF /* JoesProxy-UI.xctestplan */,
+				4442E5752F99DD5700908FAF /* JoesProxy-Smoke.xctestplan */,
+				EEEE10022E10000100844D6D /* Config */,
+				A2B300022F20000100844D6D /* Fixtures */,
+				4498EC1B2CDAED9900844D6D /* JoesProxy */,
+				C110001B2F00000100844D6D /* JoesProxyCLI */,
+				4498EC2D2CDAED9B00844D6D /* JoesProxyTests */,
+				D0C000012F00000100844D6D /* DocumentationShared */,
+				C40000152F00000100844D6D /* JoesProxyAgentPrototypeResources */,
+				4498EC372CDAED9B00844D6D /* JoesProxyUITests */,
+				4498EC572CDD762A00844D6D /* Frameworks */,
+				4498EC1A2CDAED9900844D6D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4498EC1A2CDAED9900844D6D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4498EC192CDAED9900844D6D /* JoesProxy.app */,
+				C40000012F00000100844D6D /* JoesProxyAgentPrototype.app */,
+				4498EC2A2CDAED9B00844D6D /* JoesProxyTests.xctest */,
+				4498EC342CDAED9B00844D6D /* JoesProxyUITests.xctest */,
+				C11000102F00000100844D6D /* joesproxyctl */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4498EC572CDD762A00844D6D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		EEEE10022E10000100844D6D /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				EEEE10012E10000100844D6D /* Version.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4498EC182CDAED9900844D6D /* JoesProxy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4498EC3E2CDAED9B00844D6D /* Build configuration list for PBXNativeTarget "JoesProxy" */;
+			buildPhases = (
+				4498EC152CDAED9900844D6D /* Sources */,
+				4498EC162CDAED9900844D6D /* Frameworks */,
+				4498EC172CDAED9900844D6D /* Resources */,
+				C110000A2F00000100844D6D /* Embed CLI */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C11000032F00000100844D6D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4498EC1B2CDAED9900844D6D /* JoesProxy */,
+				D0C000012F00000100844D6D /* DocumentationShared */,
+			);
+			name = JoesProxy;
+			packageProductDependencies = (
+				44AA00222E10000100844D6D /* NIOHTTP1 */,
+				44AA00232E10000100844D6D /* NIOSSL */,
+				44AA00262E10000100844D6D /* NIOTLS */,
+				44AA00212E10000100844D6D /* NIOPosix */,
+				44AA00242E10000100844D6D /* Sparkle */,
+			);
+			productName = JoesProxy;
+			productReference = 4498EC192CDAED9900844D6D /* JoesProxy.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4498EC292CDAED9B00844D6D /* JoesProxyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4498EC412CDAED9B00844D6D /* Build configuration list for PBXNativeTarget "JoesProxyTests" */;
+			buildPhases = (
+				4498EC262CDAED9B00844D6D /* Sources */,
+				4498EC272CDAED9B00844D6D /* Frameworks */,
+				4498EC282CDAED9B00844D6D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4498EC2C2CDAED9B00844D6D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4498EC2D2CDAED9B00844D6D /* JoesProxyTests */,
+				C110001B2F00000100844D6D /* JoesProxyCLI */,
+				D0C000012F00000100844D6D /* DocumentationShared */,
+			);
+			name = JoesProxyTests;
+			packageProductDependencies = (
+				44AA00222E10000100844D6D /* NIOHTTP1 */,
+				44AA00232E10000100844D6D /* NIOSSL */,
+				44AA00262E10000100844D6D /* NIOTLS */,
+				44AA00212E10000100844D6D /* NIOPosix */,
+				44AA00252E10000100844D6D /* NIOEmbedded */,
+			);
+			productName = JoesProxyTests;
+			productReference = 4498EC2A2CDAED9B00844D6D /* JoesProxyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		4498EC332CDAED9B00844D6D /* JoesProxyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4498EC442CDAED9B00844D6D /* Build configuration list for PBXNativeTarget "JoesProxyUITests" */;
+			buildPhases = (
+				4498EC302CDAED9B00844D6D /* Sources */,
+				4498EC312CDAED9B00844D6D /* Frameworks */,
+				4498EC322CDAED9B00844D6D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4498EC362CDAED9B00844D6D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4498EC372CDAED9B00844D6D /* JoesProxyUITests */,
+			);
+			name = JoesProxyUITests;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyUITests;
+			productReference = 4498EC342CDAED9B00844D6D /* JoesProxyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		C11000182F00000100844D6D /* joesproxyctl */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C11000412F00000100844D6D /* Build configuration list for PBXNativeTarget "joesproxyctl" */;
+			buildPhases = (
+				C11000152F00000100844D6D /* Sources */,
+				C11000162F00000100844D6D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C110001B2F00000100844D6D /* JoesProxyCLI */,
+				D0C000012F00000100844D6D /* DocumentationShared */,
+			);
+			name = joesproxyctl;
+			packageProductDependencies = (
+			);
+			productName = joesproxyctl;
+			productReference = C11000102F00000100844D6D /* joesproxyctl */;
+			productType = "com.apple.product-type.tool";
+		};
+		C40000032F00000100844D6D /* JoesProxyAgentPrototype */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C400000A2F00000100844D6D /* Build configuration list for PBXNativeTarget "JoesProxyAgentPrototype" */;
+			buildPhases = (
+				C40000042F00000100844D6D /* Sources */,
+				C40000052F00000100844D6D /* Frameworks */,
+				C40000062F00000100844D6D /* Resources */,
+				C40000132F00000100844D6D /* Embed CLI */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C40000142F00000100844D6D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4498EC1B2CDAED9900844D6D /* JoesProxy */,
+				D0C000012F00000100844D6D /* DocumentationShared */,
+			);
+			name = JoesProxyAgentPrototype;
+			packageProductDependencies = (
+				44AA00222E10000100844D6D /* NIOHTTP1 */,
+				44AA00232E10000100844D6D /* NIOSSL */,
+				44AA00262E10000100844D6D /* NIOTLS */,
+				44AA00212E10000100844D6D /* NIOPosix */,
+				44AA00242E10000100844D6D /* Sparkle */,
+			);
+			productName = JoesProxyAgentPrototype;
+			productReference = C40000012F00000100844D6D /* JoesProxyAgentPrototype.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4498EC112CDAED9900844D6D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				C40000032F00000100844D6D = {
+					CreatedOnToolsVersion = 16.1;
+				};
+				LastSwiftUpdateCheck = 1610;
+				LastUpgradeCheck = 1610;
+				TargetAttributes = {
+					4498EC182CDAED9900844D6D = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					4498EC292CDAED9B00844D6D = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = 4498EC182CDAED9900844D6D;
+					};
+					4498EC332CDAED9B00844D6D = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = 4498EC182CDAED9900844D6D;
+					};
+					C11000182F00000100844D6D = {
+						CreatedOnToolsVersion = 16.1;
+					};
+				};
+			};
+			buildConfigurationList = 4498EC142CDAED9900844D6D /* Build configuration list for PBXProject "JoesProxy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4498EC102CDAED9900844D6D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				44AA00112E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio" */,
+				44AA00122E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio-ssl" */,
+				44AA00132E10000100844D6D /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4498EC1A2CDAED9900844D6D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4498EC182CDAED9900844D6D /* JoesProxy */,
+				C40000032F00000100844D6D /* JoesProxyAgentPrototype */,
+				C11000182F00000100844D6D /* joesproxyctl */,
+				4498EC292CDAED9B00844D6D /* JoesProxyTests */,
+				4498EC332CDAED9B00844D6D /* JoesProxyUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4498EC172CDAED9900844D6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A2B300032F20000100844D6D /* Fixtures in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4498EC282CDAED9B00844D6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4498EC322CDAED9B00844D6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C40000062F00000100844D6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C40000162F00000100844D6D /* Fixtures in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4498EC152CDAED9900844D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4498EC262CDAED9B00844D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4498EC302CDAED9B00844D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C11000152F00000100844D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C40000042F00000100844D6D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4498EC2C2CDAED9B00844D6D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4498EC182CDAED9900844D6D /* JoesProxy */;
+			targetProxy = 4498EC2B2CDAED9B00844D6D /* PBXContainerItemProxy */;
+		};
+		4498EC362CDAED9B00844D6D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4498EC182CDAED9900844D6D /* JoesProxy */;
+			targetProxy = 4498EC352CDAED9B00844D6D /* PBXContainerItemProxy */;
+		};
+		C11000032F00000100844D6D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C11000182F00000100844D6D /* joesproxyctl */;
+			targetProxy = C11000022F00000100844D6D /* PBXContainerItemProxy */;
+		};
+		C40000142F00000100844D6D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C11000182F00000100844D6D /* joesproxyctl */;
+			targetProxy = C40000122F00000100844D6D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4498EC3C2CDAED9B00844D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4498EC3D2CDAED9B00844D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		4498EC3F2CDAED9B00844D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = JoesProxy/JoesProxy.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"JoesProxy/Preview Content\"";
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JoesProxy/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4498EC402CDAED9B00844D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				OTHER_SWIFT_FLAGS = "$(inherited) $(JOESPROXY_COMPILER_DIAGNOSTIC_FLAGS)";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = JoesProxy/JoesProxy.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"JoesProxy/Preview Content\"";
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JoesProxy/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		4498EC422CDAED9B00844D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxy";
+			};
+			name = Debug;
+		};
+		4498EC432CDAED9B00844D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxy";
+			};
+			name = Release;
+		};
+		4498EC452CDAED9B00844D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JoesProxyUITests/JoesProxyUITests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = JoesProxy;
+			};
+			name = Debug;
+		};
+		4498EC462CDAED9B00844D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JoesProxyUITests/JoesProxyUITests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = JoesProxy;
+			};
+			name = Release;
+		};
+		44B3DCB830607D3300C77485 /* Release-MenuBarOnly */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = JoesProxyAgentPrototype;
+			};
+			name = "Release-MenuBarOnly";
+		};
+		607C1016E7926E7B165A4C45 /* Release-MenuBarOnly */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = "Release-MenuBarOnly";
+		};
+		70612AE99959E2661E8D6E40 /* Release-MenuBarOnly */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy.cli;
+				PRODUCT_NAME = joesproxyctl;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Release-MenuBarOnly";
+		};
+		87E8D9916E321D3B07321976 /* Release-MenuBarOnly */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JoesProxyUITests/JoesProxyUITests.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = JoesProxy;
+			};
+			name = "Release-MenuBarOnly";
+		};
+		A97D70C66448F53431140598 /* Release-MenuBarOnly */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = JoesProxy/JoesProxy.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"JoesProxy/Preview Content\"";
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "JoesProxy/Info-MenuBarOnly.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Release-MenuBarOnly";
+		};
+		B76E0738D79B3266F691CEC8 /* Release-MenuBarOnly */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxy";
+			};
+			name = "Release-MenuBarOnly";
+		};
+		C110003F2F00000100844D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy.cli;
+				PRODUCT_NAME = joesproxyctl;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C11000402F00000100844D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy.cli;
+				PRODUCT_NAME = joesproxyctl;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C40000082F00000100844D6D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_GENERATE_MAP_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy.AgentPrototype;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG AGW4_AGENT_TARGET $(inherited)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C40000092F00000100844D6D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EEEE10012E10000100844D6D /* Version.xcconfig */;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = JoesProxy/JoesProxy.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_GENERATE_MAP_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxy.AgentPrototype;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "AGW4_AGENT_TARGET $(inherited)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4498EC142CDAED9900844D6D /* Build configuration list for PBXProject "JoesProxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4498EC3C2CDAED9B00844D6D /* Debug */,
+				4498EC3D2CDAED9B00844D6D /* Release */,
+				607C1016E7926E7B165A4C45 /* Release-MenuBarOnly */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4498EC3E2CDAED9B00844D6D /* Build configuration list for PBXNativeTarget "JoesProxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4498EC3F2CDAED9B00844D6D /* Debug */,
+				4498EC402CDAED9B00844D6D /* Release */,
+				A97D70C66448F53431140598 /* Release-MenuBarOnly */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4498EC412CDAED9B00844D6D /* Build configuration list for PBXNativeTarget "JoesProxyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4498EC422CDAED9B00844D6D /* Debug */,
+				4498EC432CDAED9B00844D6D /* Release */,
+				B76E0738D79B3266F691CEC8 /* Release-MenuBarOnly */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4498EC442CDAED9B00844D6D /* Build configuration list for PBXNativeTarget "JoesProxyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4498EC452CDAED9B00844D6D /* Debug */,
+				4498EC462CDAED9B00844D6D /* Release */,
+				87E8D9916E321D3B07321976 /* Release-MenuBarOnly */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C11000412F00000100844D6D /* Build configuration list for PBXNativeTarget "joesproxyctl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C110003F2F00000100844D6D /* Debug */,
+				C11000402F00000100844D6D /* Release */,
+				70612AE99959E2661E8D6E40 /* Release-MenuBarOnly */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C400000A2F00000100844D6D /* Build configuration list for PBXNativeTarget "JoesProxyAgentPrototype" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C40000082F00000100844D6D /* Debug */,
+				C40000092F00000100844D6D /* Release */,
+				44B3DCB830607D3300C77485 /* Release-MenuBarOnly */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		44AA00112E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.90.1;
+			};
+		};
+		44AA00122E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio-ssl" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio-ssl.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.33.0;
+			};
+		};
+		44AA00132E10000100844D6D /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		44AA00262E10000100844D6D /* NIOTLS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 44AA00112E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOTLS;
+		};
+		44AA00212E10000100844D6D /* NIOPosix */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 44AA00112E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOPosix;
+		};
+		44AA00222E10000100844D6D /* NIOHTTP1 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 44AA00112E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOHTTP1;
+		};
+		44AA00232E10000100844D6D /* NIOSSL */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 44AA00122E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio-ssl" */;
+			productName = NIOSSL;
+		};
+		44AA00242E10000100844D6D /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 44AA00132E10000100844D6D /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		44AA00252E10000100844D6D /* NIOEmbedded */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 44AA00112E10000100844D6D /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOEmbedded;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4498EC112CDAED9900844D6D /* Project object */;
+}

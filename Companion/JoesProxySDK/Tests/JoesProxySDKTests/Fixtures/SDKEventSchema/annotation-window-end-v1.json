@@ -1,0 +1,17 @@
+{
+  "id" : "00000000-0000-0000-0000-000000000503",
+  "payload" : {
+    "deviceTimestamp" : "2026-06-28T17:00:14.000Z",
+    "id" : "00000000-0000-0000-0000-000000000603",
+    "kind" : "screen",
+    "label" : "EpisodeDetail",
+    "lifecycle" : "end",
+    "metadata" : {
+
+    },
+    "scopeID" : "00000000-0000-0000-0000-000000000701"
+  },
+  "sentAt" : "2026-06-28T17:00:14.000Z",
+  "type" : "annotationEvent",
+  "version" : 1
+}

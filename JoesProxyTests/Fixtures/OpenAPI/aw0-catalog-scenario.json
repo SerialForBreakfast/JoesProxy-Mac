@@ -1,0 +1,106 @@
+{
+  "id": { "rawValue": "aw0-catalog-v1" },
+  "schemaVersion": 1,
+  "name": "AW-0 catalog exactPath pack",
+  "purpose": "Prove one scenario can stage four concrete Map Local routes from a synthetic OpenAPI contract. POST and template ids stay unstaged to record miss behavior.",
+  "originatingClientID": "placeholder-overwritten-by-server",
+  "target": {
+    "appIdentifier": null,
+    "environment": null,
+    "hosts": ["catalog.example.invalid"],
+    "paths": ["/v1"]
+  },
+  "preconditions": [],
+  "captureScope": {
+    "hosts": ["catalog.example.invalid"],
+    "includeBodies": false
+  },
+  "disclosureProfileID": "shareable",
+  "faults": [
+    {
+      "mapLocal": {
+        "matcher": {
+          "method": "GET",
+          "scheme": "http",
+          "host": "catalog.example.invalid",
+          "path": "/v1/health",
+          "matchMode": "exactPath"
+        },
+        "inlineBodyText": "{\"status\":\"ok\",\"version\":\"1\"}",
+        "inlineContentType": "application/json",
+        "inlineStatusCode": 200
+      }
+    },
+    {
+      "mapLocal": {
+        "matcher": {
+          "method": "GET",
+          "scheme": "http",
+          "host": "catalog.example.invalid",
+          "path": "/v1/items",
+          "matchMode": "exactPath"
+        },
+        "inlineBodyText": "{\"items\":[{\"id\":\"item-1\",\"status\":\"available\",\"title\":\"Catalog Item One\"}],\"status\":\"available\"}",
+        "inlineContentType": "application/json",
+        "inlineStatusCode": 200
+      }
+    },
+    {
+      "mapLocal": {
+        "matcher": {
+          "method": "GET",
+          "scheme": "http",
+          "host": "catalog.example.invalid",
+          "path": "/v1/items/item-1",
+          "matchMode": "exactPath"
+        },
+        "inlineBodyText": "{\"id\":\"item-1\",\"status\":\"available\",\"title\":\"Catalog Item One\"}",
+        "inlineContentType": "application/json",
+        "inlineStatusCode": 200
+      }
+    },
+    {
+      "mapLocal": {
+        "matcher": {
+          "method": "GET",
+          "scheme": "http",
+          "host": "catalog.example.invalid",
+          "path": "/v1/items/item-missing",
+          "matchMode": "exactPath"
+        },
+        "inlineBodyText": "{\"error\":\"not_found\",\"itemId\":\"item-missing\"}",
+        "inlineContentType": "application/json",
+        "inlineStatusCode": 404
+      }
+    }
+  ],
+  "duration": 600,
+  "observationWindow": {
+    "startTrigger": "onActivate",
+    "duration": 600
+  },
+  "assertions": [
+    {
+      "kind": "requestOccurred",
+      "matcher": {
+        "method": "GET",
+        "scheme": "http",
+        "host": "catalog.example.invalid",
+        "path": "/v1/health",
+        "matchMode": "exactPath"
+      },
+      "evidenceSource": "captured"
+    }
+  ],
+  "assertionSeverity": "warning",
+  "evidenceRetentionSpec": {
+    "maxRecords": 50,
+    "retention": 86400
+  },
+  "cleanupActions": [
+    { "faultIndex": 0, "kind": "mapLocal" },
+    { "faultIndex": 1, "kind": "mapLocal" },
+    { "faultIndex": 2, "kind": "mapLocal" },
+    { "faultIndex": 3, "kind": "mapLocal" }
+  ]
+}

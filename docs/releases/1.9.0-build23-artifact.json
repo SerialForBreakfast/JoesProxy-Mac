@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "version": "1.9.0",
+  "build": "23",
+  "channel": "private-testing",
+  "published": false,
+  "installer": {
+    "path": "Releases/JoesProxy-1.9.0-build23.dmg",
+    "bytes": 198257148,
+    "sha256": "916a3eac4e14fb5adf9fa6b7d079dd6947a49c482e4b90fd4a2a7f67616865df",
+    "recordedSigningAndNotarizationVerified": true,
+    "modifiedDuringPublicPreparation": false
+  },
+  "source": {
+    "originalArchiveSHA256": "cd08d18fe7b27e0495cdaaa4c68bf20a4d6a271f776702c8fefc824649cc46d5",
+    "originalArchiveFileCount": 2722,
+    "publicRepositoryName": "JoesProxy-Mac",
+    "derivativeEditedAfterPackaging": true,
+    "derivativeBuildValidation": "pending",
+    "binaryContainsOldProjectLinks": true
+  },
+  "recordedPolicy": { "passed": 3038, "skipped": 15, "failed": 0, "runtimeWarnings": 13 },
+  "pending": ["Manual acceptance", "Edited source validation", "Binary/source pairing decision", "Hosted checks", "Publication authorization"]
+}

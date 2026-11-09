@@ -1,0 +1,45 @@
+name: Public preview build
+
+'on':
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-preview-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: ${{ vars.JOESPROXY_DEVELOPER_DIR || '/Applications/Xcode_27.0.app/Contents/Developer' }}
+    steps:
+      - name: Check out reviewed source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Validate workflow policy
+        run: ruby memlog/utility_scripts/public_preview_security.rb workflows
+      - name: Download locked packages
+        run: bash memlog/utility_scripts/public_preview_build.sh resolve
+      - name: Build unsigned app and inspect offline Help
+        run: bash memlog/utility_scripts/public_preview_build.sh build
+      - name: Test companion SDK on macOS
+        run: bash memlog/utility_scripts/public_preview_build.sh sdk
+      - name: Retain bounded build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-preview-build
+          path: |
+            build/PublicPreview/evidence/toolchain.txt
+            build/PublicPreview/evidence/cli-version.json
+            build/PublicPreview/evidence/cli-help.json
+            build/PublicPreview/evidence/sdk-tests.log
+          retention-days: 3
+          if-no-files-found: warn

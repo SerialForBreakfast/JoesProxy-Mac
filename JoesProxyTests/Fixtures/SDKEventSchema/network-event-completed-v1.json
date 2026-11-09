@@ -1,0 +1,46 @@
+{
+  "id" : "00000000-0000-0000-0000-000000000201",
+  "payload" : {
+    "annotations" : [
+      "PlaybackStart",
+      "EpisodeDetail"
+    ],
+    "cacheStatus" : "hit",
+    "certificateExpiry" : null,
+    "connectionID" : null,
+    "connectionInfo" : {
+      "cdnRegion" : "IAD",
+      "httpProtocol" : "HTTP/2",
+      "isConnectionReused" : false
+    },
+    "id" : "00000000-0000-0000-0000-000000000301",
+    "lane" : "api",
+    "method" : "GET",
+    "parentEventID" : null,
+    "phase" : "completed",
+    "redactionLevel" : "queryRedacted",
+    "redirectCount" : 0,
+    "retryCount" : 0,
+    "sessionID" : "00000000-0000-0000-0000-000000000401",
+    "sizes" : {
+      "compressedResponseBytes" : null,
+      "requestBytes" : 0,
+      "responseBytes" : 2981
+    },
+    "sourceSDK" : null,
+    "statusCode" : 200,
+    "timestamp" : "2026-06-28T17:00:01.250Z",
+    "timing" : {
+      "dns" : null,
+      "tcp" : null,
+      "tls" : null,
+      "total" : 0.361,
+      "transfer" : 0.041,
+      "ttfb" : 0.32
+    },
+    "url" : "https:\/\/api.example.com\/apps-api\/v3.1\/iphone\/dynamicplay\/show\/61457875.json"
+  },
+  "sentAt" : "2026-06-28T17:00:01.300Z",
+  "type" : "networkEvent",
+  "version" : 1
+}

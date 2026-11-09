@@ -1,0 +1,36 @@
+{
+  "id": "audio-muxed-only-aligned",
+  "version": "1",
+  "displayName": "Muxed-Only Aligned Audio",
+  "purpose": "Positive control where all A/V variants carry in-band program audio without a separate audio group.",
+  "featureTags": ["positive-control", "audio-topology", "muxed-only", "aligned", "sdr", "avc", "aac", "abr", "six-second-grid"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 265089, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 359089, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 497851, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "In-Band Program Audio",
+      "language": "en",
+      "associatedLanguage": null,
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "inBand",
+      "variantsCarryingInBand": ["video-360", "video-720", "video-1080"],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "audioTopology": "muxedOnly",
+  "audioDescription": "Multiplexed program audio carried within each A/V variant transport stream.",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "conformantControl",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Stable playback across variant switches without independent audio playlist requests."
+}

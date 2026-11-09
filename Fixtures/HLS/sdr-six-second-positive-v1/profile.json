@@ -1,0 +1,47 @@
+{
+  "id": "sdr-six-second-positive-v1",
+  "version": "1",
+  "displayName": "Six-Second SDR Positive Control",
+  "purpose": "Nominal-six-second SDR AVC/AAC positive control with a continuous 90-second synthetic timeline.",
+  "featureTags": ["positive-control", "sdr", "avc", "aac", "abr", "six-second-grid", "live-loop", "live-time-shifting-ready", "synthetic-media"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 249082, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 310996, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 374666, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {"name": "English Program", "language": "en", "associatedLanguage": null, "channels": "2", "isDefault": true, "isAutoSelect": true, "characteristics": [], "audibleSignature": "440 Hz synthetic tone"}
+  ],
+  "audioDescription": "One aligned stereo AAC-LC 48 kHz synthetic program-audio rendition; no speech or third-party media.",
+  "bundleSizeBudgetBytes": 25165824,
+  "isRecommended": true,
+  "conformanceClass": "conformantControl",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Stable VOD, conventional live-loop, ABR, and bounded live-time-shifting playback.",
+  "sourceProvenance": {
+    "kind": "project-authored synthetic lavfi sources",
+    "video": "testsrc with deterministic grid and border overlays",
+    "audio": "440 Hz sine tone",
+    "durationSeconds": 90,
+    "authoringCommand": "Fixtures/HLS/author-hls.sh sdr-six-second",
+    "ffmpegVersion": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+    "ffprobeVersion": "ffprobe version 8.0.1 Copyright (c) 2007-2025 the FFmpeg developers"
+  },
+  "mediaFacts": {
+    "container": "MPEG-2 transport stream",
+    "videoCodec": "H.264/AVC High, yuv420p, 30 fps",
+    "audioCodec": "AAC-LC, 48 kHz, stereo",
+    "segmentDurationSeconds": 6,
+    "segmentCountPerRendition": 15,
+    "continuousTimelineSeconds": 90,
+    "videoSegmentStarts": "IDR/keyframe verified by ffprobe",
+    "measuredVariantBandwidthBitsPerSecond": [249082, 310996, 374666],
+    "measuredVariantAverageBandwidthBitsPerSecond": [247191, 307552, 368999]
+  },
+  "validationStatus": {
+    "boundedBitstreamInspection": "passed during offline authoring",
+    "repositoryHashValidation": "governed by expected-hashes.json and HLSFixtureProfileMatrixTests",
+    "httpOriginValidation": "governed by HLSFixtureServerTests",
+    "officialHLSValidator": "not run: mediastreamvalidator was unavailable on the authoring host"
+  }
+}

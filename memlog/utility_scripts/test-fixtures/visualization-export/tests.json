@@ -1,0 +1,10 @@
+{"testNodes":[
+  {"nodeIdentifier":"single","nodeType":"Test Case","result":"Passed"},
+  {"nodeIdentifier":"failed","nodeType":"Test Case","result":"Failed"},
+  {"nodeIdentifier":"skipped","nodeType":"Test Case","result":"Skipped"},
+  {"nodeIdentifier":"repeated","nodeType":"Test Case","result":"Failed","children":[
+    {"nodeType":"Repetition","result":"Passed"},
+    {"nodeType":"Repetition","result":"Failed"},
+    {"nodeType":"Repetition","result":"Passed"}
+  ]}
+]}

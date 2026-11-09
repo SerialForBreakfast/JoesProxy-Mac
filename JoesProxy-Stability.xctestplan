@@ -1,0 +1,20 @@
+{
+  "configurations": [{"id": "D30FAEA9-1E8C-405F-AE88-51F143D76A81", "name": "Stability", "options": {}}],
+  "defaultOptions": {
+    "preferredScreenCaptureFormat": "screenshots",
+    "mainThreadCheckerEnabled": false,
+    "performanceAntipatternCheckerEnabled": false,
+    "mainThreadCheckerDetectionPolicy": {"enabled": false},
+    "threadPerformanceCheckerRuntimeIssueDetection": {"enabled": false},
+    "targetForVariableExpansion": {
+      "containerPath": "container:JoesProxy.xcodeproj",
+      "identifier": "4498EC182CDAED9900844D6D", "name": "JoesProxy"
+    }
+  },
+  "testTargets": [{
+    "parallelizable": false,
+    "selectedTests": ["CaptureStabilityProfilingUITests"],
+    "target": {"containerPath": "container:JoesProxy.xcodeproj", "identifier": "4498EC332CDAED9B00844D6D", "name": "JoesProxyUITests"}
+  }],
+  "version": 1
+}

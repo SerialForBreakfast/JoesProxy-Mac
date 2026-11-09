@@ -1,0 +1,42 @@
+{
+  "id": "id3-packed-audio-timestamp",
+  "version": "1",
+  "displayName": "ID3 Packed-Audio Timestamp",
+  "purpose": "Packed-audio transport timestamp PRIV validation profile.",
+  "featureTags": ["positive-control", "id3", "packed-audio", "timestamp-priv", "sdr", "avc", "aac"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 173210, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 267962, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 407834, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "English Program",
+      "language": "en",
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "id3Schedule": {
+    "carrier": "packedAudioTimestamp",
+    "version": "id3v2.3",
+    "allowedFrameIDs": ["PRIV"],
+    "events": [
+      {"id": "evt-priv-000", "eventClass": "segmentStart", "mediaTime": 0.0, "segmentIndex": 0, "frameID": "PRIV", "label": "Timestamp PRIV"}
+    ]
+  },
+  "audioTopology": "demuxedAll",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "conformantControl",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Packed-audio segment timestamps should match the first audio sample."
+}

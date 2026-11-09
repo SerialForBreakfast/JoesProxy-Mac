@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How It Works & Architecture — JoesProxy</title>
+  <meta name="description" content="Learn about JoesProxy's native Swift architecture, local-first privacy model, HTTPS decryption mechanics, and AI agent approval governance.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="canonical" href="https://www.joesproxy.com/how-it-works/">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="../index.html" class="brand">
+        JoesProxy <span class="brand-badge">Architecture</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../features/index.html" class="nav-link">Features</a></li>
+          <li><a href="../quick-start/index.html" class="nav-link">Quick Start</a></li>
+          <li><a href="index.html" class="nav-link active">How It Works</a></li>
+          <li><a href="../help/index.html" class="nav-link">Help</a></li>
+          <li><a href="../project/index.html" class="nav-link">Project</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" data-theme-toggle title="Toggle Dark/Light Mode">Theme</button>
+        <a href="../download/index.html" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-bottom: 48px;">
+      <div class="container">
+        <span class="hero-eyebrow">Architecture & Trust</span>
+        <h1 class="hero-title">Private by design. Governed by you.</h1>
+        <p class="hero-support">
+          JoesProxy runs 100% locally on your Mac using native Swift and Apple SwiftNIO. No cloud relays, no telemetry, and zero unapproved AI mutations.
+        </p>
+      </div>
+    </section>
+
+    <!-- 1. System Architecture -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Native macOS High-Performance Engine</h2>
+          <p class="section-subhead">Engineered for lightweight memory footprints and multi-gigabit loopback throughput.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="card-title">Swift 6 & Apple SwiftNIO</h3>
+            <p class="card-body">Non-blocking, event-driven I/O engine built on the same networking stack Apple uses in production. Handles thousands of concurrent connections with minimal CPU usage.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">In-Memory Session Store</h3>
+            <p class="card-body">High-speed circular memory buffers with configurable retention limits (default 250 MB) and periodic background rolling auto-saves to prevent memory bloat during long captures.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Zero Electron / WebKit Bloat</h3>
+            <p class="card-body">100% native SwiftUI interface. Launches in under a second, consumes negligible idle battery, and adheres strictly to macOS design guidelines.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Request Journey -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">The Request Journey</h2>
+          <p class="section-subhead">How traffic flows through JoesProxy's inspection and mutation pipeline.</p>
+        </div>
+
+        <div class="steps-row">
+          <div class="step-card">
+            <div class="step-number">Phase 1</div>
+            <h3 class="step-title">Ingress & Decryption</h3>
+            <p class="step-desc">Target client connects via HTTP forward or HTTPS CONNECT. For eligible HTTPS, JoesProxy mints an ephemeral dynamic certificate signed by the local CA.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">Phase 2</div>
+            <h3 class="step-title">Rule Evaluation</h3>
+            <p class="step-desc">The rule engine checks Map Local, Block, Map Remote, live rewrites, and semantic vector matchers against the incoming request path and headers.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">Phase 3</div>
+            <h3 class="step-title">Upstream Dispatch</h3>
+            <p class="step-desc">If not blocked or locally mapped, the request is dispatched to the upstream destination over TLS with keep-alive connection pooling.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">Phase 4</div>
+            <h3 class="step-title">Capture & Delivery</h3>
+            <p class="step-desc">The raw response is captured, optionally patched by active rewrite rules, and streamed back to the client application.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. AI Agent Safety & Governance -->
+    <section id="trust" class="section section-alt">
+      <div class="container">
+        <div class="grid-2">
+          <div>
+            <span class="hero-eyebrow">Security Governance</span>
+            <h2 class="section-title">Human-in-the-Loop AI Approvals</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+              JoesProxy is designed with strict capability boundaries to ensure AI coding agents (Claude Code, Cursor, Codex) cannot compromise developer safety or modify live traffic without consent.
+            </p>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.9375rem; color: var(--text-secondary);">
+              <li><strong>Capability Isolation:</strong> Runtime control, header reading, body reading, and traffic mutations each require independent approvals.</li>
+              <li><strong>Loopback-Only Listener:</strong> The MCP server binds exclusively to <code>127.0.0.1</code> and never listens on external network interfaces.</li>
+              <li><strong>Single-Use Grants:</strong> Approvals are single-use by default; no open-ended wildcard write access is granted to AI models.</li>
+              <li><strong>Automated Cleanup:</strong> Test scenarios and diagnostic runs automatically revert mutations when an investigation concludes.</li>
+            </ul>
+          </div>
+          <div class="showcase-stage" style="margin: 0;">
+            <p class="screenshot-note">Screenshot omitted from this source snapshot: the earlier image has not been cleared for public distribution.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Privacy Statement -->
+    <section id="privacy" class="section">
+      <div class="container">
+        <div class="card" style="max-width: 800px; margin: 0 auto;">
+          <span class="hero-eyebrow">Privacy Commitment</span>
+          <h2 class="card-title" style="font-size: 1.75rem;">Local processing, deliberate sharing</h2>
+          <p class="card-body" style="font-size: 1rem; margin-bottom: 16px;">
+            JoesProxy is a local developer tool, not a cloud service. We believe developer traffic and API payloads are strictly private:
+          </p>
+          <ul style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem;">
+            <li><strong>Authorized Sharing:</strong> Capture processing is local. Enrolled clients may receive approved evidence and process it through their own services; exports may be shared or saved to synchronized folders.</li>
+            <li><strong>Zero Analytics or Telemetry:</strong> JoesProxy contains no telemetry trackers, user identifiers, or crash-reporting SDKs.</li>
+            <li><strong>Local Certificate Authority:</strong> Your root CA key is generated locally on your Mac and stored in your secure macOS Keychain.</li>
+            <li><strong>Auditability:</strong> The complete source code is open source and available for independent inspection on GitHub.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="footer-brand">JoesProxy</div>
+          <p class="footer-desc">A native macOS HTTP/HTTPS debugging proxy built for developers and AI coding agents.</p>
+        </div>
+        <div>
+          <div class="footer-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="../features/index.html">Features</a></li>
+            <li><a href="../quick-start/index.html">Quick Start</a></li>
+            <li><a href="../download/index.html">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Architecture</div>
+          <ul class="footer-links">
+            <li><a href="index.html">How It Works</a></li>
+            <li><a href="../help/index.html">Help Hub</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Open Source</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/SerialForBreakfast/JoesProxy-Mac" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="../project/index.html">Project Story</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 JoesProxy Contributors. MIT Licensed.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

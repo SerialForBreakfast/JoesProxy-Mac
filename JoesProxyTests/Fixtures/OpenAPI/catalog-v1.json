@@ -1,0 +1,207 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Synthetic Catalog API",
+    "version": "1.0.0",
+    "description": "Neutral AW-0 fixture. Not a product runtime. Origin catalog.example.invalid."
+  },
+  "servers": [
+    {
+      "url": "http://catalog.example.invalid"
+    }
+  ],
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Liveness",
+        "responses": {
+          "200": {
+            "description": "Service is up",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" },
+                "example": { "status": "ok", "version": "1" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items": {
+      "get": {
+        "operationId": "listItems",
+        "summary": "List items",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["available", "archived"],
+              "default": "available"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of items",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ItemList" },
+                "examples": {
+                  "available": {
+                    "value": {
+                      "items": [
+                        { "id": "item-1", "status": "available", "title": "Catalog Item One" }
+                      ],
+                      "status": "available"
+                    }
+                  },
+                  "archived": {
+                    "value": {
+                      "items": [
+                        { "id": "item-9", "status": "archived", "title": "Archived Item" }
+                      ],
+                      "status": "archived"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createItem",
+        "summary": "Create item",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ItemWrite" },
+              "example": { "title": "Created Item" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" },
+                "example": {
+                  "id": "item-new",
+                  "status": "available",
+                  "title": "Created Item"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/items/{itemId}": {
+      "get": {
+        "operationId": "getItem",
+        "summary": "Fetch one item",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" },
+                "example": {
+                  "id": "item-1",
+                  "status": "available",
+                  "title": "Catalog Item One"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Named not-found variant",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "not_found", "itemId": "item-missing" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stream": {
+      "get": {
+        "operationId": "getEventStream",
+        "summary": "Server-sent events — unsupported in AW v1",
+        "responses": {
+          "200": {
+            "description": "Event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "example": "ok" },
+          "version": { "type": "string", "default": "1" }
+        }
+      },
+      "Item": {
+        "type": "object",
+        "required": ["id", "status", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["available", "archived"] },
+          "title": { "type": "string" }
+        }
+      },
+      "ItemWrite": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" }
+        }
+      },
+      "ItemList": {
+        "type": "object",
+        "required": ["items", "status"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Item" }
+          },
+          "status": { "type": "string", "enum": ["available", "archived"] }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" },
+          "itemId": { "type": "string" }
+        }
+      }
+    }
+  }
+}

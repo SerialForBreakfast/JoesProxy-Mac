@@ -1,0 +1,16 @@
+{
+  "configurations": [{"id": "D3B6B490-68A7-4DFE-9F47-8D38CCAC0D70", "name": "Optimized Transport", "options": {}}],
+  "defaultOptions": {
+    "mainThreadCheckerEnabled": false,
+    "performanceAntipatternCheckerEnabled": false,
+    "mainThreadCheckerDetectionPolicy": {"enabled": false},
+    "threadPerformanceCheckerRuntimeIssueDetection": {"enabled": false},
+    "targetForVariableExpansion": {"containerPath": "container:JoesProxy.xcodeproj", "identifier": "4498EC182CDAED9900844D6D", "name": "JoesProxy"}
+  },
+  "testTargets": [{
+    "parallelizable": false,
+    "selectedTests": ["ProxyServerTests/testScriptedBinaryFramingMatrixAcrossTransportModes()", "ProxyServerTests/testScriptedMixedBurstIdleResumeDrainsWithMetrics()", "NetworkThrottleSocketPressureTests"],
+    "target": {"containerPath": "container:JoesProxy.xcodeproj", "identifier": "4498EC292CDAED9B00844D6D", "name": "JoesProxyTests"}
+  }],
+  "version": 1
+}

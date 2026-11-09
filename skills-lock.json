@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "swift-accessibility-agent": {
+      "source": "SerialForBreakfast/SwiftAccessibilityAgent",
+      "sourceType": "github",
+      "computedHash": "59d1653b15496270ea998684ccbf1b8c2f377606b52866e265500c60f2f60d86"
+    }
+  }
+}

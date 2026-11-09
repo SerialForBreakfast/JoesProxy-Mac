@@ -1,0 +1,34 @@
+{
+  "configurations" : [
+    {
+      "id" : "B7F21152-0ED1-443A-875C-D172A0DC7E21",
+      "name" : "Host UI Tests",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:JoesProxy.xcodeproj",
+      "identifier" : "4498EC182CDAED9900844D6D",
+      "name" : "JoesProxy"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "skippedTests" : [
+        "JoesProxyUITests\/testExample()",
+        "JoesProxyUITests\/testLaunchPerformance()"
+      ],
+      "target" : {
+        "containerPath" : "container:JoesProxy.xcodeproj",
+        "identifier" : "4498EC332CDAED9B00844D6D",
+        "name" : "JoesProxyUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help & Troubleshooting — JoesProxy</title>
+  <meta name="description" content="Searchable documentation, troubleshooting playbooks, and glossary for JoesProxy proxying, TLS decryption, overrides, and AI agent supervision.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="canonical" href="https://www.joesproxy.com/help/">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="../index.html" class="brand">
+        JoesProxy <span class="brand-badge">Help</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../features/index.html" class="nav-link">Features</a></li>
+          <li><a href="../quick-start/index.html" class="nav-link">Quick Start</a></li>
+          <li><a href="../how-it-works/index.html" class="nav-link">How It Works</a></li>
+          <li><a href="index.html" class="nav-link active">Help</a></li>
+          <li><a href="../project/index.html" class="nav-link">Project</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" data-theme-toggle title="Toggle Dark/Light Mode">Theme</button>
+        <a href="../download/index.html" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-bottom: 32px;">
+      <div class="container">
+        <span class="hero-eyebrow">Documentation & Support</span>
+        <h1 class="hero-title">Help Topics & Troubleshooting</h1>
+        <p class="hero-support">Searchable guides for setup, inspection, traffic mutation, and AI agent supervision.</p>
+        
+        <!-- Search Filter Input -->
+        <div style="max-width: 560px; margin: 24px auto 0;">
+          <input type="text" data-search-input placeholder="Search help topics (e.g. 'certificate', 'throttle', 'mcp')..." style="width: 100%; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--text-primary); font-size: 1rem; outline: none;">
+        </div>
+      </div>
+    </section>
+
+    <!-- Help Topics Grid -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="grid-3">
+          
+          <div class="card" data-searchable>
+            <h3 class="card-title">Certificate Setup & Trust</h3>
+            <p class="card-body">Step-by-step guidance on creating, installing, trusting, and verifying the JoesProxy root CA across macOS, iOS Simulator, and mobile devices.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">Traffic States Explained</h3>
+            <p class="card-body">Understanding session classifications: <strong>Inspected</strong> (decrypted), <strong>Tunneled</strong> (encrypted passthrough), <strong>Blocked</strong> (synthetic status), <strong>Overridden</strong> (Map Local), and <strong>Failed</strong>.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">System Proxy Routing</h3>
+            <p class="card-body">How JoesProxy automatically configures macOS network preferences when capturing and safely restores your network defaults on quit.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">Request Inspector Guide</h3>
+            <p class="card-body">How to navigate the JSON Folder Tree, view raw headers, inspect query parameters, and understand inspection metadata reasons.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">Local Overrides Guide</h3>
+            <p class="card-body">Creating and managing Map Local files, Block synthetic errors, Map Remote redirects with path rewriting, and live JSON response patches.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">Simulating Bad Connections</h3>
+            <p class="card-body">Using throttling presets from 56k modem to flaky 3G, configuring custom round-trip latency delays, and forcing cache header stripping.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">Bookmarks & Request Replay</h3>
+            <p class="card-body">Saving key requests as bookmarks, editing headers and bodies, refreshing expired auth tokens from live sessions, and exporting cURL commands.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">Media & HLS Inspection</h3>
+            <p class="card-body">Parsing HLS master playlists, media variants, audio and subtitle tracks, ad-break markers, and serving synthetic streaming fixtures.</p>
+          </div>
+
+          <div class="card" data-searchable>
+            <h3 class="card-title">AI Agent Supervision & MCP</h3>
+            <p class="card-body">Enrolling AI assistants, resolving in-app capability approvals, configuring disclosure profiles, and running structured Diagnostic Runs.</p>
+          </div>
+
+          <div class="card" data-searchable style="border-left: 4px solid var(--warning);">
+            <h3 class="card-title" style="color: var(--warning);">Troubleshooting: No Traffic</h3>
+            <p class="card-body">Verify listener status on port 9090, check Wi-Fi subnet reachability for mobile devices, and confirm target domains are not on bypass lists.</p>
+          </div>
+
+          <div class="card" data-searchable style="border-left: 4px solid var(--warning);">
+            <h3 class="card-title" style="color: var(--warning);">Troubleshooting: HTTPS Tunneled</h3>
+            <p class="card-body">Why a body shows as tunneled: verify root CA trust in Keychain / Settings, check for certificate pinning, and confirm selective intercept rules.</p>
+          </div>
+
+          <div class="card" data-searchable style="border-left: 4px solid var(--warning);">
+            <h3 class="card-title" style="color: var(--warning);">Troubleshooting: MCP Connection</h3>
+            <p class="card-body">Run <code>joesproxyctl doctor</code> to verify MCP listener status, refresh client authentication tokens, and check capability grant profiles.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Safety: Return to Normal -->
+    <section class="section">
+      <div class="container">
+        <div class="card" style="max-width: 800px; margin: 0 auto; border-left: 4px solid var(--success);">
+          <h3 class="card-title" style="color: var(--success);">Return to Normal: Restoring Default Network State</h3>
+          <p class="card-body" style="margin-top: 8px;">
+            When your debugging or testing session is complete, JoesProxy makes it easy to restore default network conditions:
+          </p>
+          <ul style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem; margin-top: 8px;">
+            <li>Select <strong>Proxy > Stop Proxy</strong> (<code>⌘⌥.</code>) to stop the proxy and restore macOS system network settings.</li>
+            <li>Use the <strong>Disable All Overrides</strong> button in the toolbar to clear active Map Local, Block, and rewrite rules.</li>
+            <li>Quit JoesProxy cleanly; all system proxy routing is automatically deactivated upon application exit.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="footer-brand">JoesProxy</div>
+          <p class="footer-desc">A native macOS HTTP/HTTPS debugging proxy built for developers and AI coding agents.</p>
+        </div>
+        <div>
+          <div class="footer-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="../features/index.html">Features</a></li>
+            <li><a href="../quick-start/index.html">Quick Start</a></li>
+            <li><a href="../download/index.html">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Architecture</div>
+          <ul class="footer-links">
+            <li><a href="../how-it-works/index.html">How It Works</a></li>
+            <li><a href="index.html">Help Hub</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Open Source</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/SerialForBreakfast/JoesProxy-Mac" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="../project/index.html">Project Story</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 JoesProxy Contributors. MIT Licensed.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

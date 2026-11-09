@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-11-05",
+  "fixture": "collection-200-v1",
+  "definition": "200 objects with synthetic index IDs and eight repetitions of Synthetic title; selected /items; sorted JSON; existing synthetic bodyRead grant",
+  "historicalBeforeConditionalReads": {"rawResultBytes": 36248, "fullBriefResultBytes": 1244},
+  "regressionGates": {"fullBriefResultBytesMaximumExclusive": 2000, "repeatResultBytesMaximumExclusive": 1000, "repeatCalls": 8, "repeatAnalysisExecutions": 0},
+  "providerTokens": null,
+  "latencyPolicy": "Record all repeat samples in milliseconds; trend only on matched build, hardware and load. No shared-host timing gate.",
+  "correctnessPolicy": "Verify selected facts before size; same-sequence source changes must invalidate; no authorization bypass; incomplete remains incomplete. Run lifecycle refresh must invalidate.",
+  "baselinePolicy": "Do not overwrite this baseline to accommodate a regression. Intentional fixture or envelope changes require reviewed versioning and side-by-side results. Preserve failed runs and retries. Bytes are not tokens."
+}

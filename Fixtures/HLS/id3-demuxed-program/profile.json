@@ -1,0 +1,56 @@
+{
+  "id": "id3-demuxed-program",
+  "version": "1",
+  "displayName": "ID3 Demuxed Program",
+  "purpose": "Demuxed program audio carrying MPEG-2 TS ID3 timed metadata.",
+  "featureTags": ["positive-control", "id3", "timed-metadata", "demuxed-audio", "sdr", "avc", "aac"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 173210, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 267962, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 407834, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "English Program",
+      "language": "en",
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    },
+    {
+      "name": "English Audio Description",
+      "language": "en",
+      "channels": "2",
+      "isDefault": false,
+      "isAutoSelect": true,
+      "characteristics": ["public.accessibility.describes-video"],
+      "audibleSignature": "880 Hz synthetic AD tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "id3Schedule": {
+    "carrier": "mpeg2TS",
+    "version": "id3v2.3",
+    "allowedFrameIDs": ["TIT2", "TXXX"],
+    "events": [
+      {"id": "evt-000", "eventClass": "segmentStart", "mediaTime": 0.0, "segmentIndex": 0, "frameID": "TIT2", "label": "Segment 000"}
+    ]
+  },
+  "audioTopology": "demuxedAll",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "conformantControl",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Timed metadata should arrive through the independent audio rendition."
+}

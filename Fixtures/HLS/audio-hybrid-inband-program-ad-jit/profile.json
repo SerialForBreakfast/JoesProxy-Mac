@@ -1,0 +1,52 @@
+{
+  "id": "audio-hybrid-inband-program-ad-jit",
+  "version": "1",
+  "displayName": "Hybrid In-Band Program + JIT AD",
+  "purpose": "Simulated JIT alternate-audio publication near the moving live edge.",
+  "featureTags": ["jit-publication", "hybrid", "audio-topology", "scheduled-publication", "live-edge", "alternate-audio", "audio-description", "aligned", "sdr", "avc", "aac"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 265089, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 359089, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 497851, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "English Program",
+      "language": "en",
+      "associatedLanguage": null,
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "inBand",
+      "variantsCarryingInBand": ["video-360", "video-720", "video-1080"],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    },
+    {
+      "name": "English Audio Description",
+      "language": "en",
+      "associatedLanguage": "en",
+      "channels": "2",
+      "isDefault": false,
+      "isAutoSelect": true,
+      "characteristics": ["public.accessibility.describes-video"],
+      "audibleSignature": "880 Hz synthetic AD tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "scheduledJIT",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "audioTopology": "hybridInBandProgramAD",
+  "jitPublicationState": "current",
+  "audioDescription": "Hybrid audio delivery with scheduled JIT AD rendition published near the live edge.",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "stressCase",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Rendition switching should adapt to JIT publication lag and availability."
+}

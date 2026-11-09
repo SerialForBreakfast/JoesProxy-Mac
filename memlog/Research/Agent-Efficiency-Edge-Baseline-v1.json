@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-06",
+  "fixture": "mixed-selection-v1",
+  "measurementLayer": "authenticatedMCPResult",
+  "calls": 12,
+  "conditionalAttempts": 10,
+  "conditionalHits": 5,
+  "sourceAnalysisExecutions": 13,
+  "maximumWorkflowBytes": 16000,
+  "initialWorkflowBytes": 13962,
+  "discoveryMetadataMaximumBytes": 4096,
+  "receiptAdditionalHTTPCalls": 0,
+  "timingGate": null,
+  "providerTokenGate": null,
+  "notes": "Additive fixture; original idle and busy v1 baselines remain unchanged. Missing sources are not analyzed; each present selected source counts separately. The byte ceiling leaves qualification headroom and never permits dropping evidence. Timing, memory and energy are separate measurements."
+}

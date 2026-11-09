@@ -1,0 +1,45 @@
+{
+  "id" : "00000000-0000-0000-0000-000000000202",
+  "payload" : {
+    "annotations" : [
+
+    ],
+    "cacheStatus" : null,
+    "certificateExpiry" : null,
+    "connectionID" : null,
+    "connectionInfo" : {
+      "cdnRegion" : null,
+      "httpProtocol" : "CONNECT",
+      "isConnectionReused" : false
+    },
+    "id" : "00000000-0000-0000-0000-000000000302",
+    "lane" : "api",
+    "method" : "CONNECT",
+    "parentEventID" : null,
+    "phase" : "completed",
+    "redactionLevel" : "metadataOnly",
+    "redirectCount" : 0,
+    "retryCount" : 0,
+    "sessionID" : "00000000-0000-0000-0000-000000000402",
+    "sizes" : {
+      "compressedResponseBytes" : null,
+      "requestBytes" : 0,
+      "responseBytes" : 0
+    },
+    "sourceSDK" : null,
+    "statusCode" : null,
+    "timestamp" : "2026-06-28T17:00:02.000Z",
+    "timing" : {
+      "dns" : null,
+      "tcp" : null,
+      "tls" : null,
+      "total" : 0.08,
+      "transfer" : 0.0,
+      "ttfb" : 0.08
+    },
+    "url" : "https:\/\/secure.example.com\/"
+  },
+  "sentAt" : "2026-06-28T17:00:02.100Z",
+  "type" : "networkEvent",
+  "version" : 1
+}

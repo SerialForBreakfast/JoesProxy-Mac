@@ -1,0 +1,12 @@
+{
+  "_comment": "SPIKE ONLY — disposable credential from run_mcp_transport_spike.sh; not for production MCP.",
+  "mcpServers": {
+    "joesproxy-spike": {
+      "type": "http",
+      "url": "http://127.0.0.1:9091/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_CURRENT_RUNNER_CREDENTIAL"
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+<VAST version="3.0">
+  <Ad id="wrapper-1">
+    <Wrapper>
+      <Impression>https://track.example.com/wrapper-imp?x=1</Impression>
+      <VASTAdTagURI><![CDATA[https://secondary.example.com/vast.xml?campaign=1]]></VASTAdTagURI>
+    </Wrapper>
+  </Ad>
+</VAST>

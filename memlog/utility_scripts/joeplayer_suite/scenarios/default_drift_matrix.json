@@ -1,0 +1,12 @@
+{
+  "profiles": [
+    "baseline-aligned-codecs",
+    "discontinuity-cross-rendition-drift"
+  ],
+  "offsetsSeconds": [-2, -0.5, -0.1, 0.1, 0.5, 2],
+  "trialsPerCell": 10,
+  "audioTarget": "ad",
+  "playAtSeconds": 0.1,
+  "trialDurationSeconds": 20,
+  "faults": []
+}

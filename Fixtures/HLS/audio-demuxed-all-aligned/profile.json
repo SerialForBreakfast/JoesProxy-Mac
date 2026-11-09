@@ -1,0 +1,51 @@
+{
+  "id": "audio-demuxed-all-aligned",
+  "version": "1",
+  "displayName": "Demuxed-All Aligned Audio",
+  "purpose": "Positive control where video-only variants reference an audio group with separate program and AD playlists.",
+  "featureTags": ["positive-control", "audio-topology", "demuxed-all", "alternate-audio", "audio-description", "aligned", "sdr", "avc", "aac", "abr", "six-second-grid"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 173210, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 267962, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 407834, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "English Program",
+      "language": "en",
+      "associatedLanguage": null,
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    },
+    {
+      "name": "English Audio Description",
+      "language": "en",
+      "associatedLanguage": "en",
+      "channels": "2",
+      "isDefault": false,
+      "isAutoSelect": true,
+      "characteristics": ["public.accessibility.describes-video"],
+      "audibleSignature": "880 Hz synthetic AD tone",
+      "deliveryKind": "uriBacked",
+      "variantsCarryingInBand": [],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "audioTopology": "demuxedAll",
+  "audioDescription": "Fully demuxed audio group with separate URI-backed program audio and audio description renditions.",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "conformantControl",
+  "controlledFaults": [],
+  "expectedClientBehavior": "Seamless switching between Program and AD renditions on the same aligned 6-second segment grid."
+}

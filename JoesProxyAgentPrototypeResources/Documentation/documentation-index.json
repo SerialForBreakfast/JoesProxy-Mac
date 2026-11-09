@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-09-19.agw4",
+  "topics": [
+    {
+      "id": "agent-documentation",
+      "title": "Documentation Discovery",
+      "summary": "Find bounded, offline Agent guidance bundled with this experimental target.",
+      "category": "help",
+      "keywords": ["documentation", "offline", "cli", "agent", "catalog"],
+      "relatedTopics": ["setup", "mcpAndCLI", "trafficStates", "exportPrivacy"],
+      "file": "doc-agent-documentation.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "setup",
+      "title": "JoesProxy Setup Guide",
+      "summary": "Use the core setup path and distinguish local evidence from device actions.",
+      "category": "help",
+      "keywords": ["setup", "certificate", "trust", "proxy", "readiness"],
+      "relatedTopics": ["trafficStates", "mcpAndCLI"],
+      "file": "doc-setup.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "mcpAndCLI",
+      "title": "MCP And CLI",
+      "summary": "Understand the locally bundled command-line companion and its approval boundary.",
+      "category": "help",
+      "keywords": ["mcp", "cli", "approval", "agent", "credentials"],
+      "relatedTopics": ["agent-documentation", "setup", "trafficStates"],
+      "file": "doc-mcpAndCLI.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "trafficStates",
+      "title": "Traffic States",
+      "summary": "Understand inspected and tunneled traffic evidence without an Inspector view.",
+      "category": "help",
+      "keywords": ["https", "inspected", "tunneled", "trust", "evidence"],
+      "relatedTopics": ["setup", "mcpAndCLI"],
+      "file": "doc-trafficStates.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "exportPrivacy",
+      "title": "Export And Privacy",
+      "summary": "Understand the data-sensitivity boundary for any future export workflow.",
+      "category": "help",
+      "keywords": ["privacy", "export", "recording", "sensitive data"],
+      "relatedTopics": ["setup", "agent-documentation"],
+      "file": "doc-exportPrivacy.md",
+      "capabilityReferences": []
+    }
+  ]
+}

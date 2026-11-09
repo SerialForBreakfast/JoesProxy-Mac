@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "context": {
+      "fixture": "busy-collection-200",
+      "version": "1",
+      "environment": "Debug/Policy/arm64/synthetic",
+      "measurementLayer": "authenticatedMCPResult"
+    },
+    "attempts": [
+      {
+        "id": "0",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "1",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "2",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "3",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "4",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "5",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "6",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "7",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "8",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      }
+    ],
+    "providerUsage": null
+  },
+  "candidate": {
+    "context": {
+      "fixture": "busy-collection-200",
+      "version": "1",
+      "environment": "Debug/Policy/arm64/synthetic",
+      "measurementLayer": "authenticatedMCPResult"
+    },
+    "attempts": [
+      {
+        "id": "0",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 1386,
+        "analysisExecutions": 1
+      },
+      {
+        "id": "1",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "2",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "3",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "4",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "5",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "6",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "7",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      },
+      {
+        "id": "8",
+        "operation": "response_evidence_brief",
+        "outcome": "success",
+        "responseBytes": 610,
+        "analysisExecutions": 0
+      }
+    ],
+    "providerUsage": null
+  }
+}

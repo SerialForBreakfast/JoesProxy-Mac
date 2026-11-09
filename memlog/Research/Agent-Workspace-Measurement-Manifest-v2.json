@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "revision": "2026-09-20",
+  "candidates": ["B", "C"],
+  "historicalA": "excluded: instrumented and not an equivalent source baseline",
+  "isolation": "shared factory; fresh run UUID; repository-owned storage; synthetic certificates and credentials; no system routing",
+  "resources": "same complete documentation and Fixtures directory",
+  "retention": {"sessionLimit": 12000, "initialSessions": 10000, "seedBodyUTF8": "AGW synthetic seed"},
+  "phases": ["warmup", "empty-idle", "retained-observation", "traffic-query", "drain"],
+  "full": {"phaseSeconds": [60, 120, 120, 180, 120], "pairs": 3, "orders": ["BC", "CB", "BC"], "forwardedRequests": 700, "queryCount": 180, "deadlineSecondsPerApp": 800},
+  "pilot": {"phaseSeconds": [10, 10, 10, 15, 10], "pairs": 1, "orders": ["BC"], "forwardedRequests": 50, "queryCount": 15, "deadlineSecondsPerApp": 150},
+  "traffic": {"host": "127.0.0.1", "ports": "OS selected", "bodyBytes": 32768, "repeatedByte": 42, "concurrency": 1, "minimumSpacingMilliseconds": 200, "timeoutSeconds": 10, "validation": "exact response bytes for every request"},
+  "queries": {"cadenceSeconds": 1, "pageLimit": 10, "owner": "canonical MCP snapshot service", "bodyCheck": "latest completed record matches synthetic body", "transport": "in-process service; not MCP/CLI roundtrip latency"},
+  "metrics": {"cadenceSeconds": 1, "physicalFootprintLimitBytes": 1610612736, "receiverMaxAgeSeconds": 5, "pendingUDPDatagrams": 1, "fields": ["physicalFootprintBytes", "residentBytes", "userCPUTimeNanoseconds", "systemCPUTimeNanoseconds", "interruptWakeups", "idleWakeups", "lastQueryNanoseconds", "forwardingSeconds", "retainedSessions", "retainedBodyBytes", "pendingCaptures", "reservedCaptureBytes", "activeChannels", "rejectedCaptures", "inspectorModelConstructionCount"]},
+  "acceptance": ["exact delivery count and bytes", "all scheduled queries pass", "zero Inspector constructions and subscriptions", "all phases observed", "no instrumented libraries loaded", "zero pending capture reservations and channels after stop/drain", "zero rejected captures", "retained count equals seeded plus delivered requests"],
+  "unmeasured": ["heap allocation attribution", "MCP/CLI transport latency", "TLS throughput", "real device playback", "long-run leak freedom"],
+  "stopConditions": ["memory cutoff or unavailable process metrics", "5 GiB host free-space guard", "existing app or concurrent host runner", "failed byte/query/drain contract", "disruptive permission prompt"]
+}

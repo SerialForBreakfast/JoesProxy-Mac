@@ -1,0 +1,150 @@
+{
+  "profile": "discontinuity-cross-rendition-drift",
+  "profileVersion": "1",
+  "purpose": "Misaligned audio plus per-rendition discontinuity indexes (video@3, audio-en@5, audio-ad@4).",
+  "differsFromBaseline": "Cross-rendition discontinuity placement for JoePlayer track-switch drift trials.",
+  "generatedWith": "Fixtures/HLS/author-hls.sh matrix",
+  "ffmpegVersion": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "files": {
+    "audio-ad/seg-000.ts": {
+      "sha256": "50ded5c63ebda7fbe9fa4083a5b0b0b40094fdcffb7642630f90b3f60998c8ea",
+      "bytes": 39480
+    },
+    "audio-ad/seg-001.ts": {
+      "sha256": "4c3f3e57db32f742493fdc7b32ef5f76268bce4e3458d4246b1fa11151b4a0d3",
+      "bytes": 39480
+    },
+    "audio-ad/seg-002.ts": {
+      "sha256": "037df01e378f100dcafe1a80e2a33833bd371178f55c2a7d226afc62ac68c377",
+      "bytes": 39480
+    },
+    "audio-ad/seg-003.ts": {
+      "sha256": "942965c2faa57c036e9989f1ca031bbe54f3b7dbbbd3b6b1d85c39fd6b6d9ad3",
+      "bytes": 39480
+    },
+    "audio-ad/seg-004.ts": {
+      "sha256": "76cc469a1cd3d9ff5a96de892deb28172c513c9783139d2b36fbc5d9e4d05ad7",
+      "bytes": 39480
+    },
+    "audio-ad/seg-005.ts": {
+      "sha256": "5982e6edccfd88864e366d606ca0f95adfd08deedfb97493ddfc7afa2e951250",
+      "bytes": 39668
+    },
+    "audio-ad/seg-006.ts": {
+      "sha256": "aa35e904cd0d2b660693261f52b50a275f6d3f9c638573da2be5741446057be5",
+      "bytes": 39480
+    },
+    "audio-ad/seg-007.ts": {
+      "sha256": "437d954e59d22c0c5cd9538c6b6054e86f4865b0c1cd36ffc9804b0bf0571321",
+      "bytes": 39480
+    },
+    "audio-ad/seg-008.ts": {
+      "sha256": "05b891e6e5902305ea47fd916f52b0d1577662dc61e68aecfbb7a83c2f734d8a",
+      "bytes": 940
+    },
+    "audio-ad/stream.m3u8": {
+      "sha256": "6c2bb3afc4c218c155972f5665554343799684d9547f77adf28766df5e61f264",
+      "bytes": 395
+    },
+    "audio-en/seg-000.ts": {
+      "sha256": "530d45703296baae086263aa7408a574b6eedeb7c28a6aaab653eefab2b35892",
+      "bytes": 39668
+    },
+    "audio-en/seg-001.ts": {
+      "sha256": "3a24c3bf36ee4a462ef69259c98afcab76c67959e222ad224dbdb2ce286db00a",
+      "bytes": 39480
+    },
+    "audio-en/seg-002.ts": {
+      "sha256": "7246da8c6e3410ce9ebdc4fae247716111a59ffc9ce7946b3cffbe67f7b23069",
+      "bytes": 39480
+    },
+    "audio-en/seg-003.ts": {
+      "sha256": "eb8ef19bdb7920b0147a51297e74d424f68b3a23f08817f1a4db4f61e10f458f",
+      "bytes": 39480
+    },
+    "audio-en/seg-004.ts": {
+      "sha256": "041de7421656b4d5c4c04e5f63507319df8b3466b3f0e17dfed505c9546e36fe",
+      "bytes": 39480
+    },
+    "audio-en/seg-005.ts": {
+      "sha256": "8addb5ed37b2bfaa14b4a87df9e46c71c0f3ad66de5a9333fd43f377dd916fe6",
+      "bytes": 39668
+    },
+    "audio-en/seg-006.ts": {
+      "sha256": "d6254ae85029ee5967f9f124a4c97039ff8b7db7482c1b1abf3ccf2f194ba8db",
+      "bytes": 39480
+    },
+    "audio-en/seg-007.ts": {
+      "sha256": "01e4e891cbbfe9067c1ad16d314d567dedde7beb92ca33bd431b19c6dbfeaded",
+      "bytes": 39480
+    },
+    "audio-en/seg-008.ts": {
+      "sha256": "441e81078086f50ebe5c76dedf7677d0a9514a1e523c0752d49545ec9f570954",
+      "bytes": 940
+    },
+    "audio-en/stream.m3u8": {
+      "sha256": "664dd109d5b4e75d5ed7a812cb0ad29a16d36b75c274e961de4a438b8efa9654",
+      "bytes": 395
+    },
+    "master.m3u8": {
+      "sha256": "53f8bd0b81344a0a0bac53752e4be02c3f55b1b4f5751efa2f91967b87ff93ad",
+      "bytes": 657
+    },
+    "video-hi/seg-000.ts": {
+      "sha256": "9257195a409c3121a6f239901bbb7e257c15853b988814d720d8e6f0a4daad2c",
+      "bytes": 226728
+    },
+    "video-hi/seg-001.ts": {
+      "sha256": "8959d12e86cb8e1a3de31948f1becfde1a5b764f0e681d50a8ec240378e36894",
+      "bytes": 232180
+    },
+    "video-hi/seg-002.ts": {
+      "sha256": "27271aa091304e91257ac62defc2c6cf0893bfbe25c2766340d46a0624f0b775",
+      "bytes": 240640
+    },
+    "video-hi/seg-003.ts": {
+      "sha256": "7fff10282e462e92b5b8f5fd17c03d51d3aeb6d70dca46a8f0b1c5934cdbfa30",
+      "bytes": 238760
+    },
+    "video-hi/seg-004.ts": {
+      "sha256": "69e678b4873feb205aeca54dd0c7fd063db523fd397b662c14b1b9a76230fc18",
+      "bytes": 235752
+    },
+    "video-hi/seg-005.ts": {
+      "sha256": "688cf59cc1678dac763a7a83f30848510a1be46898168f39ce4af35fb2cffedd",
+      "bytes": 257560
+    },
+    "video-hi/stream.m3u8": {
+      "sha256": "6eda808e36205215853d0b3873bc7320d711d369718a29bd810b7386a476d3de",
+      "bytes": 308
+    },
+    "video-lo/seg-000.ts": {
+      "sha256": "f6aa815dce2807b99e2498347a18a2f57d8913ec0027c151398a3e1c8aa0a95b",
+      "bytes": 217328
+    },
+    "video-lo/seg-001.ts": {
+      "sha256": "86a3e819cc77ee2569b7fa560152780612715637f4a3b69d131b42b5ee6b3b67",
+      "bytes": 233872
+    },
+    "video-lo/seg-002.ts": {
+      "sha256": "b73fd078ff0237db36ca1fb13c3aafb5fbd0cfbeb95f908e8e26cf767c7dbd4c",
+      "bytes": 238572
+    },
+    "video-lo/seg-003.ts": {
+      "sha256": "8af492d2a6b1d0fd64617a44e661e33a132fbae16fad42c528a64655029affff",
+      "bytes": 238760
+    },
+    "video-lo/seg-004.ts": {
+      "sha256": "b1b6e6269646e994a9ade008157a4e7c3decae0daca3971d6c383c98e4393c61",
+      "bytes": 235940
+    },
+    "video-lo/seg-005.ts": {
+      "sha256": "b3b1c72cda1bdae242d4976ccef195923633ff3d9e8dc0ed319ece4d0afab2aa",
+      "bytes": 262824
+    },
+    "video-lo/stream.m3u8": {
+      "sha256": "6eda808e36205215853d0b3873bc7320d711d369718a29bd810b7386a476d3de",
+      "bytes": 308
+    }
+  }
+}

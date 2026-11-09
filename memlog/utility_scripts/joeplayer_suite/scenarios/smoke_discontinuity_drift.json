@@ -1,0 +1,9 @@
+{
+  "profiles": ["discontinuity-cross-rendition-drift"],
+  "offsetsSeconds": [0.0],
+  "trialsPerCell": 1,
+  "audioTarget": "ad",
+  "playAtSeconds": 0.1,
+  "trialDurationSeconds": 28,
+  "faults": []
+}

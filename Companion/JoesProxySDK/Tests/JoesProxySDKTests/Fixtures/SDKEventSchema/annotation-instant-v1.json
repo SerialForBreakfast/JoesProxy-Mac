@@ -1,0 +1,17 @@
+{
+  "id" : "00000000-0000-0000-0000-000000000501",
+  "payload" : {
+    "deviceTimestamp" : "2026-06-28T17:00:03.000Z",
+    "id" : "00000000-0000-0000-0000-000000000601",
+    "kind" : "feature",
+    "label" : "PlaybackButtonTapped",
+    "lifecycle" : "instant",
+    "metadata" : {
+      "contentID" : "ep-42"
+    },
+    "scopeID" : null
+  },
+  "sentAt" : "2026-06-28T17:00:03.000Z",
+  "type" : "annotationEvent",
+  "version" : 1
+}

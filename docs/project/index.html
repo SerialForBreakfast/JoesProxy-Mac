@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Project & Roadmap — JoesProxy</title>
+  <meta name="description" content="The story, core engineering principles, roadmap, releases, and MIT open-source license behind JoesProxy.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="canonical" href="https://www.joesproxy.com/project/">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="../index.html" class="brand">
+        JoesProxy <span class="brand-badge">Project</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../features/index.html" class="nav-link">Features</a></li>
+          <li><a href="../quick-start/index.html" class="nav-link">Quick Start</a></li>
+          <li><a href="../how-it-works/index.html" class="nav-link">How It Works</a></li>
+          <li><a href="../help/index.html" class="nav-link">Help</a></li>
+          <li><a href="index.html" class="nav-link active">Project</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" data-theme-toggle title="Toggle Dark/Light Mode">Theme</button>
+        <a href="../download/index.html" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-bottom: 48px;">
+      <div class="container">
+        <span class="hero-eyebrow">Open Source Project</span>
+        <h1 class="hero-title">Built for developers and AI coding agents</h1>
+        <p class="hero-support">
+          JoesProxy was created to provide a lean, transparent, and scriptable alternative to commercial proxy tools, with first-class support for AI agent collaboration.
+        </p>
+      </div>
+    </section>
+
+    <!-- Core Principles -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Core Principles</h2>
+          <p class="section-subhead">The non-negotiable architectural tenets that guide JoesProxy development.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="card-title">Local-First Privacy</h3>
+            <p class="card-body">Capture processing is local, with no application telemetry. You control exports and agent disclosure; independently connected clients may process approved evidence through their own services.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Human Agency in AI Loops</h3>
+            <p class="card-body">AI coding assistants are powerful partners, but they should never modify network behavior invisibly. Every agent proposal requires explicit human approval in the native UI.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Native macOS Craftsmanship</h3>
+            <p class="card-body">Built in pure Swift 6 and Apple SwiftNIO without Electron or web wrappers. Fast startup, low CPU usage, and faithful adherence to macOS interaction design.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Releases & Milestones -->
+    <section id="releases" class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Release History & Milestones</h2>
+          <p class="section-subhead">Track our progress across major product versions.</p>
+        </div>
+
+        <div style="max-width: 800px; margin: 40px auto 0; display: flex; flex-direction: column; gap: 24px;">
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+              <h3 class="card-title" style="margin: 0;">Version 1.2 — Advanced Agentic Wire Harness</h3>
+              <span style="font-size: 0.8125rem; color: var(--accent-primary); font-weight: 600;">Current Release</span>
+            </div>
+            <p class="card-body">
+              Completed Workstream AG: Hypothesis DAG fault bisection, LLM streaming wire inspector & token jitter sandbox, async race-condition fuzzing, payload resilience bisection, multi-session trajectory diffing, and zero-dependency vector similarity wire mocking.
+            </p>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+              <h3 class="card-title" style="margin: 0;">Version 1.1 — AI Agent Diagnostics & MCP Scenarios</h3>
+              <span style="font-size: 0.8125rem; color: var(--text-muted);">August 2026</span>
+            </div>
+            <p class="card-body">
+              Integrated Model Context Protocol (MCP) server on port 9091, capability-gated in-app approval panel, durable Diagnostic Runs, multi-fault Test Scenarios, and the companion <code>joesproxyctl</code> CLI.
+            </p>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+              <h3 class="card-title" style="margin: 0;">Version 1.0 — Core Proxy & Local Overrides</h3>
+              <span style="font-size: 0.8125rem; color: var(--text-muted);">June 2026</span>
+            </div>
+            <p class="card-body">
+              Initial public release: HTTP/1.1 forward proxy, HTTPS interception via local root CA, Map Local, Block, Map Remote, Live Response Rewrites, Explorer/Timeline views, and <code>.jproxy</code> session recordings.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contributing & License -->
+    <section id="contribute" class="section section-alt">
+      <div class="container">
+        <div class="grid-2">
+          <div>
+            <span class="hero-eyebrow">Community</span>
+            <h2 class="section-title">Contributing & Development</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+              JoesProxy is a maintainer-led source preview. External code contributions are currently closed. The project uses file-system synchronized groups; follow the first-run guide for the existing toolchain and locked dependencies.
+            </p>
+            <div class="code-box">
+              <pre><code># Clone repository
+git clone https://github.com/SerialForBreakfast/JoesProxy-Mac.git
+cd JoesProxy-Mac
+
+# Build app target with Xcode
+xcodebuild build -scheme JoesProxy -destination "platform=macOS"
+
+# Run unit and policy test suites
+xcodebuild test -scheme JoesProxy -testPlan JoesProxy-Policy -destination "platform=macOS" -parallel-testing-enabled NO -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates</code></pre>
+            </div>
+          </div>
+
+          <div id="license" class="card">
+            <span class="hero-eyebrow">Open Source</span>
+            <h3 class="card-title">MIT License</h3>
+            <p class="card-body" style="font-size: 0.875rem; line-height: 1.6; margin-bottom: 16px;">
+              Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.
+            </p>
+            <a href="https://github.com/SerialForBreakfast/JoesProxy-Mac/blob/main/LICENSE" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">View License on GitHub</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="footer-brand">JoesProxy</div>
+          <p class="footer-desc">A native macOS HTTP/HTTPS debugging proxy built for developers and AI coding agents.</p>
+        </div>
+        <div>
+          <div class="footer-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="../features/index.html">Features</a></li>
+            <li><a href="../quick-start/index.html">Quick Start</a></li>
+            <li><a href="../download/index.html">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Architecture</div>
+          <ul class="footer-links">
+            <li><a href="../how-it-works/index.html">How It Works</a></li>
+            <li><a href="../help/index.html">Help Hub</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Open Source</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/SerialForBreakfast/JoesProxy-Mac" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="index.html">Project Story</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 JoesProxy Contributors. MIT Licensed.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="1610" version="1.7">
+   <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES" buildArchitectures="Automatic">
+      <BuildActionEntries>
+         <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="NO">
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="4498EC182CDAED9900844D6D" BuildableName="JoesProxy.app" BlueprintName="JoesProxy" ReferencedContainer="container:JoesProxy.xcodeproj"/>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction buildConfiguration="Release" selectedDebuggerIdentifier="" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.PosixSpawn" shouldUseLaunchSchemeArgsEnv="NO" disableMainThreadChecker="YES" disablePerformanceAntipatternChecker="YES" codeCoverageEnabled="NO">
+      <TestPlans><TestPlanReference reference="container:JoesProxy-Transport.xctestplan" default="YES"/></TestPlans>
+   </TestAction>
+</Scheme>

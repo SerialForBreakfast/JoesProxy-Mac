@@ -1,0 +1,35 @@
+{
+  "configurations" : [
+    {
+      "id" : "A1C8E2B4-6D3F-4E91-9B70-2F4C8A1D5E60",
+      "name" : "Host Smoke Tests",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:JoesProxy.xcodeproj",
+      "identifier" : "4498EC182CDAED9900844D6D",
+      "name" : "JoesProxy"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "selectedTests" : [
+        "CompactModeHUDUITests\/testCompactHUDLaunchesWithoutInspector()",
+        "LaunchArbitrationUITests\/testFirstRunAndRollingRestoreDoNotStack()",
+        "ProxyRuntimeSmokeUITests\/testStartProxyAndCaptureSessionFromCurl()"
+      ],
+      "target" : {
+        "containerPath" : "container:JoesProxy.xcodeproj",
+        "identifier" : "4498EC332CDAED9B00844D6D",
+        "name" : "JoesProxyUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

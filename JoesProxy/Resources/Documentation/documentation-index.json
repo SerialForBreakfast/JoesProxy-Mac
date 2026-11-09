@@ -1,0 +1,1508 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-09-15.1",
+  "topics": [
+    {
+      "id": "certificateSetup",
+      "title": "Certificate And HTTPS Setup",
+      "summary": "Understand certificate readiness, trust, and the setup steps required for HTTPS inspection.",
+      "category": "help",
+      "keywords": [
+        "certificate",
+        "root ca",
+        "trust",
+        "trusted",
+        "https setup",
+        "tls",
+        "ssl",
+        "inspection setup",
+        "macos setup",
+        "ios setup",
+        "apple tv setup",
+        "simulator setup"
+      ],
+      "relatedTopics": [
+        "trafficStates",
+        "systemProxyRouting",
+        "requestInspector"
+      ],
+      "file": "doc-certificateSetup.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "trafficStates",
+      "title": "Traffic States",
+      "summary": "Learn when JoesProxy inspects HTTPS traffic and when it leaves traffic tunneled for compatibility.",
+      "category": "help",
+      "keywords": [
+        "https inspected",
+        "https tunneled",
+        "inspection reason",
+        "connect",
+        "pinning",
+        "pass-through",
+        "passthrough",
+        "tls state",
+        "intercept",
+        "bypass"
+      ],
+      "relatedTopics": [
+        "certificateSetup",
+        "requestInspector",
+        "systemProxyRouting"
+      ],
+      "file": "doc-trafficStates.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "systemProxyRouting",
+      "title": "System Proxy And Routing",
+      "summary": "Route macOS and Simulator traffic through JoesProxy with optional menu-bar controls.",
+      "category": "help",
+      "keywords": [
+        "system proxy",
+        "routing",
+        "menu bar",
+        "pac",
+        "strict capture",
+        "networksetup",
+        "ambient traffic",
+        "simulator proxy",
+        "route macos"
+      ],
+      "relatedTopics": [
+        "certificateSetup",
+        "capturedSessions",
+        "trafficStates",
+        "mcpAndCLI"
+      ],
+      "file": "doc-systemProxyRouting.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "capturedSessions",
+      "title": "Captured Sessions",
+      "summary": "Use Table, Explorer, and Timeline to search, filter, group, and inspect live traffic.",
+      "category": "help",
+      "keywords": [
+        "sessions",
+        "table",
+        "explorer",
+        "timeline",
+        "search",
+        "filters",
+        "sort",
+        "group",
+        "grouping",
+        "browser mode",
+        "captured traffic",
+        "follow live",
+        "source badge"
+      ],
+      "relatedTopics": [
+        "requestInspector",
+        "networkThrottling",
+        "bookmarksReplay",
+        "mediaInfo",
+        "exportPrivacy"
+      ],
+      "file": "doc-capturedSessions.md",
+      "capabilityReferences": [
+        "sessions_list"
+      ]
+    },
+    {
+      "id": "requestInspector",
+      "title": "Request Inspector",
+      "summary": "Read request and response details, including why some sessions show limited data.",
+      "category": "help",
+      "keywords": [
+        "inspector",
+        "headers",
+        "bodies",
+        "timing",
+        "metadata",
+        "request summary",
+        "response summary",
+        "body unavailable",
+        "tunneled metadata",
+        "override attribution"
+      ],
+      "relatedTopics": [
+        "trafficStates",
+        "capturedSessions",
+        "localOverrides",
+        "mediaInfo"
+      ],
+      "file": "doc-requestInspector.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "networkThrottling",
+      "title": "Network Throttling",
+      "summary": "Slow proxied traffic with editable bandwidth and latency presets.",
+      "category": "help",
+      "keywords": [
+        "throttle",
+        "throttling",
+        "bandwidth",
+        "latency",
+        "slow network",
+        "56k",
+        "isdn",
+        "t1",
+        "mobile",
+        "3g",
+        "lte",
+        "packet loss",
+        "quic",
+        "udp"
+      ],
+      "relatedTopics": [
+        "capturedSessions",
+        "trafficStates",
+        "requestInspector"
+      ],
+      "file": "doc-networkThrottling.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "localOverrides",
+      "title": "Local Overrides",
+      "summary": "Map Local, Block, Map Remote, live rewrites, and fixture redirects for matching traffic.",
+      "category": "help",
+      "keywords": [
+        "local overrides",
+        "map local",
+        "map remote",
+        "block",
+        "block request",
+        "mock response",
+        "override",
+        "replace response",
+        "local file",
+        "fixture redirect",
+        "live rewrite",
+        "path prefix",
+        "fault injection",
+        "effect bundle",
+        ".jproxy-effects",
+        "effect package"
+      ],
+      "relatedTopics": [
+        "capturedSessions",
+        "requestInspector",
+        "bookmarkResponseRewrites",
+        "mcpAndCLI",
+        "mediaInfo"
+      ],
+      "file": "doc-localOverrides.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "bookmarksReplay",
+      "title": "Bookmarks And Replay",
+      "summary": "Save repeatable requests, refresh them from live traffic, and replay them through JoesProxy.",
+      "category": "help",
+      "keywords": [
+        "bookmarks",
+        "replay",
+        "refresh auth",
+        "update from session",
+        "rerun request",
+        "saved request",
+        "curl"
+      ],
+      "relatedTopics": [
+        "capturedSessions",
+        "bookmarkResponseRewrites",
+        "exportPrivacy"
+      ],
+      "file": "doc-bookmarksReplay.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "bookmarkResponseRewrites",
+      "title": "Bookmark Response Rewrites",
+      "summary": "Serve a bookmark's saved response with JSON field overrides when matching traffic hits the proxy.",
+      "category": "help",
+      "keywords": [
+        "response rewrite",
+        "bookmark rewrite",
+        "json path",
+        "field override",
+        "saved response",
+        "preview patches",
+        "enable for session",
+        "mock response",
+        "intercept response",
+        "dot path",
+        "movie.shortDescription",
+        "map local bookmark"
+      ],
+      "relatedTopics": [
+        "bookmarksReplay",
+        "localOverrides",
+        "capturedSessions"
+      ],
+      "file": "doc-bookmarkResponseRewrites.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "mediaInfo",
+      "title": "Media Info",
+      "summary": "Inspect HLS, DASH, ads, images, AV assets, and timed metadata from classified sessions.",
+      "category": "help",
+      "keywords": [
+        "media info",
+        "hls",
+        "dash",
+        "m3u8",
+        "mpd",
+        "vast",
+        "vmap",
+        "id3",
+        "avasset",
+        "streaming",
+        "manifest",
+        "ad break",
+        "fixture",
+        "playlist",
+        "synthetic asset",
+        "assets.joesproxy.invalid",
+        "synthetic origin",
+        "virtual host"
+      ],
+      "relatedTopics": [
+        "capturedSessions",
+        "requestInspector",
+        "localOverrides",
+        "mcpAndCLI"
+      ],
+      "file": "doc-mediaInfo.md",
+      "capabilityReferences": [
+        "media_context"
+      ]
+    },
+    {
+      "id": "mcpAndCLI",
+      "title": "MCP And CLI",
+      "summary": "Let AI agents and joesproxyctl automate capture, mutation, and cleanup through the MCP server.",
+      "category": "help",
+      "keywords": [
+        "mcp",
+        "cli",
+        "joesproxyctl",
+        "agent",
+        "approval",
+        "standing grant",
+        "doctor",
+        "propose",
+        "apply",
+        "codex",
+        "cursor",
+        "claude",
+        "fixture run",
+        "scenario",
+        "instruments",
+        "time profiler",
+        "hangs",
+        "allocations",
+        "correlated audit",
+        "sessions search",
+        "sessions list",
+        "cli json",
+        "filtering",
+        "jq"
+      ],
+      "relatedTopics": [
+        "localOverrides",
+        "mediaInfo",
+        "systemProxyRouting",
+        "exportPrivacy"
+      ],
+      "file": "doc-mcpAndCLI.md",
+      "capabilityReferences": [
+        "documentation_list",
+        "documentation_search",
+        "documentation_read"
+      ]
+    },
+    {
+      "id": "integrations",
+      "title": "Companion Integrations",
+      "summary": "Orchestrate JoesProxy with companion tools like TVTestRig for Apple TV automation and ViewLens for visual truncation auditing.",
+      "category": "help",
+      "keywords": [
+        "integrations",
+        "tvtestrig",
+        "viewlens",
+        "truncation",
+        "automation",
+        "appletv",
+        "vision",
+        "audit",
+        "pipeline",
+        "recipes"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI",
+        "localOverrides",
+        "systemProxyRouting"
+      ],
+      "file": "doc-integrations.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "exportPrivacy",
+      "title": "Export And Privacy",
+      "summary": "Choose the right export format and avoid sharing sensitive recorded traffic accidentally.",
+      "category": "help",
+      "keywords": [
+        "export",
+        "har",
+        "save recording",
+        "open recording",
+        "privacy",
+        "sensitive",
+        "share recording",
+        "json recording",
+        "long capture storage",
+        "retention",
+        "limit stored body data",
+        "metadata only",
+        "text bodies only",
+        "media focused",
+        "crash recovery",
+        "restore rolling capture",
+        "off-path export",
+        "memory defense"
+      ],
+      "relatedTopics": [
+        "capturedSessions",
+        "bookmarksReplay",
+        "visualizationExport"
+      ],
+      "file": "doc-exportPrivacy.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "visualizationExport",
+      "title": "Export Visualization",
+      "summary": "Export PNG charts from captured traffic with privacy-safe defaults and scope-aware chart types.",
+      "category": "help",
+      "keywords": [
+        "visualization",
+        "export visualization",
+        "png",
+        "chart",
+        "timeline",
+        "waterfall",
+        "host health",
+        "redaction",
+        "provenance",
+        "partial capture",
+        "stripped bodies",
+        "presentation theme",
+        "hd",
+        "qhd",
+        "4k",
+        "shareable chart"
+      ],
+      "relatedTopics": [
+        "exportPrivacy",
+        "capturedSessions",
+        "requestInspector"
+      ],
+      "file": "doc-visualizationExport.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-gettingStarted",
+      "title": "Getting Started",
+      "summary": "In-app Help: Getting Started.",
+      "category": "help-hub",
+      "keywords": [
+        "Getting Started"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-gettingStarted.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-systemProxy",
+      "title": "System Proxy Routing",
+      "summary": "In-app Help: System Proxy Routing.",
+      "category": "help-hub",
+      "keywords": [
+        "System Proxy Routing"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-systemProxy.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-trafficStates",
+      "title": "Traffic States",
+      "summary": "In-app Help: Traffic States.",
+      "category": "help-hub",
+      "keywords": [
+        "Traffic States"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-trafficStates.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-sessionTools",
+      "title": "Session Tools",
+      "summary": "In-app Help: Session Tools.",
+      "category": "help-hub",
+      "keywords": [
+        "Session Tools"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-sessionTools.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-networkConditioning",
+      "title": "Network Throttling & No Caching",
+      "summary": "In-app Help: Network Throttling & No Caching.",
+      "category": "help-hub",
+      "keywords": [
+        "Network Throttling & No Caching"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-networkConditioning.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-mediaInfo",
+      "title": "Media Info",
+      "summary": "In-app Help: Media Info.",
+      "category": "help-hub",
+      "keywords": [
+        "Media Info"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-mediaInfo.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-mcpAndCLI",
+      "title": "MCP And CLI",
+      "summary": "In-app Help: MCP And CLI.",
+      "category": "help-hub",
+      "keywords": [
+        "MCP And CLI"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-mcpAndCLI.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-explorerBrowser",
+      "title": "Table, Explorer, and Timeline",
+      "summary": "In-app Help: Table, Explorer, and Timeline.",
+      "category": "help-hub",
+      "keywords": [
+        "Table, Explorer, and Timeline"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-explorerBrowser.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-bookmarksWorkflow",
+      "title": "Bookmarks Workflow",
+      "summary": "In-app Help: Bookmarks Workflow.",
+      "category": "help-hub",
+      "keywords": [
+        "Bookmarks Workflow"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-bookmarksWorkflow.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-bookmarkResponseRewrites",
+      "title": "Bookmark Response Rewrites",
+      "summary": "In-app Help: Bookmark Response Rewrites.",
+      "category": "help-hub",
+      "keywords": [
+        "Bookmark Response Rewrites"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-bookmarkResponseRewrites.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-recordingSaveModes",
+      "title": "Recording Save Modes",
+      "summary": "In-app Help: Recording Save Modes.",
+      "category": "help-hub",
+      "keywords": [
+        "Recording Save Modes"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-recordingSaveModes.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-importExport",
+      "title": "Import / Export",
+      "summary": "In-app Help: Import / Export.",
+      "category": "help-hub",
+      "keywords": [
+        "Import / Export"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-importExport.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "hub-troubleshooting",
+      "title": "Troubleshooting",
+      "summary": "In-app Help: Troubleshooting.",
+      "category": "help-hub",
+      "keywords": [
+        "Troubleshooting"
+      ],
+      "relatedTopics": [],
+      "file": "doc-hub-troubleshooting.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-https-inspected",
+      "title": "HTTPS Inspected",
+      "summary": "Definition of HTTPS Inspected; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "inspected",
+        "intercepted",
+        "decrypted"
+      ],
+      "relatedTopics": [
+        "trafficStates"
+      ],
+      "hubSectionID": "trafficStates",
+      "file": "doc-glossary-https-inspected.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-https-tunneled",
+      "title": "HTTPS Tunneled",
+      "summary": "Definition of HTTPS Tunneled; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "tunneled",
+        "pass-through",
+        "passthrough"
+      ],
+      "relatedTopics": [
+        "trafficStates"
+      ],
+      "hubSectionID": "trafficStates",
+      "file": "doc-glossary-https-tunneled.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-inspection-reason",
+      "title": "Inspection Reason",
+      "summary": "Definition of Inspection Reason; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "reason",
+        "why tunneled",
+        "why inspected"
+      ],
+      "relatedTopics": [
+        "trafficStates"
+      ],
+      "hubSectionID": "trafficStates",
+      "file": "doc-glossary-inspection-reason.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-certificate-pinning",
+      "title": "Certificate Pinning",
+      "summary": "Definition of Certificate Pinning; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "pinning",
+        "pinned tls",
+        "pinned certificate"
+      ],
+      "relatedTopics": [
+        "trafficStates"
+      ],
+      "hubSectionID": "trafficStates",
+      "file": "doc-glossary-certificate-pinning.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-captured-sessions",
+      "title": "Captured Sessions",
+      "summary": "Definition of Captured Sessions; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "sessions",
+        "table",
+        "explorer",
+        "timeline",
+        "follow live"
+      ],
+      "relatedTopics": [
+        "capturedSessions"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-captured-sessions.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-timeline",
+      "title": "Timeline",
+      "summary": "Definition of Timeline; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "temporal view",
+        "lanes",
+        "gap detection"
+      ],
+      "relatedTopics": [
+        "capturedSessions"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-timeline.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-system-proxy-routing",
+      "title": "System Proxy Routing",
+      "summary": "Definition of System Proxy Routing; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "system proxy",
+        "automatic routing",
+        "pac",
+        "strict capture",
+        "menu bar routing"
+      ],
+      "relatedTopics": [
+        "systemProxyRouting"
+      ],
+      "hubSectionID": "gettingStarted",
+      "file": "doc-glossary-system-proxy-routing.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-bookmarks",
+      "title": "Bookmarks",
+      "summary": "Definition of Bookmarks; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "replay",
+        "saved request",
+        "rerun"
+      ],
+      "relatedTopics": [
+        "bookmarksReplay"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-bookmarks.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-bookmark-response-rewrites",
+      "title": "Bookmark Response Rewrites",
+      "summary": "Definition of Bookmark Response Rewrites; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "response rewrite",
+        "json field override",
+        "saved response rewrite",
+        "preview patches"
+      ],
+      "relatedTopics": [
+        "bookmarkResponseRewrites"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-bookmark-response-rewrites.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-json-path",
+      "title": "JSON Path",
+      "summary": "Definition of JSON Path; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "dot path",
+        "field path",
+        "movie.title",
+        "items[0].id"
+      ],
+      "relatedTopics": [
+        "bookmarkResponseRewrites"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-json-path.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-local-overrides",
+      "title": "Local Overrides",
+      "summary": "Definition of Local Overrides; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "overrides",
+        "response rules",
+        "mock rules"
+      ],
+      "relatedTopics": [
+        "localOverrides"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-local-overrides.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-map-local",
+      "title": "Map Local",
+      "summary": "Definition of Map Local; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "map local",
+        "local file",
+        "captured response",
+        "inline text",
+        "fixture redirect"
+      ],
+      "relatedTopics": [
+        "localOverrides"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-map-local.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-map-remote",
+      "title": "Map Remote",
+      "summary": "Definition of Map Remote; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "map remote",
+        "retarget host",
+        "prod to staging"
+      ],
+      "relatedTopics": [
+        "localOverrides"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-map-remote.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-block",
+      "title": "Block",
+      "summary": "Definition of Block; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "block request",
+        "deny",
+        "fault injection",
+        "synthetic error"
+      ],
+      "relatedTopics": [
+        "localOverrides"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-block.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-live-response-rewrite",
+      "title": "Live Response Rewrite",
+      "summary": "Definition of Live Response Rewrite; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "live rewrite",
+        "in-flight rewrite",
+        "response edit"
+      ],
+      "relatedTopics": [
+        "localOverrides"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-live-response-rewrite.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-network-throttling",
+      "title": "Network Throttling",
+      "summary": "Definition of Network Throttling; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "throttle",
+        "slow network",
+        "bandwidth",
+        "latency",
+        "56k",
+        "isdn",
+        "t1",
+        "mobile"
+      ],
+      "relatedTopics": [
+        "networkThrottling"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-network-throttling.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-no-caching",
+      "title": "No Caching",
+      "summary": "Definition of No Caching; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "disable caching",
+        "cache-control",
+        "pragma",
+        "force refresh"
+      ],
+      "relatedTopics": [
+        "networkThrottling"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-no-caching.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-media-info",
+      "title": "Media Info",
+      "summary": "Definition of Media Info; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "media inspection",
+        "hls",
+        "dash",
+        "m3u8",
+        "mpd",
+        "vast",
+        "vmap",
+        "avasset"
+      ],
+      "relatedTopics": [
+        "mediaInfo"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-media-info.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-hls-fixture",
+      "title": "HLS Fixture",
+      "summary": "Definition of HLS Fixture; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "fixture run",
+        "fixture redirect",
+        "synthetic hls",
+        "playlist profile",
+        "live time shifting",
+        "warm dvr",
+        "cold dvr"
+      ],
+      "relatedTopics": [
+        "mediaInfo"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-hls-fixture.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-mcp",
+      "title": "MCP",
+      "summary": "Definition of MCP; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "model context protocol",
+        "agent tools",
+        "mcp management"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI"
+      ],
+      "hubSectionID": "gettingStarted",
+      "file": "doc-glossary-mcp.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-joesproxyctl",
+      "title": "joesproxyctl",
+      "summary": "Definition of joesproxyctl; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "cli",
+        "command line",
+        "doctor",
+        "auth login"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI"
+      ],
+      "hubSectionID": "gettingStarted",
+      "file": "doc-glossary-joesproxyctl.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-standing-grant",
+      "title": "Standing Grant",
+      "summary": "Definition of Standing Grant; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "approval grant",
+        "wait for approval",
+        "capability grant"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI"
+      ],
+      "hubSectionID": "gettingStarted",
+      "file": "doc-glossary-standing-grant.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-request-inspector",
+      "title": "Request Inspector",
+      "summary": "Definition of Request Inspector; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "headers",
+        "bodies",
+        "timing",
+        "inspector",
+        "override attribution"
+      ],
+      "relatedTopics": [
+        "requestInspector"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-request-inspector.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-save-recording",
+      "title": "Save Recording",
+      "summary": "Definition of Save Recording; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "json export",
+        "workspace save",
+        ".jproxy"
+      ],
+      "relatedTopics": [
+        "exportPrivacy"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-save-recording.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-export-to-har",
+      "title": "Export to HAR",
+      "summary": "Definition of Export to HAR; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "har",
+        "interop export"
+      ],
+      "relatedTopics": [
+        "exportPrivacy"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-export-to-har.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-long-capture-storage",
+      "title": "Long Capture Storage",
+      "summary": "Definition of Long Capture Storage; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "retention",
+        "only keep recent bodies",
+        "only keep recent sessions",
+        "unlimited"
+      ],
+      "relatedTopics": [
+        "exportPrivacy"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-long-capture-storage.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-metadata-only-recording",
+      "title": "Metadata Only Recording",
+      "summary": "Definition of Metadata Only Recording; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "metadata only",
+        "smallest recording",
+        "no bodies"
+      ],
+      "relatedTopics": [
+        "exportPrivacy"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-metadata-only-recording.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-media-focused-recording",
+      "title": "Media Focused Recording",
+      "summary": "Definition of Media Focused Recording; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "media focused",
+        "streaming save mode",
+        "manifest save mode"
+      ],
+      "relatedTopics": [
+        "exportPrivacy"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-media-focused-recording.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-export-visualization",
+      "title": "Export Visualization",
+      "summary": "Definition of Export Visualization; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "visualization export",
+        "png chart",
+        "traffic chart"
+      ],
+      "relatedTopics": [
+        "visualizationExport"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-export-visualization.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-visualization-provenance",
+      "title": "Visualization Provenance",
+      "summary": "Definition of Visualization Provenance; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "partial capture",
+        "bodies stripped",
+        "proxy-only"
+      ],
+      "relatedTopics": [
+        "visualizationExport"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-visualization-provenance.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-trust-required",
+      "title": "Trust Required",
+      "summary": "Definition of Trust Required; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "not trusted",
+        "certificate trust"
+      ],
+      "relatedTopics": [
+        "certificateSetup"
+      ],
+      "hubSectionID": "troubleshooting",
+      "file": "doc-glossary-trust-required.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-connect",
+      "title": "CONNECT",
+      "summary": "Definition of CONNECT; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "http connect",
+        "https tunnel"
+      ],
+      "relatedTopics": [
+        "trafficStates"
+      ],
+      "hubSectionID": "glossary",
+      "file": "doc-glossary-connect.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-root-ca",
+      "title": "Root CA",
+      "summary": "Definition of Root CA; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "certificate authority",
+        "root certificate",
+        "ca"
+      ],
+      "relatedTopics": [
+        "certificateSetup"
+      ],
+      "hubSectionID": "glossary",
+      "file": "doc-glossary-root-ca.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-trust-store",
+      "title": "Trust Store",
+      "summary": "Definition of Trust Store; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "trusted certificates",
+        "system trust"
+      ],
+      "relatedTopics": [
+        "certificateSetup"
+      ],
+      "hubSectionID": "glossary",
+      "file": "doc-glossary-trust-store.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-effect-bundle",
+      "title": "Effect Bundle",
+      "summary": "Definition of Effect Bundle; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        ".jproxy-effects",
+        "effect package",
+        "named effect bundle",
+        "bundle activation"
+      ],
+      "relatedTopics": [
+        "localOverrides"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-effect-bundle.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-synthetic-asset-origin",
+      "title": "Synthetic Asset Origin",
+      "summary": "Definition of Synthetic Asset Origin; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "assets.joesproxy.invalid",
+        "synthetic origin",
+        "lan asset server",
+        "virtual host"
+      ],
+      "relatedTopics": [
+        "mediaInfo"
+      ],
+      "hubSectionID": "sessionTools",
+      "file": "doc-glossary-synthetic-asset-origin.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-crash-recovery-off-path-save",
+      "title": "Crash Recovery Off-Path Save",
+      "summary": "Definition of Crash Recovery Off-Path Save; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "restore rolling capture",
+        "off-path export",
+        "snapshot recovery",
+        "memory defense"
+      ],
+      "relatedTopics": [
+        "exportPrivacy"
+      ],
+      "hubSectionID": "importExport",
+      "file": "doc-glossary-crash-recovery-off-path-save.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-xcode-instruments-diagnostics",
+      "title": "Xcode Instruments Diagnostics",
+      "summary": "Definition of Xcode Instruments Diagnostics; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "instruments trace",
+        "time profiler",
+        "hangs",
+        "allocations",
+        "correlated audit"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI"
+      ],
+      "hubSectionID": "gettingStarted",
+      "file": "doc-glossary-xcode-instruments-diagnostics.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-deterministic-cli-filtering",
+      "title": "Deterministic CLI Filtering",
+      "summary": "Definition of Deterministic CLI Filtering; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "cli json",
+        "sessions search",
+        "joesproxyctl --json",
+        "jq filtering"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI"
+      ],
+      "hubSectionID": "gettingStarted",
+      "file": "doc-glossary-deterministic-cli-filtering.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "glossary-tunneling",
+      "title": "Tunneling",
+      "summary": "Definition of Tunneling; read the definition section for scope and limitations.",
+      "category": "glossary",
+      "keywords": [
+        "pass through",
+        "encrypted passthrough"
+      ],
+      "relatedTopics": [
+        "trafficStates"
+      ],
+      "hubSectionID": "glossary",
+      "file": "doc-glossary-tunneling.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "setup",
+      "title": "Setup and onboarding",
+      "summary": "Configure the proxy and verify real traffic before optional agent enrollment.",
+      "category": "setup",
+      "keywords": [
+        "setup",
+        "onboarding",
+        "trust",
+        "certificate",
+        "routing",
+        "enroll"
+      ],
+      "relatedTopics": [
+        "certificateSetup",
+        "systemProxyRouting",
+        "mcpAndCLI"
+      ],
+      "file": "doc-setup.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "workflow-mocking",
+      "title": "Coordinate JSON and images",
+      "summary": "Coordinate JSON and images. Read prerequisites, evidence and cleanup boundaries.",
+      "category": "mocking",
+      "keywords": [
+        "mock",
+        "image",
+        "client mismatch",
+        "stale revision",
+        "cache",
+        "carousel"
+      ],
+      "relatedTopics": [
+        "localOverrides",
+        "requestInspector"
+      ],
+      "file": "doc-workflow-mocking.md",
+      "capabilityReferences": [
+        "effect_bundle_prepare",
+        "effect_bundle_retire_preparation"
+      ]
+    },
+    {
+      "id": "workflow-evidence",
+      "title": "Evidence and recovery",
+      "summary": "Evidence and recovery. Read prerequisites, evidence and cleanup boundaries.",
+      "category": "workflows",
+      "keywords": [
+        "missing body",
+        "body unavailable",
+        "partial cleanup",
+        "target rejection",
+        "delivery"
+      ],
+      "relatedTopics": [
+        "requestInspector",
+        "exportPrivacy"
+      ],
+      "file": "doc-workflow-evidence.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "agent-documentation",
+      "title": "Documentation discovery",
+      "summary": "Documentation discovery. Read prerequisites, evidence and cleanup boundaries.",
+      "category": "agents",
+      "keywords": [
+        "documentation",
+        "help",
+        "offline",
+        "MCP",
+        "CLI",
+        "sandbox",
+        "workspace",
+        "supervision",
+        "Inspector"
+      ],
+      "relatedTopics": [
+        "mcpAndCLI",
+        "setup"
+      ],
+      "file": "doc-agent-documentation.md",
+      "capabilityReferences": [
+        "documentation_list",
+        "documentation_search",
+        "documentation_read"
+      ]
+    },
+    {
+      "id": "reference-tools",
+      "title": "MCP tool reference",
+      "summary": "Generated names, descriptions and capability categories. tools/list supplies exact running schemas.",
+      "category": "reference",
+      "keywords": [
+        "tools",
+        "capabilities",
+        "schema",
+        "reference"
+      ],
+      "relatedTopics": [
+        "agent-documentation"
+      ],
+      "file": "doc-reference-tools.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "reference-cli",
+      "title": "CLI command reference",
+      "summary": "Generated command examples from CLI help. Parameterized examples require explicit values and authority.",
+      "category": "reference",
+      "keywords": [
+        "commands",
+        "CLI",
+        "help",
+        "reference"
+      ],
+      "relatedTopics": [
+        "agent-documentation"
+      ],
+      "file": "doc-reference-cli.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "workflow-image",
+      "title": "Replace an image",
+      "summary": "Scope, prepare, verify and clean up a synthetic image response.",
+      "category": "recipe",
+      "keywords": [
+        "image",
+        "poster",
+        "MIME",
+        "relative",
+        "cache"
+      ],
+      "relatedTopics": [
+        "workflow-mocking",
+        "workflow-evidence"
+      ],
+      "file": "doc-workflow-image.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "setup-ios",
+      "title": "iOS setup guide",
+      "summary": "Automatic PAC URL and manual proxy setup, certificate trust, and device-routing verification.",
+      "category": "setup",
+      "keywords": [
+        "iOS",
+        "setup",
+        "trust",
+        "routing",
+        "PAC",
+        "Automatic",
+        "direct fallback"
+      ],
+      "relatedTopics": [
+        "setup",
+        "certificateSetup",
+        "trafficStates"
+      ],
+      "file": "doc-setup-ios.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "setup-tvos",
+      "title": "tvOS setup guide",
+      "summary": "Shared explanations from the tvOS setup walkthrough.",
+      "category": "setup",
+      "keywords": [
+        "tvOS",
+        "setup",
+        "trust",
+        "routing"
+      ],
+      "relatedTopics": [
+        "setup",
+        "certificateSetup",
+        "trafficStates"
+      ],
+      "file": "doc-setup-tvos.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "setup-macos",
+      "title": "macOS setup guide",
+      "summary": "Shared explanations from the macOS setup walkthrough.",
+      "category": "setup",
+      "keywords": [
+        "macOS",
+        "setup",
+        "trust",
+        "routing"
+      ],
+      "relatedTopics": [
+        "setup",
+        "certificateSetup",
+        "trafficStates"
+      ],
+      "file": "doc-setup-macos.md",
+      "capabilityReferences": []
+    },
+    {
+      "id": "setup-simulator",
+      "title": "Simulator setup guide",
+      "summary": "Shared explanations from the Simulator setup walkthrough.",
+      "category": "setup",
+      "keywords": [
+        "Simulator",
+        "setup",
+        "trust",
+        "routing"
+      ],
+      "relatedTopics": [
+        "setup",
+        "certificateSetup",
+        "trafficStates"
+      ],
+      "file": "doc-setup-simulator.md",
+      "capabilityReferences": []
+    }
+  ]
+}

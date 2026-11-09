@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JoesProxy — Reveal the traffic. Reshape the response.</title>
+  <meta name="description" content="A macOS desktop proxy for developers and AI coding agents. Inspect live HTTP/HTTPS traffic, reshape responses, and run autonomous diagnostics with human-in-the-loop approvals.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="canonical" href="https://www.joesproxy.com/">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="index.html" class="brand">
+        JoesProxy <span class="brand-badge">v1.2</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="features/index.html" class="nav-link">Features</a></li>
+          <li><a href="quick-start/index.html" class="nav-link">Quick Start</a></li>
+          <li><a href="how-it-works/index.html" class="nav-link">How It Works</a></li>
+          <li><a href="help/index.html" class="nav-link">Help</a></li>
+          <li><a href="project/index.html" class="nav-link">Project</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" data-theme-toggle title="Toggle Dark/Light Mode">Theme</button>
+        <a href="download/index.html" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero">
+      <div class="container">
+        <span class="hero-eyebrow">Local network debugging for developers and AI agents</span>
+        <h1 class="hero-title">Reveal the traffic. Reshape the response.</h1>
+        <p class="hero-support">
+          Inspect app traffic live on your Mac or let an AI coding agent analyze, mutate, and verify it. From single API fixes to synthetic mock worlds, JoesProxy keeps capture, approvals, and privacy locally in your hands.
+        </p>
+        <div class="hero-actions">
+          <a href="download/index.html" class="btn btn-primary btn-lg">Download JoesProxy for Mac</a>
+          <a href="quick-start/index.html" class="btn btn-secondary btn-lg">Quick Start Guide</a>
+        </div>
+        <div class="trust-strip">
+          <div class="trust-item"><span class="trust-dot"></span> Runs 100% locally on your Mac</div>
+          <div class="trust-item"><span class="trust-dot"></span> Human-in-the-loop AI approvals</div>
+          <div class="trust-item"><span class="trust-dot"></span> Open source (MIT) with zero telemetry</div>
+        </div>
+
+        <!-- Product Hero Showcase -->
+        <div class="showcase-stage">
+          <div class="showcase-window">
+            <img src="assets/screenshots/workspace.png" alt="JoesProxy live session table showing captured requests and a formatted JSON response" width="1040" height="650">
+          </div>
+          <p class="showcase-caption">Live capture: Routed requests appear in real time; prettified JSON, headers, timing, and source device origins stay connected beside each session.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Three Investigation Views -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Follow your traffic your way</h2>
+          <p class="section-subhead">Switch between chronological, structural, and temporal views of live network activity.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-icon">[1]</div>
+            <h3 class="card-title">Live Request Stream</h3>
+            <p class="card-body">Scan requests in arrival order as they happen. Filter by host, status code, method, or source device (Mac, iOS Simulator, iPhone, Apple TV, Docker). Prettified JSON, headers, and timing metrics stay linked beside the selected session.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">[2]</div>
+            <h3 class="card-title">Host & Endpoint Tree</h3>
+            <p class="card-body">Group busy captures by domain and endpoint path. Great for apps that communicate with dozens of microservices simultaneously—drill into the exact service you care about instead of scrolling a wall of logs.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">[3]</div>
+            <h3 class="card-title">Automated Anomaly Findings</h3>
+            <p class="card-body">Identify sequencing bottlenecks, playback gaps, retry clusters, and buffering risks. JoesProxy automatically analyzes timing and surfaces actionable findings before issues reach production.</p>
+          </div>
+        </div>
+
+        <!-- Explorer & Timeline Screenshots -->
+        <div class="grid-2" style="margin-top: 48px;">
+          <div class="showcase-stage" style="margin: 0;">
+            <img src="assets/screenshots/explorer.png" alt="Explorer view grouping traffic by host into a folder hierarchy" width="500" height="320">
+            <p class="showcase-caption">Explorer View: Foldered domain hierarchy.</p>
+          </div>
+          <div class="showcase-stage" style="margin: 0;">
+            <img src="assets/screenshots/timeline.png" alt="Timeline view with automatic buffering risk finding highlighted" width="500" height="320">
+            <p class="showcase-caption">Timeline View: Automatic anomaly callouts.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Traffic Mutation -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Reshape responses on the fly</h2>
+          <p class="section-subhead">Test client edge cases and error resilience without waiting on backend deployments or server changes.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="card-title">Map Local</h3>
+            <p class="card-body">Replace any upstream response with a local draft file, inline JSON snippet, or an entire mock directory tree served as a mock API.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Block & Fault Inject</h3>
+            <p class="card-body">Simulate outages by dropping connections or returning synthetic status codes (404, 500, 503) to test error fallbacks and retry policies.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Map Remote</h3>
+            <p class="card-body">Forward traffic to alternate hosts, staging servers, or local Docker containers while rewriting destination paths and queries.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Live JSON Rewrites</h3>
+            <p class="card-body">Patch specific fields in live upstream responses (e.g. adjust prices, toggle feature flags) without altering the rest of the payload.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Network Throttling</h3>
+            <p class="card-body">Simulate real-world conditions from 56k modem to flaky 3G or custom bandwidth and latency presets right from your desk.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">No-Caching Controls</h3>
+            <p class="card-body">Strip cache headers globally or per-domain so your client always receives fresh upstream responses during active debugging.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Built for AI Coding Assistants -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Your AI agent can investigate. You authorize the work.</h2>
+          <p class="section-subhead">Built-in Model Context Protocol (MCP) server connects JoesProxy directly to Claude Code, Cursor, and Codex.</p>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 24px;">
+              An enrolled AI assistant can inspect captured sessions, formulate hypotheses, and propose targeted fixes. But no traffic mutation or sensitive data access takes effect without your explicit, in-app approval.
+            </p>
+            <div class="steps-row" style="grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px;">
+              <div class="step-card">
+                <div class="step-number">Step 1</div>
+                <div class="step-title">Agent Observes</div>
+                <div class="step-desc">Reads sanitized capture traces to isolate client errors.</div>
+              </div>
+              <div class="step-card">
+                <div class="step-number">Step 2</div>
+                <div class="step-title">Agent Proposes</div>
+                <div class="step-desc">Suggests a scoped Map Local, rewrite rule, or diagnostic check.</div>
+              </div>
+              <div class="step-card">
+                <div class="step-number">Step 3</div>
+                <div class="step-title">You Approve</div>
+                <div class="step-desc">Click Allow in JoesProxy with full visibility into the change.</div>
+              </div>
+              <div class="step-card">
+                <div class="step-number">Step 4</div>
+                <div class="step-title">Proxy Verifies</div>
+                <div class="step-desc">Gathers wire evidence and restores normal traffic when done.</div>
+              </div>
+            </div>
+          </div>
+          <div class="showcase-stage" style="margin: 0;">
+            <p class="screenshot-note">Screenshot omitted from this source snapshot: the earlier image has not been cleared for public distribution.</p>
+            <p class="showcase-caption">In-App Approvals: Every agent action requires explicit human authorization.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cutting-Edge Wire Harness -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Cutting-edge wire diagnostics for agentic workflows</h2>
+          <p class="section-subhead">Autonomous engines designed for systematic debugging, fuzzing, and client resilience testing.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3 class="card-title">Hypothesis DAGs & Fault Bisection</h3>
+            <p class="card-body">Formulate multi-branch hypothesis trees; automatically prune disproven theories and bisect root causes across complex multi-step API flows.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">LLM Stream Inspector & Sandbox</h3>
+            <p class="card-body">Inspect SSE token deltas, measure TTFT, throughput (tokens/sec), and inter-token jitter; detect prompt leakages and inject streaming faults.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Async Race-Condition Fuzzing</h3>
+            <p class="card-body">Permute concurrent API arrival orderings using deterministic micro-delays to expose timing-dependent crashes and race conditions.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Counterfactual Resilience Optimizer</h3>
+            <p class="card-body">Automatically mutate JSON response fields (nullify, omit, type-coerce) to isolate breaking points and generate defensive Swift decoding advice.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Multi-Session Trajectory Diffing</h3>
+            <p class="card-body">Align two capture files (e.g. baseline release vs broken nightly) to pinpoint the exact step index and payload delta where execution diverged.</p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Semantic Wire Mocking</h3>
+            <p class="card-body">Intercept natural language search and chat queries, matching them against mock pools using zero-dependency local vector cosine similarity.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Try These Prompts -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Try these prompts with your AI assistant</h2>
+          <p class="section-subhead">Once MCP is running, just describe what you want in plain language.</p>
+        </div>
+
+        <div class="prompt-grid">
+          <div class="prompt-card">
+            "Formulate an active hypothesis tree to bisect why checkout is failing: test if it's an expired token, missing discount field, or gateway timeout, and prune disproven branches automatically as traffic arrives."
+          </div>
+          <div class="prompt-card">
+            "Inspect our streaming LLM chat endpoint: measure time-to-first-token, throughput, and inter-token jitter, check for canary prompt leakage, and inject a stream stall to verify our loading UI doesn't hang."
+          </div>
+          <div class="prompt-card">
+            "Fuzz async race conditions during app launch: permute the arrival order of /auth, /config, and /profile using micro-delays to see if the client crashes when /config resolves before /auth."
+          </div>
+          <div class="prompt-card">
+            "Run a resilience optimizer on my /v1/feed response: mutate each JSON field to isolate the exact breaking point causing a client crash and suggest defensive decoding fixes."
+          </div>
+          <div class="prompt-card">
+            "Compare my baseline working session recording against a broken nightly recording: align their request traces and pinpoint the exact step index and payload delta where the client branched into a failure state."
+          </div>
+          <div class="prompt-card">
+            "Mock our natural language search queries: match any prompt semantically similar to 'cancel plan' or 'stop renewal' using vector cosine similarity and return a synthetic response without exact URL matching."
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Target Support -->
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Debug any device in minutes</h2>
+          <p class="section-subhead">Guided setup wizards walk through certificate trust and traffic verification step-by-step.</p>
+        </div>
+
+        <div class="target-grid">
+          <div class="target-card">
+            <div class="target-name">macOS</div>
+            <div class="target-desc">One-click system proxy routing or menu bar extra</div>
+          </div>
+          <div class="target-card">
+            <div class="target-name">iOS Simulator</div>
+            <div class="target-desc">Automated per-simulator trust checks & booted filter</div>
+          </div>
+          <div class="target-card">
+            <div class="target-name">iPhone / iPad</div>
+            <div class="target-desc">Guided certificate export, AirDrop, QR code, and Wi-Fi proxy</div>
+          </div>
+          <div class="target-card">
+            <div class="target-name">Apple TV</div>
+            <div class="target-desc">Supervised profile install & manifest inspection</div>
+          </div>
+          <div class="target-card">
+            <div class="target-name">Docker</div>
+            <div class="target-desc">CLI-driven certificate export for container egress</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final Call to Action -->
+    <section class="hero" style="background-color: var(--bg-surface);">
+      <div class="container">
+        <h2 class="hero-title" style="font-size: 2.75rem;">Ready to see what your app is really saying?</h2>
+        <p class="hero-support">Download JoesProxy for macOS and start capturing traffic in under 60 seconds.</p>
+        <div class="hero-actions">
+          <a href="download/index.html" class="btn btn-primary btn-lg">Download for macOS</a>
+          <a href="quick-start/index.html" class="btn btn-secondary btn-lg">Read Quick Start</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="footer-brand">JoesProxy</div>
+          <p class="footer-desc">A native macOS HTTP/HTTPS debugging proxy built for developers and AI coding agents.</p>
+          <p style="font-size: 0.8125rem; color: var(--text-muted);">MIT Licensed · Open Source</p>
+        </div>
+        <div>
+          <div class="footer-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="features/index.html">Features</a></li>
+            <li><a href="quick-start/index.html">Quick Start</a></li>
+            <li><a href="download/index.html">Download</a></li>
+            <li><a href="project/index.html#releases">Release Notes</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Architecture</div>
+          <ul class="footer-links">
+            <li><a href="how-it-works/index.html">How It Works</a></li>
+            <li><a href="how-it-works/index.html#trust">Security & Trust</a></li>
+            <li><a href="how-it-works/index.html#privacy">Privacy Statement</a></li>
+            <li><a href="help/index.html">Help & Troubleshooting</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Open Source</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/SerialForBreakfast/JoesProxy-Mac" target="_blank" rel="noopener">GitHub Repository</a></li>
+            <li><a href="project/index.html#contribute">Contributing</a></li>
+            <li><a href="project/index.html#license">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 JoesProxy Contributors. All rights reserved.</div>
+        <div>Runs 100% locally on your Mac. Zero analytics, zero telemetry.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

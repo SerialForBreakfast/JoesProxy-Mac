@@ -1,0 +1,21 @@
+{
+  "id": "player-qa-widescreen-v1",
+  "version": "2",
+  "displayName": "Widescreen Player QA",
+  "purpose": "16:9 adaptive test pattern with multilingual and audio-description rendition switching.",
+  "featureTags": ["player-qa", "16:9", "abr", "test-pattern", "timecode", "tone", "alternate-audio", "multilingual", "audio-description"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 800000, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 2200000, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 4500000, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {"name": "English Program", "language": "en", "associatedLanguage": null, "channels": "2", "isDefault": true, "isAutoSelect": true, "characteristics": [], "audibleSignature": "440 Hz"},
+    {"name": "English Audio Description", "language": "en", "associatedLanguage": "en", "channels": "2", "isDefault": false, "isAutoSelect": true, "characteristics": ["public.accessibility.describes-video"], "audibleSignature": "440 Hz program tone plus 1 kHz synthetic description cue"},
+    {"name": "Español", "language": "es", "associatedLanguage": null, "channels": "2", "isDefault": false, "isAutoSelect": true, "characteristics": [], "audibleSignature": "660 Hz"},
+    {"name": "Deutsch", "language": "de", "associatedLanguage": null, "channels": "2", "isDefault": false, "isAutoSelect": true, "characteristics": [], "audibleSignature": "330 Hz"}
+  ],
+  "audioDescription": "Four aligned stereo AAC-LC 48 kHz tracks with distinct safe-level synthetic signatures; the AD rendition carries the platform accessibility characteristic.",
+  "bundleSizeBudgetBytes": 10485760,
+  "isRecommended": true
+}

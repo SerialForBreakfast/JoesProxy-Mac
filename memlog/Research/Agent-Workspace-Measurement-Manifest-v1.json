@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "candidate": "A",
+  "fixture": {
+    "id": "agent-workspace-loopback-v1",
+    "bodyUTF8": "AGW1 synthetic response body v1\n",
+    "bodyByteCount": 32,
+    "bodySHA256": "85bab3bd71b1f4446db4efeb0910530aa6324ccc9e438e44ec6bf52814c3b6c2",
+    "metadata": {
+      "method": "GET",
+      "path": "/agent-workspace/synthetic-v1",
+      "responseStatus": 200,
+      "contentType": "application/octet-stream"
+    }
+  },
+  "harness": {
+    "traffic": "synthetic loopback only",
+    "proxyPort": "assigned by the test harness",
+    "originPort": "assigned by the test harness",
+    "metricsPort": "assigned by the test harness",
+    "retention": {
+      "sessionCount": 10000,
+      "bodyRetention": "fixture body retained subject to the configured capture policy",
+      "settingsSource": "isolated test configuration"
+    }
+  },
+  "querySequence": [
+    "read aggregate capture health",
+    "list retained synthetic sessions",
+    "request bounded body evidence for one known session",
+    "request bounded media or timeline analysis only when explicitly selected",
+    "verify the expected delivery bytes and query result"
+  ],
+  "expectedContract": {
+    "deliveredBodySHA256": "85bab3bd71b1f4446db4efeb0910530aa6324ccc9e438e44ec6bf52814c3b6c2",
+    "deliveredByteCount": 32,
+    "queryResult": "one bounded synthetic result with no unavailable-body error",
+    "parity": "all candidates must report the same delivery digest and bounded query result"
+  },
+  "collection": {
+    "phases": ["warmup", "empty-idle", "retained-observation", "traffic-query", "drain"],
+    "sampler": "isolated app self-sampler at one-second cadence",
+    "overhead": "sampler performs one bounded process query and one datagram when a prior send is not pending; layout probes are separately labeled and excluded from timing comparison",
+    "unavailableMetricPolicy": "missing, unsupported, or failed measurements are encoded as unavailable and never as zero"
+  },
+  "resultSchema": {
+    "required": ["candidate", "buildIdentity", "workloadDigest", "phase", "sampleCount", "parityResult"],
+    "measurementFields": ["physicalFootprintBytes", "residentBytes", "cpu", "wakeups", "latencyDistribution", "queueCounts", "retentionCounts", "agentWorkspaceDiagnostics"],
+    "counterFields": ["inspectorModelConstructionCount", "inspectorModelReleaseCount", "inspectorSubscriptionCount", "inspectorPresentationActivationCount", "inspectorPresentationDeactivationCount", "explicitAgentAnalysisCount"]
+  },
+  "stopConditions": [
+    "existing memory or disk safety guard triggers",
+    "unbounded growth is observed",
+    "synthetic forwarding or expected-query contract fails",
+    "a disruptive permission prompt appears"
+  ]
+}

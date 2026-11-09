@@ -1,0 +1,21 @@
+{
+  "id" : "00000000-0000-0000-0000-000000000103",
+  "payload" : {
+    "accepted" : false,
+    "clockOffsetMs" : 0,
+    "compatibilityMessage" : "This SDK is not compatible with JoesProxy 1.0.0. Update the JoesProxySDK package to a version that supports schema 1.",
+    "compatibilityResolution" : "update_sdk",
+    "latestSupportedSchemaVersion" : 1,
+    "minimumSupportedSchemaVersion" : 1,
+    "rejectReason" : "schema_version_unsupported",
+    "selectedSchemaVersion" : null,
+    "serverAppVersion" : "1.0.0",
+    "serverTimestamp" : "2026-06-28T17:00:00.200Z",
+    "supportedSchemaVersions" : [
+      1
+    ]
+  },
+  "sentAt" : "2026-06-28T17:00:00.200Z",
+  "type" : "handshakeAck",
+  "version" : 1
+}

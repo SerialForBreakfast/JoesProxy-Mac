@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Start Guide — JoesProxy</title>
+  <meta name="description" content="Get started with JoesProxy in minutes: Start the proxy, route your target device, verify traffic capture, and connect an AI coding agent.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="canonical" href="https://www.joesproxy.com/quick-start/">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="../index.html" class="brand">
+        JoesProxy <span class="brand-badge">Quick Start</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../features/index.html" class="nav-link">Features</a></li>
+          <li><a href="index.html" class="nav-link active">Quick Start</a></li>
+          <li><a href="../how-it-works/index.html" class="nav-link">How It Works</a></li>
+          <li><a href="../help/index.html" class="nav-link">Help</a></li>
+          <li><a href="../project/index.html" class="nav-link">Project</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-secondary btn-sm" data-theme-toggle title="Toggle Dark/Light Mode">Theme</button>
+        <a href="../download/index.html" class="btn btn-primary btn-sm">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-bottom: 32px;">
+      <div class="container">
+        <span class="hero-eyebrow">Setup & Orientation</span>
+        <h1 class="hero-title">Capture your first real request</h1>
+        <p class="hero-support">
+          Start the proxy, route your target application, and verify that traffic appears in the live table. Add HTTPS body decryption or an AI agent after your baseline capture is working.
+        </p>
+      </div>
+    </section>
+
+    <!-- 4-Step Verified Workflow -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="steps-row">
+          <div class="step-card">
+            <div class="step-number">Step 1</div>
+            <h3 class="step-title">Start the Proxy</h3>
+            <p class="step-desc">Open JoesProxy and select <strong>Start Proxy</strong>. Confirm the status pill reports Running (default port <code>9090</code>).</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">Step 2</div>
+            <h3 class="step-title">Route Your Target</h3>
+            <p class="step-desc">Point your Mac, Simulator, phone, or Docker container to the proxy host and port.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">Step 3</div>
+            <h3 class="step-title">Verify First Session</h3>
+            <p class="step-desc">Perform an action in your app and confirm the new request appears in the live capture table.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">Step 4</div>
+            <h3 class="step-title">Add HTTPS / AI Agent</h3>
+            <p class="step-desc">Install the root CA when you need decrypted payloads, or enable MCP on port 9091 for AI pairing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Target-Specific Setup Guides (Tabs) -->
+    <section class="section">
+      <div class="container" data-tabs>
+        <div class="section-header" style="margin-bottom: 32px;">
+          <h2 class="section-title">Target Setup Guides</h2>
+          <p class="section-subhead">Select your target platform to view verified routing instructions.</p>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm active" data-tab-target="mac">macOS</button>
+          <button class="btn btn-secondary btn-sm" data-tab-target="simulator">iOS Simulator</button>
+          <button class="btn btn-secondary btn-sm" data-tab-target="mobile">iPhone / iPad</button>
+          <button class="btn btn-secondary btn-sm" data-tab-target="tv">Apple TV</button>
+          <button class="btn btn-secondary btn-sm" data-tab-target="docker">Docker Container</button>
+          <button class="btn btn-secondary btn-sm" data-tab-target="agent">AI Agent (MCP)</button>
+        </div>
+
+        <!-- macOS Tab -->
+        <div data-tab-panel="mac" class="card active">
+          <h3 class="card-title">Routing macOS Traffic</h3>
+          <p class="card-body" style="margin-bottom: 16px;">
+            To capture traffic from browsers and Mac applications, turn on macOS system proxy routing:
+          </p>
+          <ol style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem;">
+            <li>In JoesProxy, click <strong>Start Proxy</strong>.</li>
+            <li>Enable <strong>Set macOS System Proxy</strong> in the top toolbar, or use the menu bar extra popover.</li>
+            <li>Open Safari or run a <code>curl</code> request in Terminal. Your requests will appear live in the table.</li>
+          </ol>
+        </div>
+
+        <!-- Simulator Tab -->
+        <div data-tab-panel="simulator" class="card">
+          <h3 class="card-title">iOS Simulator Setup</h3>
+          <p class="card-body" style="margin-bottom: 16px;">
+            The iOS Simulator automatically shares your Mac’s system proxy settings when system proxy is enabled.
+          </p>
+          <ol style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem;">
+            <li>Open <strong>Certificate > HTTPS Setup</strong> in JoesProxy.</li>
+            <li>Select <strong>Simulator Setup</strong> to view all booted simulators and install the JoesProxy root CA with one click.</li>
+            <li>Launch your app in the Simulator. Decrypted HTTPS sessions will appear in JoesProxy.</li>
+          </ol>
+        </div>
+
+        <!-- Mobile Tab -->
+        <div data-tab-panel="mobile" class="card">
+          <h3 class="card-title">iPhone & iPad Setup</h3>
+          <ol style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem;">
+            <li>Ensure your iPhone/iPad is on the same local Wi-Fi network as your Mac.</li>
+            <li>In iOS <strong>Settings > Wi-Fi</strong>, tap the info icon next to your network, scroll to <strong>Configure Proxy</strong>, choose <strong>Manual</strong>, and enter your Mac’s local IP address and port <code>9090</code>.</li>
+            <li>Open <strong>Certificate > HTTPS Setup</strong> in JoesProxy to scan the QR code or AirDrop the root certificate profile to your device.</li>
+            <li>In iOS, go to <strong>Settings > General > VPN & Device Management</strong> to install the profile, then go to <strong>Settings > General > About > Certificate Trust Settings</strong> to enable full trust.</li>
+          </ol>
+        </div>
+
+        <!-- Apple TV Tab -->
+        <div data-tab-panel="tv" class="card">
+          <h3 class="card-title">Apple TV (tvOS) Setup</h3>
+          <p class="card-body" style="margin-bottom: 16px;">
+            Apple TV requires a supervised configuration profile to install custom root certificates.
+          </p>
+          <ol style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem;">
+            <li>Open <strong>Help > Apple TV Setup Guide</strong> in JoesProxy.</li>
+            <li>Export the payload profile or install it via Apple Configurator / MDM.</li>
+            <li>Set HTTP proxy on Apple TV Wi-Fi settings to point to your Mac.</li>
+          </ol>
+        </div>
+
+        <!-- Docker Tab -->
+        <div data-tab-panel="docker" class="card">
+          <h3 class="card-title">Docker Container Egress Setup</h3>
+          <p class="card-body" style="margin-bottom: 16px;">
+            Export the root CA and pass standard proxy environment variables to your container:
+          </p>
+          <div class="code-box">
+            <pre><code># 1. Export JoesProxy root CA certificate
+joesproxyctl certificate export --format pem --output ./joesproxy-ca.pem
+
+# 2. Run container with HTTP/HTTPS proxy pointing to host
+docker run -e HTTP_PROXY="http://host.docker.internal:9090" \
+           -e HTTPS_PROXY="http://host.docker.internal:9090" \
+           -e SSL_CERT_FILE="/certs/joesproxy-ca.pem" \
+           -v "$(pwd)/joesproxy-ca.pem:/certs/joesproxy-ca.pem" \
+           my-app-image</code></pre>
+          </div>
+        </div>
+
+        <!-- AI Agent Tab -->
+        <div data-tab-panel="agent" class="card">
+          <h3 class="card-title">AI Coding Assistant (MCP) Setup</h3>
+          <p class="card-body" style="margin-bottom: 16px;">
+            Connect Claude Code, Cursor, or Codex via the Model Context Protocol:
+          </p>
+          <ol style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem;">
+            <li>In JoesProxy, open <strong>MCP > Open MCP Management</strong> (<code>⌘⌥M</code>) and click <strong>Start MCP Server</strong> (default port <code>9091</code>).</li>
+            <li>Configure your agent client to connect to <code>http://127.0.0.1:9091/mcp</code>.</li>
+            <li>Verify connectivity by running <code>joesproxyctl doctor</code> in terminal.</li>
+            <li>Prompt your agent in natural language to inspect traffic or propose mutation rules.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- Troubleshooting Callout -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="card" style="border-left: 4px solid var(--warning);">
+          <h3 class="card-title" style="color: var(--warning);">Troubleshooting: What to check if no traffic appears</h3>
+          <ul style="margin-left: 20px; color: var(--text-secondary); line-height: 1.8; font-size: 0.9375rem; margin-top: 12px;">
+            <li><strong>Proxy listener state:</strong> Confirm the status indicator in JoesProxy reports <em>Running on port 9090</em>.</li>
+            <li><strong>Network reachability:</strong> If debugging a physical device, confirm device and Mac are on the same Wi-Fi subnet with AP isolation disabled.</li>
+            <li><strong>Target bypass list:</strong> Verify that target domains are not included in macOS Network Proxy Bypass / Exception lists.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col-brand">
+          <div class="footer-brand">JoesProxy</div>
+          <p class="footer-desc">A native macOS HTTP/HTTPS debugging proxy built for developers and AI coding agents.</p>
+        </div>
+        <div>
+          <div class="footer-title">Product</div>
+          <ul class="footer-links">
+            <li><a href="../features/index.html">Features</a></li>
+            <li><a href="index.html">Quick Start</a></li>
+            <li><a href="../download/index.html">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Architecture</div>
+          <ul class="footer-links">
+            <li><a href="../how-it-works/index.html">How It Works</a></li>
+            <li><a href="../help/index.html">Help Hub</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-title">Open Source</div>
+          <ul class="footer-links">
+            <li><a href="https://github.com/SerialForBreakfast/JoesProxy-Mac" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="../project/index.html">Project Story</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 JoesProxy Contributors. MIT Licensed.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

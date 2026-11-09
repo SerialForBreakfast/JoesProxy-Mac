@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "joesproxy": {
+      "type": "http",
+      "url": "http://127.0.0.1:9091/mcp",
+      "headers": {
+        "Authorization": "Bearer PASTE_ONE_TIME_ENROLLMENT_CREDENTIAL"
+      }
+    }
+  }
+}

@@ -1,0 +1,1205 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		6600BB242FF234FC00709515 /* JoesProxySDK in Frameworks */ = {isa = PBXBuildFile; productRef = 6600BB232FF234FC00709515 /* JoesProxySDK */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		44279FD32FF2350300709515 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 44279FBD2FF234FC00709515 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 44279FC42FF234FC00709515;
+			remoteInfo = JoesProxyCompanion;
+		};
+		44279FDD2FF2350300709515 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 44279FBD2FF234FC00709515 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 44279FC42FF234FC00709515;
+			remoteInfo = JoesProxyCompanion;
+		};
+		5500AA612FF234FC00709515 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 44279FBD2FF234FC00709515 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5500AA512FF234FC00709515;
+			remoteInfo = JoesProxyTV;
+		};
+		5500AA622FF234FC00709515 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 44279FBD2FF234FC00709515 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5500AA512FF234FC00709515;
+			remoteInfo = JoesProxyTV;
+		};
+		6600BB612FF234FC00709515 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 44279FBD2FF234FC00709515 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6600BB512FF234FC00709515;
+			remoteInfo = JoesProxyPlayer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		44279FC52FF234FC00709515 /* JoesProxyCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JoesProxyCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		44279FD22FF2350300709515 /* JoesProxyCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		44279FDC2FF2350300709515 /* JoesProxyCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5500AA012FF234FC00709515 /* JoesProxyTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JoesProxyTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5500AA022FF234FC00709515 /* JoesProxyTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5500AA032FF234FC00709515 /* JoesProxyTVUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyTVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6600BB012FF234FC00709515 /* JoesProxyPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JoesProxyPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6600BB022FF234FC00709515 /* JoesProxyPlayerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoesProxyPlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5500AA142FF234FC00709515 /* Exceptions for "../JoesProxyTV" folder in "JoesProxyTV" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5500AA512FF234FC00709515 /* JoesProxyTV */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		44279FC72FF234FC00709515 /* JoesProxyCompanion */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JoesProxyCompanion;
+			sourceTree = "<group>";
+		};
+		44279FD52FF2350300709515 /* JoesProxyCompanionTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JoesProxyCompanionTests;
+			sourceTree = "<group>";
+		};
+		44279FDF2FF2350300709515 /* JoesProxyCompanionUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JoesProxyCompanionUITests;
+			sourceTree = "<group>";
+		};
+		5500AA112FF234FC00709515 /* ../JoesProxyTV */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5500AA142FF234FC00709515 /* Exceptions for "../JoesProxyTV" folder in "JoesProxyTV" target */,
+			);
+			path = ../JoesProxyTV;
+			sourceTree = "<group>";
+		};
+		5500AA122FF234FC00709515 /* ../JoesProxyTVTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ../JoesProxyTVTests;
+			sourceTree = "<group>";
+		};
+		5500AA132FF234FC00709515 /* ../JoesProxyTVUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ../JoesProxyTVUITests;
+			sourceTree = "<group>";
+		};
+		6600BB112FF234FC00709515 /* ../JoesProxyPlayer/JoesProxyPlayer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ../JoesProxyPlayer/JoesProxyPlayer;
+			sourceTree = "<group>";
+		};
+		6600BB122FF234FC00709515 /* ../JoesProxyPlayerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ../JoesProxyPlayerTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		44279FC22FF234FC00709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44279FCF2FF2350300709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44279FD92FF2350300709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA212FF234FC00709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA222FF234FC00709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA232FF234FC00709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6600BB212FF234FC00709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6600BB242FF234FC00709515 /* JoesProxySDK in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6600BB222FF234FC00709515 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		44279FBC2FF234FC00709515 = {
+			isa = PBXGroup;
+			children = (
+				44279FC72FF234FC00709515 /* JoesProxyCompanion */,
+				44279FD52FF2350300709515 /* JoesProxyCompanionTests */,
+				44279FDF2FF2350300709515 /* JoesProxyCompanionUITests */,
+				5500AA112FF234FC00709515 /* ../JoesProxyTV */,
+				5500AA122FF234FC00709515 /* ../JoesProxyTVTests */,
+				5500AA132FF234FC00709515 /* ../JoesProxyTVUITests */,
+				6600BB112FF234FC00709515 /* ../JoesProxyPlayer/JoesProxyPlayer */,
+				6600BB122FF234FC00709515 /* ../JoesProxyPlayerTests */,
+				44279FC62FF234FC00709515 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		44279FC62FF234FC00709515 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				44279FC52FF234FC00709515 /* JoesProxyCompanion.app */,
+				44279FD22FF2350300709515 /* JoesProxyCompanionTests.xctest */,
+				44279FDC2FF2350300709515 /* JoesProxyCompanionUITests.xctest */,
+				5500AA012FF234FC00709515 /* JoesProxyTV.app */,
+				5500AA022FF234FC00709515 /* JoesProxyTVTests.xctest */,
+				5500AA032FF234FC00709515 /* JoesProxyTVUITests.xctest */,
+				6600BB012FF234FC00709515 /* JoesProxyPlayer.app */,
+				6600BB022FF234FC00709515 /* JoesProxyPlayerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		44279FC42FF234FC00709515 /* JoesProxyCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 44279FE62FF2350300709515 /* Build configuration list for PBXNativeTarget "JoesProxyCompanion" */;
+			buildPhases = (
+				44279FC12FF234FC00709515 /* Sources */,
+				44279FC22FF234FC00709515 /* Frameworks */,
+				44279FC32FF234FC00709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				44279FC72FF234FC00709515 /* JoesProxyCompanion */,
+			);
+			name = JoesProxyCompanion;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyCompanion;
+			productReference = 44279FC52FF234FC00709515 /* JoesProxyCompanion.app */;
+			productType = "com.apple.product-type.application";
+		};
+		44279FD12FF2350300709515 /* JoesProxyCompanionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 44279FE92FF2350300709515 /* Build configuration list for PBXNativeTarget "JoesProxyCompanionTests" */;
+			buildPhases = (
+				44279FCE2FF2350300709515 /* Sources */,
+				44279FCF2FF2350300709515 /* Frameworks */,
+				44279FD02FF2350300709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				44279FD42FF2350300709515 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				44279FD52FF2350300709515 /* JoesProxyCompanionTests */,
+			);
+			name = JoesProxyCompanionTests;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyCompanionTests;
+			productReference = 44279FD22FF2350300709515 /* JoesProxyCompanionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		44279FDB2FF2350300709515 /* JoesProxyCompanionUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 44279FEC2FF2350300709515 /* Build configuration list for PBXNativeTarget "JoesProxyCompanionUITests" */;
+			buildPhases = (
+				44279FD82FF2350300709515 /* Sources */,
+				44279FD92FF2350300709515 /* Frameworks */,
+				44279FDA2FF2350300709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				44279FDE2FF2350300709515 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				44279FDF2FF2350300709515 /* JoesProxyCompanionUITests */,
+			);
+			name = JoesProxyCompanionUITests;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyCompanionUITests;
+			productReference = 44279FDC2FF2350300709515 /* JoesProxyCompanionUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		5500AA512FF234FC00709515 /* JoesProxyTV */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5500AA912FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyTV" */;
+			buildPhases = (
+				5500AA312FF234FC00709515 /* Sources */,
+				5500AA212FF234FC00709515 /* Frameworks */,
+				5500AA412FF234FC00709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5500AA112FF234FC00709515 /* ../JoesProxyTV */,
+			);
+			name = JoesProxyTV;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyTV;
+			productReference = 5500AA012FF234FC00709515 /* JoesProxyTV.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5500AA522FF234FC00709515 /* JoesProxyTVTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5500AA922FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyTVTests" */;
+			buildPhases = (
+				5500AA322FF234FC00709515 /* Sources */,
+				5500AA222FF234FC00709515 /* Frameworks */,
+				5500AA422FF234FC00709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5500AA712FF234FC00709515 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5500AA122FF234FC00709515 /* ../JoesProxyTVTests */,
+			);
+			name = JoesProxyTVTests;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyTVTests;
+			productReference = 5500AA022FF234FC00709515 /* JoesProxyTVTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5500AA532FF234FC00709515 /* JoesProxyTVUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5500AA932FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyTVUITests" */;
+			buildPhases = (
+				5500AA332FF234FC00709515 /* Sources */,
+				5500AA232FF234FC00709515 /* Frameworks */,
+				5500AA432FF234FC00709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5500AA722FF234FC00709515 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5500AA132FF234FC00709515 /* ../JoesProxyTVUITests */,
+			);
+			name = JoesProxyTVUITests;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyTVUITests;
+			productReference = 5500AA032FF234FC00709515 /* JoesProxyTVUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		6600BB512FF234FC00709515 /* JoesProxyPlayer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6600BB912FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyPlayer" */;
+			buildPhases = (
+				6600BB312FF234FC00709515 /* Sources */,
+				6600BB212FF234FC00709515 /* Frameworks */,
+				6600BB412FF234FC00709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6600BB112FF234FC00709515 /* ../JoesProxyPlayer/JoesProxyPlayer */,
+			);
+			name = JoesProxyPlayer;
+			packageProductDependencies = (
+				6600BB232FF234FC00709515 /* JoesProxySDK */,
+			);
+			productName = JoesProxyPlayer;
+			productReference = 6600BB012FF234FC00709515 /* JoesProxyPlayer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		6600BB522FF234FC00709515 /* JoesProxyPlayerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6600BB922FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyPlayerTests" */;
+			buildPhases = (
+				6600BB322FF234FC00709515 /* Sources */,
+				6600BB222FF234FC00709515 /* Frameworks */,
+				6600BB422FF234FC00709515 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6600BB712FF234FC00709515 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6600BB122FF234FC00709515 /* ../JoesProxyPlayerTests */,
+			);
+			name = JoesProxyPlayerTests;
+			packageProductDependencies = (
+			);
+			productName = JoesProxyPlayerTests;
+			productReference = 6600BB022FF234FC00709515 /* JoesProxyPlayerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		44279FBD2FF234FC00709515 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					44279FC42FF234FC00709515 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					44279FD12FF2350300709515 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 44279FC42FF234FC00709515;
+					};
+					44279FDB2FF2350300709515 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 44279FC42FF234FC00709515;
+					};
+					5500AA512FF234FC00709515 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					5500AA522FF234FC00709515 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 5500AA512FF234FC00709515;
+					};
+					5500AA532FF234FC00709515 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 5500AA512FF234FC00709515;
+					};
+					6600BB512FF234FC00709515 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					6600BB522FF234FC00709515 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 6600BB512FF234FC00709515;
+					};
+				};
+			};
+			buildConfigurationList = 44279FC02FF234FC00709515 /* Build configuration list for PBXProject "JoesProxyCompanion" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 44279FBC2FF234FC00709515;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6600BB202FF234FC00709515 /* XCLocalSwiftPackageReference "../JoesProxySDK" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 44279FC62FF234FC00709515 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				44279FC42FF234FC00709515 /* JoesProxyCompanion */,
+				44279FD12FF2350300709515 /* JoesProxyCompanionTests */,
+				44279FDB2FF2350300709515 /* JoesProxyCompanionUITests */,
+				5500AA512FF234FC00709515 /* JoesProxyTV */,
+				5500AA522FF234FC00709515 /* JoesProxyTVTests */,
+				5500AA532FF234FC00709515 /* JoesProxyTVUITests */,
+				6600BB512FF234FC00709515 /* JoesProxyPlayer */,
+				6600BB522FF234FC00709515 /* JoesProxyPlayerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		44279FC32FF234FC00709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44279FD02FF2350300709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44279FDA2FF2350300709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA412FF234FC00709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA422FF234FC00709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA432FF234FC00709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6600BB412FF234FC00709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6600BB422FF234FC00709515 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		44279FC12FF234FC00709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44279FCE2FF2350300709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		44279FD82FF2350300709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA312FF234FC00709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA322FF234FC00709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5500AA332FF234FC00709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6600BB312FF234FC00709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6600BB322FF234FC00709515 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		44279FD42FF2350300709515 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 44279FC42FF234FC00709515 /* JoesProxyCompanion */;
+			targetProxy = 44279FD32FF2350300709515 /* PBXContainerItemProxy */;
+		};
+		44279FDE2FF2350300709515 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 44279FC42FF234FC00709515 /* JoesProxyCompanion */;
+			targetProxy = 44279FDD2FF2350300709515 /* PBXContainerItemProxy */;
+		};
+		5500AA712FF234FC00709515 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5500AA512FF234FC00709515 /* JoesProxyTV */;
+			targetProxy = 5500AA612FF234FC00709515 /* PBXContainerItemProxy */;
+		};
+		5500AA722FF234FC00709515 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5500AA512FF234FC00709515 /* JoesProxyTV */;
+			targetProxy = 5500AA622FF234FC00709515 /* PBXContainerItemProxy */;
+		};
+		6600BB712FF234FC00709515 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6600BB512FF234FC00709515 /* JoesProxyPlayer */;
+			targetProxy = 6600BB612FF234FC00709515 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		44279FE42FF2350300709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		44279FE52FF2350300709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		44279FE72FF2350300709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyCompanion;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		44279FE82FF2350300709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyCompanion;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		44279FEA2FF2350300709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyCompanionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxyCompanion.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxyCompanion";
+			};
+			name = Debug;
+		};
+		44279FEB2FF2350300709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyCompanionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxyCompanion.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxyCompanion";
+			};
+			name = Release;
+		};
+		44279FED2FF2350300709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyCompanionUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = JoesProxyCompanion;
+			};
+			name = Debug;
+		};
+		44279FEE2FF2350300709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyCompanionUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = JoesProxyCompanion;
+			};
+			name = Release;
+		};
+		5500AA812FF234FC00709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ../JoesProxyTV/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTV;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		5500AA822FF234FC00709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ../JoesProxyTV/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTV;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+		5500AA832FF234FC00709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTVTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxyTV.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxyTV";
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		5500AA842FF234FC00709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTVTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxyTV.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxyTV";
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+		5500AA852FF234FC00709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTVUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = JoesProxyTV;
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		5500AA862FF234FC00709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ShowBlender.JoesProxyTVUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = JoesProxyTV;
+				TVOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+		6600BB812FF234FC00709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = JoePlayer;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyPlayer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6600BB822FF234FC00709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = JoePlayer;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyPlayer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6600BB832FF234FC00709515 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyPlayerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxyPlayer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxyPlayer";
+			};
+			name = Debug;
+		};
+		6600BB842FF234FC00709515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RWZ25NGH8K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.showblender.JoesProxyPlayerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JoesProxyPlayer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/JoesProxyPlayer";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		44279FC02FF234FC00709515 /* Build configuration list for PBXProject "JoesProxyCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				44279FE42FF2350300709515 /* Debug */,
+				44279FE52FF2350300709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		44279FE62FF2350300709515 /* Build configuration list for PBXNativeTarget "JoesProxyCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				44279FE72FF2350300709515 /* Debug */,
+				44279FE82FF2350300709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		44279FE92FF2350300709515 /* Build configuration list for PBXNativeTarget "JoesProxyCompanionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				44279FEA2FF2350300709515 /* Debug */,
+				44279FEB2FF2350300709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		44279FEC2FF2350300709515 /* Build configuration list for PBXNativeTarget "JoesProxyCompanionUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				44279FED2FF2350300709515 /* Debug */,
+				44279FEE2FF2350300709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5500AA912FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyTV" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5500AA812FF234FC00709515 /* Debug */,
+				5500AA822FF234FC00709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5500AA922FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyTVTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5500AA832FF234FC00709515 /* Debug */,
+				5500AA842FF234FC00709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5500AA932FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyTVUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5500AA852FF234FC00709515 /* Debug */,
+				5500AA862FF234FC00709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6600BB912FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyPlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6600BB812FF234FC00709515 /* Debug */,
+				6600BB822FF234FC00709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6600BB922FF234FC00709515 /* Build configuration list for PBXNativeTarget "JoesProxyPlayerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6600BB832FF234FC00709515 /* Debug */,
+				6600BB842FF234FC00709515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		6600BB202FF234FC00709515 /* XCLocalSwiftPackageReference "../JoesProxySDK" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../JoesProxySDK;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6600BB232FF234FC00709515 /* JoesProxySDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6600BB202FF234FC00709515 /* XCLocalSwiftPackageReference "../JoesProxySDK" */;
+			productName = JoesProxySDK;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 44279FBD2FF234FC00709515 /* Project object */;
+}

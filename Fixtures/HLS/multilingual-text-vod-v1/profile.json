@@ -1,0 +1,59 @@
+{
+  "id": "multilingual-text-vod-v1",
+  "version": "1",
+  "displayName": "Multilingual Captions",
+  "purpose": "24-second shared-media subtitle selection test. VOD default; explicit conformant liveLoop supports DVR and shared-clock text. Diagnostic text is not reviewed localization or spoken translation. WebVTT only; embedded captions and JIT text are unsupported.",
+  "featureTags": ["webvtt", "subtitles", "sdh", "forced", "multilingual", "vod", "live-loop", "diagnostic-unreviewed", "rtl", "cjk"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 928000, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 2464000, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 4964000, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "isRecommended": false,
+  "conformanceClass": "stressCase",
+  "expectedClientBehavior": "Advertise seven distinct text choices. Select language/role explicitly and verify visible cue identity against media time. Delivery does not establish rendering. Forced/automatic selection depends on player preferences.",
+  "textFixture": {
+    "schemaVersion": 1,
+    "baseProfileID": "player-qa-widescreen-v1",
+    "baseInventorySHA256": "e3b5b97fb9c0158b6c0900021fc274bffa2a756cb316ac709ce735d69dcd449a",
+    "durationMilliseconds": 24000,
+    "segmentMilliseconds": 4000,
+    "mediaTimestamp": 132000,
+    "sourceRevision": "joesproxy-text-20260921-v1",
+    "provenance": "Original project-authored diagnostic text under the repository license. Translations are unreviewed diagnostic samples. Media reuses hash-pinned project-generated test pattern and tones; no speech translation is claimed.",
+    "tracks": [
+      {"id":"en","name":"English — Diagnostic","language":"en","role":"subtitles","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"CUE-001","startMilliseconds":500,"endMilliseconds":2500,"text":"English caption test."},
+        {"id":"CUE-002","startMilliseconds":3500,"endMilliseconds":5500,"text":"This cue crosses a segment boundary."},
+        {"id":"CUE-003","startMilliseconds":12500,"endMilliseconds":15000,"text":"Caption test after a silent interval."},
+        {"id":"CUE-004","startMilliseconds":20500,"endMilliseconds":23000,"text":"End of the caption test."}]},
+      {"id":"es","name":"Español — Diagnóstico","language":"es","role":"subtitles","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"CUE-001","startMilliseconds":500,"endMilliseconds":2500,"text":"Prueba de subtítulos en español."},
+        {"id":"CUE-002","startMilliseconds":3500,"endMilliseconds":5500,"text":"Este subtítulo cruza un límite de segmento."},
+        {"id":"CUE-003","startMilliseconds":12500,"endMilliseconds":15000,"text":"Prueba después de un intervalo sin subtítulos."},
+        {"id":"CUE-004","startMilliseconds":20500,"endMilliseconds":23000,"text":"Fin de la prueba de subtítulos."}]},
+      {"id":"fr","name":"Français — Diagnostic","language":"fr","role":"subtitles","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"CUE-001","startMilliseconds":500,"endMilliseconds":2500,"text":"Test de sous-titres en français."},
+        {"id":"CUE-002","startMilliseconds":3500,"endMilliseconds":5500,"text":"Ce sous-titre traverse une limite de segment."},
+        {"id":"CUE-003","startMilliseconds":12500,"endMilliseconds":15000,"text":"Test après un intervalle sans sous-titres."},
+        {"id":"CUE-004","startMilliseconds":20500,"endMilliseconds":23000,"text":"Fin du test de sous-titres."}]},
+      {"id":"en-sdh","name":"English SDH — Diagnostic","language":"en","role":"sdh","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"CUE-001","startMilliseconds":500,"endMilliseconds":2500,"text":"[Steady synthetic tone; no speech]"},
+        {"id":"CUE-002","startMilliseconds":3500,"endMilliseconds":5500,"text":"[Tone continues across the segment boundary]"},
+        {"id":"CUE-003","startMilliseconds":12500,"endMilliseconds":15000,"text":"[Synthetic tone continues]"},
+        {"id":"CUE-004","startMilliseconds":20500,"endMilliseconds":23000,"text":"[Test pattern and tone approach the end]"}]},
+      {"id":"en-forced","name":"English Forced — Diagnostic","language":"en","role":"forced","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"FORCED-001","startMilliseconds":16500,"endMilliseconds":18500,"text":"Forced-only diagnostic marker (not translated dialogue)."}]},
+      {"id":"ar","name":"العربية — اختبار","language":"ar","role":"subtitles","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"CUE-001","startMilliseconds":500,"endMilliseconds":2500,"text":"اختبار الترجمة العربية 123"},
+        {"id":"CUE-002","startMilliseconds":3500,"endMilliseconds":5500,"text":"اختبار عبر حدود المقطع"},
+        {"id":"CUE-003","startMilliseconds":12500,"endMilliseconds":15000,"text":"اختبار بعد فترة بدون ترجمة"},
+        {"id":"CUE-004","startMilliseconds":20500,"endMilliseconds":23000,"text":"نهاية اختبار الترجمة"}]},
+      {"id":"ja","name":"日本語 — テスト","language":"ja","role":"subtitles","isDefault":false,"isAutoSelect":true,"reviewStatus":"diagnosticUnreviewed","cues":[
+        {"id":"CUE-001","startMilliseconds":500,"endMilliseconds":2500,"text":"日本語字幕のテスト。"},
+        {"id":"CUE-002","startMilliseconds":3500,"endMilliseconds":5500,"text":"この字幕はセグメントの境界をまたぎます。"},
+        {"id":"CUE-003","startMilliseconds":12500,"endMilliseconds":15000,"text":"字幕のない区間の後のテスト。"},
+        {"id":"CUE-004","startMilliseconds":20500,"endMilliseconds":23000,"text":"字幕テストの終了。"}]}
+    ]
+  }
+}

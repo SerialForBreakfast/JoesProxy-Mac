@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Joseph McCraw</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_joesproxy._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>JoesProxy advertises its SDK event server and profile server on your local network so companion apps and devices can discover this Mac during setup.</string>
+
+	<!-- Sparkle updater: feed URL and EdDSA public key.
+	     SUPublicEDKey must be set to the base64 key printed by ./bin/generate_keys
+	     before the first signed release is built. -->
+	<key>SUFeedURL</key>
+	<string>https://SerialForBreakfast.github.io/JoesProxy-Mac/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>REPLACE_WITH_EDDSA_PUBLIC_KEY_AFTER_RUNNING_generate_keys</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+
+	<!-- Local-only build variant (AO residual gap): launches with no Dock icon from the very first
+	     frame. Unlike the runtime `.accessory` Settings toggle (`MenuBarOnlyActivation`), which still
+	     shows a Dock icon briefly at cold start, this key applies before the app ever creates its
+	     first window. Not used by the standard Release configuration or the notarized/distributed
+	     build — see the "Release-MenuBarOnly" build configuration and "JoesProxy-MenuBarOnly" scheme. -->
+	<key>LSUIElement</key>
+	<true/>
+
+	<!-- Exported UTI: declares the .jproxy file type owned by this app -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.JoesProxy.jproxy</string>
+			<key>UTTypeDescription</key>
+			<string>JoesProxy Session Recording</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>jproxy</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+
+	<!-- URL scheme: joesproxy://session/<uuid> deep-links from the iOS SDK overlay to the selected session -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>joesproxy</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.joesproxy.deeplink</string>
+		</dict>
+	</array>
+
+	<!-- Document type binding: lets Finder and the OS associate .jproxy with this app -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>JoesProxy Session Recording</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.JoesProxy.jproxy</string>
+			</array>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>jproxy</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

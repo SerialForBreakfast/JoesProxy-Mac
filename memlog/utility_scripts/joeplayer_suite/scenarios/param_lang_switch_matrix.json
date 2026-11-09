@@ -1,0 +1,9 @@
+{
+  "profiles": ["param-lang-en-es"],
+  "offsetsSeconds": [-0.5, 0.5],
+  "trialsPerCell": 3,
+  "audioTarget": "es",
+  "playAtSeconds": 0.1,
+  "trialDurationSeconds": 20,
+  "faults": []
+}

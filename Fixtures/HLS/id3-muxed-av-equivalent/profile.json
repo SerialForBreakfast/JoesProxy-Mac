@@ -1,0 +1,44 @@
+{
+  "id": "id3-muxed-av-equivalent",
+  "version": "1",
+  "displayName": "ID3 Muxed A/V Equivalent",
+  "purpose": "Multiplexed MPEG-2 TS ID3 timed metadata across all A/V variants.",
+  "featureTags": ["positive-control", "id3", "timed-metadata", "mpeg2ts", "abr-consistency", "sdr", "avc", "aac"],
+  "renditions": [
+    {"width": 640, "height": 360, "bandwidth": 265164, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 359164, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 497925, "codecs": "avc1.640029,mp4a.40.2"}
+  ],
+  "audioRenditions": [
+    {
+      "name": "In-Band Program Audio",
+      "language": "en",
+      "channels": "2",
+      "isDefault": true,
+      "isAutoSelect": true,
+      "characteristics": [],
+      "audibleSignature": "440 Hz synthetic tone",
+      "deliveryKind": "inBand",
+      "variantsCarryingInBand": ["video-360", "video-720", "video-1080"],
+      "publicationSchedule": "static",
+      "segmentGridDuration": 6.0,
+      "hasDiscontinuities": false
+    }
+  ],
+  "id3Schedule": {
+    "carrier": "mpeg2TS",
+    "version": "id3v2.3",
+    "allowedFrameIDs": ["TIT2", "TXXX"],
+    "events": [
+      {"id": "evt-000", "eventClass": "segmentStart", "mediaTime": 0.0, "segmentIndex": 0, "frameID": "TIT2", "label": "Segment 000"},
+      {"id": "evt-002", "eventClass": "intraSegment", "mediaTime": 12.0, "segmentIndex": 2, "frameID": "TIT2", "label": "Segment 002"},
+      {"id": "evt-005", "eventClass": "preDiscontinuity", "mediaTime": 30.0, "segmentIndex": 5, "frameID": "TIT2", "label": "Segment 005"}
+    ]
+  },
+  "audioTopology": "muxedOnly",
+  "bundleSizeBudgetBytes": 26214400,
+  "isRecommended": false,
+  "conformanceClass": "conformantControl",
+  "controlledFaults": [],
+  "expectedClientBehavior": "ID3 timed metadata callbacks should remain consistent across ABR switches."
+}
