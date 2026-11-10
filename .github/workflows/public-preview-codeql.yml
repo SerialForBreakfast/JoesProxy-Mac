@@ -18,7 +18,7 @@ jobs:
   codeql:
     # CodeQL cannot trace builds on macOS 27 or Xcode 27, so this job alone uses Xcode 26.
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 120
     permissions:
       contents: read
       security-events: write
