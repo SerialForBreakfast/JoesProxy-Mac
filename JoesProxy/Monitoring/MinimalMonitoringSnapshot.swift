@@ -11,6 +11,7 @@ struct MinimalMonitoringSnapshot: Equatable, Sendable {
     var activeConnections: Int
     var errorCount: Int
     var droppedSessionCount: Int
+    var evictedBodyCount = 0
     var captureDuration: TimeInterval?
     /// Aggregate pending MCP approval count only (AO Axis 1) — never per-request state.
     var pendingApprovalCount: Int

@@ -122,7 +122,7 @@ final class MinimalMonitoringViewModelTests: XCTestCase {
         XCTAssertEqual(tile(viewModel, "connections")?.value, "3")
         XCTAssertEqual(tile(viewModel, "errors")?.value, "3")
         XCTAssertEqual(tile(viewModel, "errors")?.level, .caution)
-        XCTAssertEqual(tile(viewModel, "dropped")?.value, "1")
+        XCTAssertEqual(tile(viewModel, "dropped")?.value, "Sessions: 1\nBodies: 0")
         XCTAssertEqual(tile(viewModel, "dropped")?.level, .caution)
         XCTAssertEqual(tile(viewModel, "approvals")?.value, "2")
         XCTAssertEqual(tile(viewModel, "approvals")?.level, .caution)

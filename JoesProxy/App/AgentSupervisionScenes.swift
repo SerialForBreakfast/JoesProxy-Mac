@@ -50,6 +50,7 @@ struct AgentMonitoringView: View {
     @ObservedObject var compact: CompactModeController
     @Environment(\.openWindow) private var openWindow
     @State private var stopFailure: String?
+    @State private var dismissedCapacityGap: UInt64?
 
     var body: some View {
         MinimalMonitoringView(
@@ -64,7 +65,8 @@ struct AgentMonitoringView: View {
                 }
             },
             onManageModifications: { openWindow(id: "agent-management") },
-            captureAdmissionBudget: coordinator.sessionRecorder.admission,
+            capacityNotice: CaptureAdmissionNotice(budget: coordinator.sessionRecorder.admission,
+                store: coordinator.sessionStore, dismissedGap: $dismissedCapacityGap, openCapacitySettings: nil),
             uploadSpoolService: coordinator.uploadSpoolService
         )
         .alert("Modification cleanup failed", isPresented: Binding(

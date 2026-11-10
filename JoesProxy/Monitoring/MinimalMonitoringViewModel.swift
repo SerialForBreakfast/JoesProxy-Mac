@@ -142,6 +142,7 @@ final class MinimalMonitoringViewModel: ObservableObject {
             activeConnections: transport.activeProxyChannels,
             errorCount: transport.unexpectedChannelErrorCount + transport.unexpectedClientWriteFailureCount,
             droppedSessionCount: health.droppedSessionCount,
+            evictedBodyCount: health.evictedBodyCount,
             captureDuration: health.captureDuration,
             pendingApprovalCount: max(0, pendingApprovalCountProvider())
         )
@@ -232,12 +233,12 @@ final class MinimalMonitoringViewModel: ObservableObject {
             ),
             MonitoringTileDescriptor(
                 id: "dropped",
-                label: "Dropped",
+                label: "History removed",
                 systemImage: "tray.and.arrow.down",
                 // Reads as "data may be missing," not a scored health metric — everything else on
                 // this HUD is a health summary; this one is a completeness signal (ADR §7).
-                value: snapshot.droppedSessionCount.formatted(),
-                level: snapshot.droppedSessionCount > 0 ? .caution : .safe
+                value: "Sessions: \(snapshot.droppedSessionCount)\nBodies: \(snapshot.evictedBodyCount)",
+                level: snapshot.droppedSessionCount > 0 || snapshot.evictedBodyCount > 0 ? .caution : .safe
             ),
             MonitoringTileDescriptor(
                 id: "duration",

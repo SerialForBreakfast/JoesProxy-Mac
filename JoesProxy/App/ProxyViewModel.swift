@@ -5278,6 +5278,7 @@ final class ProxyViewModel: ObservableObject {
             sessionCount: sessionStore.sessions.count,
             retainedBodyBytes: sessionStore.retainedBodyBytes,
             droppedSessionCount: sessionStore.droppedSessionCount,
+            evictedBodyCount: sessionStore.evictedBodyCount,
             captureStartedAt: captureStartedAt,
             processMetrics: latestProcessMetrics
         )

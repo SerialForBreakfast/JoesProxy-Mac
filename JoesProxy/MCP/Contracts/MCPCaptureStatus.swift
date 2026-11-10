@@ -11,6 +11,17 @@ struct MCPCaptureStatusDTO: Codable, Equatable, Sendable {
     var pendingCaptures: Int
     var rejectedCaptures: Int
     var metadataOnlyCaptures: Int
+    var inFlightByteLimit: Int
+    var inFlightCountLimit: Int
+    var retainedBodyBytes: Int
+    var retainedSessionCount: Int
+    var retainedSessionLimit: Int?
+    var evictedBodyCount: Int
+    var droppedSessionCount: Int
+    var lossCounterScope = "Admission counts since launch; retention removals since clear or load."
+    var userActions: [String] = []
+    var lastIncompleteCaptureAt: Date?
+    var lastBodySkippedAt: Date?
     var admissionDetail: String
     var recommendedAction: String
     var resumeRestoresHistoricalBodies = false
@@ -19,7 +30,23 @@ struct MCPCaptureStatusDTO: Codable, Equatable, Sendable {
     var notice = "Applies to future admitted, inspectable traffic only. Does not recover missing bodies, bypass TLS policy, grant body-read access, or replay requests."
 
     init(proxyState: String, admission: CaptureAdmissionBudget.Snapshot,
-         perResponseByteLimit: Int, retainedBodyByteLimit: Int?) {
+         perResponseByteLimit: Int, retainedBodyByteLimit: Int?, retainedBodyBytes: Int = 0,
+         retainedSessionCount: Int = 0, retainedSessionLimit: Int? = nil,
+         evictedBodyCount: Int = 0, droppedSessionCount: Int = 0) {
+        lastIncompleteCaptureAt = admission.lastRejectedAt
+        lastBodySkippedAt = admission.lastBodySkippedAt
+        inFlightByteLimit = admission.byteLimit
+        inFlightCountLimit = admission.countLimit
+        self.retainedBodyBytes = retainedBodyBytes
+        self.retainedSessionCount = retainedSessionCount
+        self.retainedSessionLimit = retainedSessionLimit
+        self.evictedBodyCount = evictedBodyCount
+        self.droppedSessionCount = droppedSessionCount
+        if admission.paused {
+            userActions.append("Wait for recovery. If pressure recurs, lower Per-Response Body Cap or reduce concurrent traffic.")
+        }
+        if evictedBodyCount > 0 { userActions.append("Save earlier or increase the retained body budget for future captures.") }
+        if droppedSessionCount > 0 { userActions.append("Save earlier or increase the retained session limit.") }
         self.proxyState = proxyState
         admissionPaused = admission.paused
         self.perResponseByteLimit = perResponseByteLimit

@@ -25,7 +25,7 @@ struct MinimalMonitoringView: View {
     /// per-rule control from this passive HUD isn't offered. `nil` disables the interaction.
     var onDisableAllActiveEffect: ((String) -> Void)?
     var onManageModifications: (() -> Void)?
-    var captureAdmissionBudget: CaptureAdmissionBudget?
+    var capacityNotice: CaptureAdmissionNotice?
     var uploadSpoolService: UploadSpoolService?
 
     var body: some View {
@@ -42,8 +42,8 @@ struct MinimalMonitoringView: View {
             if let uploadSpoolService {
                 UploadStorageNotice(service: uploadSpoolService).frame(width: 270 * textScale)
             }
-            if let captureAdmissionBudget {
-                CaptureAdmissionNotice(budget: captureAdmissionBudget)
+            if let capacityNotice {
+                capacityNotice
                     .frame(width: 270 * textScale)
             }
             if let onManageModifications {

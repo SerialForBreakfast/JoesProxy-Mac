@@ -17,6 +17,7 @@ struct JoesProxyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
+    @State private var dismissedCapacityGap: UInt64?
     @Environment(\.dismissWindow) private var dismissWindow
     private let logger = Logger(subsystem: "com.JoesProxyApp.UI", category: "Lifecycle")
     private let coordinator: AppCoordinator
@@ -319,7 +320,7 @@ struct JoesProxyApp: App {
                         onOpenActiveEffect: { openActiveEffectDestination($0) },
                         onDisableAllActiveEffect: { disableAllActiveEffect($0) },
                         onManageModifications: { openWindow(id: TrafficModificationsWindowView.windowID) },
-                        captureAdmissionBudget: coordinator.sessionRecorder.admission,
+                        capacityNotice: capacityNotice,
                         uploadSpoolService: coordinator.uploadSpoolService
                     )
                     .environment(\.appTextScale, settingsViewModel.appTextSize.fontScale)
@@ -409,7 +410,7 @@ struct JoesProxyApp: App {
             .background(MainWindowConfigurator(compactModeController: compactModeController))
             .safeAreaInset(edge: .bottom) {
                 if !compactModeController.isCompactModeActive {
-                    CaptureAdmissionNotice(budget: coordinator.sessionRecorder.admission)
+                    capacityNotice
                 }
             }
             .sheet(item: rollingCaptureRestoreOfferBinding, onDismiss: {
@@ -1213,6 +1214,14 @@ struct JoesProxyApp: App {
 
     /// Traffic modification management opens independently of the capture workspace.
     /// Bookmark navigation still explicitly enters the investigation workspace.
+    private var capacityNotice: CaptureAdmissionNotice {
+        CaptureAdmissionNotice(budget: coordinator.sessionRecorder.admission, store: coordinator.sessionStore,
+                               dismissedGap: $dismissedCapacityGap) {
+            settingsViewModel.requestCapacitySettings()
+            openSettings()
+        }
+    }
+
     private func openActiveEffectDestination(_ tileID: String) {
         switch tileID {
         case "mapLocal", "mapRemote", "block", "liveRewrite",

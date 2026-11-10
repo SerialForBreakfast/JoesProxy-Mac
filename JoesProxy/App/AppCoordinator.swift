@@ -612,7 +612,10 @@ final class AppCoordinator {
             MCPCaptureStatusDTO(proxyState: resolvedProxyRuntime.currentState.accessibilityRuntimeValue,
                 admission: resolvedSessionRecorder.admission.snapshot,
                 perResponseByteLimit: resolvedConfiguration.liveCaptureBodySizeLimit,
-                retainedBodyByteLimit: resolvedSessionStore.retentionPolicy.bodyByteLimit)
+                retainedBodyByteLimit: resolvedSessionStore.retentionPolicy.bodyByteLimit,
+                retainedBodyBytes: resolvedSessionStore.retainedBodyBytes, retainedSessionCount: resolvedSessionStore.sessions.count,
+                retainedSessionLimit: resolvedSessionStore.retentionPolicy.sessionLimit,
+                evictedBodyCount: resolvedSessionStore.evictedBodyCount, droppedSessionCount: resolvedSessionStore.droppedSessionCount)
         }
         resolvedMCPServerController.protocolService.configureHTTPSRules(globalMode: resolvedHTTPSProxyMode,
             recoveryURL: persistsPreviousRunDiagnostics ? diagnosticsDirectory?.appendingPathComponent("HTTPSRecovery.json") : nil, reader: { [resolvedConfiguration] in

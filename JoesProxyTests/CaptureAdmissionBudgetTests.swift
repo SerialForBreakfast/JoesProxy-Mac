@@ -28,6 +28,21 @@ final class CaptureAdmissionBudgetTests: XCTestCase {
         XCTAssertEqual(budget.snapshot.metadataOnlyCaptures, 2)
     }
 
+    func testDismissalAndHistoryResetOnlyHideRecoveredEpisodes() throws {
+        let budget = CaptureAdmissionBudget(byteLimit: 100, countLimit: 1)
+        XCTAssertFalse(budget.snapshot.showsCapacityEpisode(dismissed: nil, historyResetAt: nil))
+        let first = try XCTUnwrap(budget.reserve(bytes: 100))
+        XCTAssertNil(budget.reserve(bytes: 1))
+        let id = try XCTUnwrap(budget.snapshot.gaps.last?.id)
+        XCTAssertTrue(budget.snapshot.showsCapacityEpisode(dismissed: id, historyResetAt: .distantFuture))
+        budget.release(first)
+        XCTAssertTrue(budget.snapshot.showsCapacityEpisode(dismissed: nil, historyResetAt: nil))
+        XCTAssertFalse(budget.snapshot.showsCapacityEpisode(dismissed: id, historyResetAt: nil))
+        XCTAssertFalse(budget.snapshot.showsCapacityEpisode(dismissed: nil, historyResetAt: .distantFuture))
+        XCTAssertNil(budget.reserve(bytes: 101))
+        XCTAssertTrue(budget.snapshot.showsCapacityEpisode(dismissed: id, historyResetAt: nil))
+    }
+
     func testMetadataCollectorCountsWithoutKeepingPayload() {
         let collector = BoundedCaptureAccumulator(limit: 0, countWithoutBody: true)
         let chunk = Data(repeating: 7, count: 65_536)

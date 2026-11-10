@@ -1483,6 +1483,32 @@ final class MCPProtocolService {
         }
     }
 
+    private func capacityWarning(status: MCPCaptureStatusDTO?, records: [SessionRecord],
+                                 includesHistory: Bool) -> String? {
+        var issues: [String] = []
+        if status?.admissionPaused == true { issues.append("Capture busy") }
+        if includesHistory, let status {
+            if let gap = status.lastIncompleteCaptureAt,
+               gap >= (snapshotService.epochMetadata.lastEpochChangeAt ?? .distantPast) {
+                issues.append("Some requests were not recorded")
+            }
+            if records.isEmpty, let skipped = status.lastBodySkippedAt,
+               skipped >= (snapshotService.epochMetadata.lastEpochChangeAt ?? .distantPast) {
+                issues.append("Response bodies skipped during capture")
+            }
+            if status.droppedSessionCount > 0 { issues.append("Older sessions removed by retention") }
+        }
+        if records.contains(where: { $0.responseCaptureLimitedByPressure == true }) {
+            issues.append("Response body skipped during capture")
+        }
+        if records.contains(where: { $0.request.recordingBodyOmissionReason == .retentionEvicted ||
+                                      $0.response?.recordingBodyOmissionReason == .retentionEvicted }) ||
+            (includesHistory && records.isEmpty && (status?.evictedBodyCount ?? 0) > 0) {
+            issues.append("Older bodies removed by retention")
+        }
+        return issues.isEmpty ? nil : issues.joined(separator: ". ")
+    }
+
     private func sessionsPage(
         id: Any?,
         arguments: [String: Any],
@@ -1497,9 +1523,11 @@ final class MCPProtocolService {
             let projection = try responseProjection(from: arguments)
             let sinceSequence = try normalizedUInt64(arguments["sinceSequence"], fieldName: "sinceSequence")
             let stateToken = captureStateToken()
+            let capacity = captureStatusProvider?()
             let effectiveQueryDigest = "\(queryDigest):\(projection.rawValue):\(sinceSequence)"
             if cursor == nil, arguments["ifStateToken"] as? String == stateToken {
                 let pageDTO = MCPSessionListPageDTO(
+                    captureWarning: capacityWarning(status: capacity, records: [], includesHistory: true),
                     items: [],
                     nextCursor: nil,
                     hasMore: false,
@@ -1545,6 +1573,7 @@ final class MCPProtocolService {
                     return projectedSessionSummary(summary, projection: projection)
                 }
                 let pageDTO = MCPSessionListPageDTO(
+                    captureWarning: capacityWarning(status: capacity, records: page.items.map(\.record), includesHistory: true),
                     items: items,
                     nextCursor: try page.nextCursor.map { try encodeCursor($0) },
                     hasMore: page.nextCursor != nil,
@@ -1612,7 +1641,9 @@ final class MCPProtocolService {
             } else {
                 recommendedAction = "refresh_pending_or_selected_sessions"
             }
+            let capacity = captureStatusProvider?()
             let digest = MCPCaptureDigestDTO(
+                captureWarning: capacityWarning(status: capacity, records: [], includesHistory: true),
                 stateToken: stateToken,
                 unchanged: unchanged,
                 sessionCount: counts.sessionCount,
@@ -1629,7 +1660,7 @@ final class MCPProtocolService {
                 rollingCaptureSavedAt: rollingCaptureStatusProvider?().savedAt,
                 rollingCaptureSessionCount: rollingCaptureStatusProvider?().sessionCount,
                 rollingCapturePersistenceError: rollingCaptureStatusProvider?().persistenceError,
-                captureStatus: captureStatusProvider?()
+                captureStatus: capacity
             )
             return try encodedToolResult(id: id, payload: MCPDTOEnvelope(payload: digest))
         } catch let error as MCPStructuredError {
@@ -2088,6 +2119,7 @@ final class MCPProtocolService {
                 bodySource: MCPSessionBodySource(rawValue: arguments["bodySource"] as? String ?? "response") ?? .response,
                 headerSource: MCPSessionHeaderSource(rawValue: arguments["headerSource"] as? String ?? "both") ?? .both
             )
+            summary.captureWarning = capacityWarning(status: captureStatusProvider?(), records: [indexed.record], includesHistory: false)
             if summary.transportEvidence == nil, profile.allowedFieldClasses.contains(.duration),
                let evidence = transportEvidenceProvider?(uuid) {
                 summary.transportEvidence = evidence

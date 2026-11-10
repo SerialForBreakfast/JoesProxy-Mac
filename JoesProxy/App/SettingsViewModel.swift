@@ -8,7 +8,17 @@ final class SettingsViewModel: ObservableObject {
     @Published var selectedSettingsTab = 0
     @Published var recoverySettingsRequest = UUID()
 
+    @Published var showsCapacitySettings = false
+
+    func requestCapacitySettings() {
+        showsRecoverySettings = false
+        showsCapacitySettings = true
+        selectedSettingsTab = 4
+        recoverySettingsRequest = UUID()
+    }
+
     func requestRecoverySettings() {
+        showsCapacitySettings = false
         showsRecoverySettings = true
         selectedSettingsTab = 4
         recoverySettingsRequest = UUID()

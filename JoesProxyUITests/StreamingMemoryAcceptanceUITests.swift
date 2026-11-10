@@ -184,7 +184,7 @@ final class StreamingMemoryAcceptanceUITests: XCTestCase {
         func tileLabelFrames() throws -> [[String: Any]] {
             let hud = app.identifiedElement("compactMonitorRoot")
             let origin = hud.frame.origin
-            return try ["Proxy", "Sessions", "Throughput", "Connections", "Errors", "Dropped", "Duration", "Approvals"].map { label in
+            return try ["Proxy", "Sessions", "Throughput", "Connections", "Errors", "History removed", "Duration", "Approvals"].map { label in
                 let element = hud.staticTexts[label].firstMatch
                 guard element.exists else { throw SoakFailure.missingTileLabel(label) }
                 let frame = element.frame

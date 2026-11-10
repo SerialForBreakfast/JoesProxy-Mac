@@ -23,6 +23,7 @@ enum MCPSessionHeaderSource: String, Equatable, Sendable, Codable, CaseIterable 
 /// Field presence is governed by ``MCPDisclosureProfile``; absent fields are omitted from JSON
 /// rather than included as empty placeholders.
 struct MCPSessionSummaryDTO: Equatable, Sendable, Codable, Identifiable {
+    var captureWarning: String? = nil
     /// Opaque session identifier (UUID string).
     var id: String
     /// Immutable monotonic capture sequence used for keyset pagination.
@@ -90,6 +91,7 @@ struct MCPDisclosedQueryParameter: Equatable, Sendable, Codable {
 
 /// Paginated MCP session list payload with schema version 1 envelope.
 struct MCPSessionListPageDTO: Equatable, Sendable, Codable {
+    var captureWarning: String? = nil
     var items: [MCPSessionSummaryDTO]
     /// Opaque bounded server-side cursor token returned unchanged on the next request.
     var nextCursor: String?
@@ -109,6 +111,7 @@ struct MCPSessionListPageDTO: Equatable, Sendable, Codable {
 
 /// Small, cache-friendly capture state used to decide whether a broader read is justified.
 struct MCPCaptureDigestDTO: Equatable, Sendable, Codable {
+    var captureWarning: String? = nil
     var stateToken: String
     var unchanged: Bool
     var sessionCount: Int

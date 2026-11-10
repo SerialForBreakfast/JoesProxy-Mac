@@ -65,9 +65,12 @@ enum RecordingBodyOmissionReason: String, Codable, Equatable, Sendable {
     case binaryExcludedFromTextMode
     case nonMediaBinaryExcluded
     case oversizedMediaExcluded
+    case retentionEvicted = "retention_evicted"
 
     var userFacingMessage: String {
         switch self {
+        case .retentionEvicted:
+            return "Older body removed to stay within your history limit. Increase the retention budget or save earlier to keep future bodies."
         case .metadataOnly:
             return "Body omitted by recording mode."
         case .binaryExcludedFromTextMode:

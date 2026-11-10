@@ -1,7 +1,17 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-09-15.1",
+  "revision": "2026-11-09.1",
   "topics": [
+    {
+      "id": "captureCapacity",
+      "title": "Capture Capacity and Missing History",
+      "summary": "Find out why a response body or an older session is missing and how to keep more evidence next time.",
+      "category": "help",
+      "keywords": ["capture busy", "capture reduced", "capture recovered", "history limit", "retention", "body cap", "missing bodies"],
+      "relatedTopics": ["capturedSessions", "requestInspector"],
+      "file": "doc-captureCapacity.md",
+      "capabilityReferences": []
+    },
     {
       "id": "certificateSetup",
       "title": "Certificate And HTTPS Setup",

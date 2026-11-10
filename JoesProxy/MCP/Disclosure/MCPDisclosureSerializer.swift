@@ -295,6 +295,7 @@ struct MCPDisclosureSerializer: Sendable {
     private static func bodyRecoveryAction(for reason: String?, available: Bool) -> String {
         if available { return "request_session_summary_includeBody_with_bodyRead_approval" }
         switch reason {
+        case "retention_evicted": return "ask_local_user_to_raise_history_budget_or_save_earlier_for_future_captures"
         case "capture_pressure": return "capture_status; wait_for_automatic_recovery_then_generate_new_authorized_traffic; do_not_restart_or_reinstall_device_profile"
         case "body_deferred": return "wait_for_recording_body_load_then_retry"
         case "body_omitted": return "open_original_full_recording_or_generate_new_authorized_traffic; never_automatically_refetch"
@@ -367,6 +368,9 @@ struct MCPDisclosureSerializer: Sendable {
         }
         if deferred {
             return BodyExcerptResult(text: nil, truncated: false, decodeStatus: "unavailable", unavailableReason: "body_deferred")
+        }
+        if omissionReason == .retentionEvicted {
+            return BodyExcerptResult(text: nil, truncated: false, decodeStatus: "unavailable", unavailableReason: "retention_evicted")
         }
         if omissionReason != nil {
             return BodyExcerptResult(text: nil, truncated: false, decodeStatus: "unavailable", unavailableReason: "body_omitted")

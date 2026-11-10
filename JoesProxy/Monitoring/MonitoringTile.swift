@@ -54,13 +54,14 @@ private struct MonitoringTileView: View {
                 .font(.system(size: 15 * textScale, weight: .medium, design: .monospaced))
                 .monospacedDigit()
                 .foregroundStyle(tile.level.color)
-                .lineLimit(1)
-                .frame(height: 20 * textScale, alignment: .leading)
+                .lineLimit(tile.id == "dropped" ? 2 : 1)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: 20 * textScale, alignment: .leading)
                 // No `.animation()` here — a value replaces the prior value at the refresh tick,
                 // never counts up or cross-fades (ADR §6: no motion).
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 40 * textScale, alignment: .leading)
+        .frame(minHeight: 40 * textScale, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))

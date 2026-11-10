@@ -176,6 +176,7 @@ final class MainWindowHelpSupportTests: XCTestCase {
         XCTAssertTrue(topics.contains(.systemProxyRouting))
         XCTAssertTrue(topics.contains(.mediaInfo))
         XCTAssertTrue(topics.contains(.mcpAndCLI))
-        XCTAssertEqual(MainWindowHelpTopic.allCases.count, 13)
+        XCTAssertTrue(topics.contains(.captureCapacity))
+        XCTAssertEqual(MainWindowHelpTopic.allCases.count, 14)
     }
 }

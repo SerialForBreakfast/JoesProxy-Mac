@@ -999,6 +999,8 @@ struct SessionDetailView: View {
 
             if let omissionReason = session.request.recordingBodyOmissionReason {
                 BodyOmissionWarningBanner(message: omissionReason.userFacingMessage)
+            } else if session.request.bodyData == nil, !session.request.bodyDeferred, (session.request.bodySize ?? 0) > 0 {
+                BodyOmissionWarningBanner(message: "Request body unavailable. The reason was not recorded.")
             }
             if session.request.bodyTruncated {
                 TruncationWarningBanner()
@@ -1076,6 +1078,9 @@ struct SessionDetailView: View {
 
             if let omissionReason = session.response?.recordingBodyOmissionReason {
                 BodyOmissionWarningBanner(message: omissionReason.userFacingMessage)
+            } else if let response = session.response, response.bodyData == nil, !response.bodyDeferred,
+                      (response.bodySize ?? 0) > 0, session.responseCaptureLimitedByPressure != true {
+                BodyOmissionWarningBanner(message: "Response body unavailable. The reason was not recorded.")
             }
             if session.responseCaptureLimitedByPressure == true {
                 BodyOmissionWarningBanner(message: "Response body skipped to keep capture memory bounded. Request details, status and timing remain available. New requests capture bodies again automatically when capacity recovers.")

@@ -79,6 +79,7 @@ struct CaptureHealthMetrics: Equatable, Sendable {
     /// Number of sessions that have been dropped due to the active retention policy
     /// since the last `clear()` or `load()` call.
     let droppedSessionCount: Int
+    var evictedBodyCount = 0
 
     /// The `Date` at which the proxy runtime most recently transitioned to `.running`.
     /// `nil` if the proxy has never started or has been stopped.

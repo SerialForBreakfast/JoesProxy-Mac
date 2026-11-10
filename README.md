@@ -2,6 +2,8 @@
 
 JoesProxy is a free, open-source network debugging proxy for macOS, released under the [MIT License](LICENSE). Inspect the request your app made, change the response it gets, and compare the next run. A coding agent can work with the same capture through MCP; you control what it can read and which changes it can apply.
 
+Explore the guides and documentation at [joesproxy.com](https://joesproxy.com/).
+
 ![JoesProxy workspace showing synthetic traffic](docs/assets/screenshots/workspace.png)
 
 ## Build from source

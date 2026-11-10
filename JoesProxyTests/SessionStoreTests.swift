@@ -488,6 +488,18 @@ final class SessionStoreTests: XCTestCase {
         XCTAssertNil(stripped?.request.bodyData, "Published record must be the post-strip copy")
         XCTAssertNil(stripped?.response?.bodyData)
         XCTAssertEqual(stripped?.request.bodySize, 6, "Body size metadata preserved")
+        XCTAssertEqual(stripped?.request.recordingBodyOmissionReason, .retentionEvicted)
+        XCTAssertEqual(stripped?.response?.recordingBodyOmissionReason, .retentionEvicted)
+        XCTAssertEqual(store.evictedBodyCount, 2)
+        XCTAssertEqual(store.droppedSessionCount, 0)
+        store.retentionPolicy = .keepLastBodyBytes(14)
+        XCTAssertEqual(store.evictedBodyCount, 2)
+        store.retentionPolicy = .keepLastSessions(1)
+        XCTAssertEqual(store.droppedSessionCount, 1)
+        XCTAssertEqual(store.evictedBodyCount, 2)
+        store.clear()
+        XCTAssertEqual(store.evictedBodyCount, 0)
+        XCTAssertEqual(store.droppedSessionCount, 0)
     }
 
     func testKeepLastBodyBytesBoundsRetainedBodiesAcrossHighVolumeCapture() {

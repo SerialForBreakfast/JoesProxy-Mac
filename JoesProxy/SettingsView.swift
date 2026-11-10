@@ -506,6 +506,8 @@ struct SettingsView: View {
                     guard !Task.isCancelled else { return }
                     if viewModel.showsRecoverySettings {
                         scroll.scrollTo("rollingCaptureRecovery", anchor: .top)
+                    } else if viewModel.showsCapacitySettings {
+                        scroll.scrollTo("capacitySettings", anchor: .top)
                     }
                 }
         }
@@ -553,6 +555,7 @@ struct SettingsView: View {
                 .accessibilityLabel("Retention policy")
                 .accessibilityHint("Controls how JoesProxy bounds in-memory session storage during long captures.")
                 .accessibilityIdentifier("settingsCaptureRetentionPolicyPicker")
+                .id("capacitySettings")
 
                 LabeledContent(viewModel.captureRetentionValueLabel) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -638,7 +641,7 @@ struct SettingsView: View {
                     }
                 }
 
-                Text("Maximum bytes retained from each live response body for inspection (default: 1024 KB / 1 MB). Bodies larger than this limit are truncated in memory and marked truncated, while the full payload streams downstream unmodified. Larger values allow inspecting bigger JSON payloads or media chunks but increase memory usage during capture.")
+                Text("Each response reserves capacity up front. A larger body cap keeps more bytes per response but fits fewer simultaneous captures. Lower this cap if bodies are frequently skipped. The full payload continues downstream.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

@@ -12,6 +12,7 @@ enum MainWindowHelpTopic: String, CaseIterable, Identifiable {
     case trafficStates
     case systemProxyRouting
     case capturedSessions
+    case captureCapacity
     case requestInspector
     case networkThrottling
     case localOverrides
@@ -30,7 +31,7 @@ enum MainWindowHelpTopic: String, CaseIterable, Identifiable {
             return HelpHubSectionID.gettingStarted.rawValue
         case .trafficStates:
             return HelpHubSectionID.trafficStates.rawValue
-        case .capturedSessions, .networkThrottling, .localOverrides, .bookmarksReplay, .bookmarkResponseRewrites, .requestInspector, .mediaInfo:
+        case .captureCapacity, .capturedSessions, .networkThrottling, .localOverrides, .bookmarksReplay, .bookmarkResponseRewrites, .requestInspector, .mediaInfo:
             return HelpHubSectionID.sessionTools.rawValue
         case .exportPrivacy, .visualizationExport:
             return HelpHubSectionID.importExport.rawValue

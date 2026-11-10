@@ -221,8 +221,18 @@ actor ProxySessionRecorder {
                     store.append(record)
                 }
                 // Live updates are not upserts: removed/evicted records stay removed.
-                let existing = updates.filter {
-                    epochs[$0.id] == store.liveCaptureEpoch.current && store.record(for: $0.id) != nil
+                let existing = updates.compactMap { update -> SessionRecord? in
+                    guard epochs[update.id] == store.liveCaptureEpoch.current,
+                          let stored = store.record(for: update.id) else { return nil }
+                    // Completion can arrive with a pre-retention copy of the request.
+                    var canonical = update
+                    if stored.request.recordingBodyOmissionReason == .retentionEvicted {
+                        canonical.request = update.request.strippingBodyData()
+                    }
+                    if stored.response?.recordingBodyOmissionReason == .retentionEvicted {
+                        canonical.response = update.response?.strippingBodyData() ?? stored.response
+                    }
+                    return canonical
                 }
                 if !existing.isEmpty { store.update(existing) }
             }

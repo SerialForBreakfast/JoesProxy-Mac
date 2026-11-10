@@ -6,7 +6,7 @@ final class RecordingEvidencePreservationTests: XCTestCase {
         let request = CapturedRequest(
             method: "POST", scheme: .https, host: "example.test", port: 443,
             path: "/fixture", headers: [], bodyData: nil, bodySize: 120,
-            bodyTruncated: true, recordingBodyOmissionReason: .metadataOnly,
+            bodyTruncated: true, recordingBodyOmissionReason: .retentionEvicted,
             clientAddress: "192.0.2.1", localCACertificateSHA256Fingerprint: "synthetic"
         )
         let response = CapturedResponse(
@@ -44,7 +44,7 @@ final class RecordingEvidencePreservationTests: XCTestCase {
             let comment = try XCTUnwrap(object["comment"] as? String)
             XCTAssertTrue(comment.contains("truncated"))
             XCTAssertTrue(comment.contains("unavailable"))
-            XCTAssertTrue(comment.contains("omitted"))
+            XCTAssertTrue(comment.contains(side == "request" ? "removed" : "omitted"))
         }
     }
 }

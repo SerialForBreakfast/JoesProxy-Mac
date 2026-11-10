@@ -3439,6 +3439,10 @@ final class CLIApplication {
         if result.command == "sessions export", result.warnings.contains("Session data was already emitted to stdout.") {
             return
         }
+        if mode == .human, let object = result.result as? [String: Any],
+           let warning = payloadObject(object)?["captureWarning"] as? String {
+            FileHandle.standardError.write(Data(("Capture warning: " + warning + "\n").utf8))
+        }
         let object = mode == .human ? (result.result ?? [:]) : result.jsonObject()
         let text = try CLIJSON.string(object, pretty: mode != .ndjson)
         writeResult(Data((text + "\n").utf8))

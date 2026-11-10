@@ -7,7 +7,7 @@ Revision: 2026-10-29 — portable source snapshot. CursorRules.md mirrors this f
 - Read .agents/skills/joesproxy-development/SKILL.md before changing this project.
 - Preserve unrelated edits. Complete the authorized task and independent work; one isolated failure does not cancel unrelated work.
 - No dependency installs, updates, lockfile changes or repair without specific approval.
-- No Git writes: the maintainer owns commits, branches, history and publication.
+- Obtain explicit maintainer approval before Git writes. Approval applies only to the named operations and repository. Publication requires separate approval.
 - Keep authored artifacts in the checkout. Compiler-managed caches may be used only within the owner's existing permissions.
 - Do not run arbitrary inline scripts or temporary programs through the shell. Use reviewed project helpers and dedicated tooling.
 - Scope authorization, exceptions to a rule and physical user interaction are distinct. Preserve approval for unchanged scope.

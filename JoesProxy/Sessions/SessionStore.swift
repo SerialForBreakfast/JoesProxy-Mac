@@ -12,6 +12,8 @@ protocol SessionStore: AnyObject {
     /// Number of sessions dropped by the active retention policy since the last
     /// `clear()` or `load()` call. Returns `0` for stores that do not enforce a policy.
     var droppedSessionCount: Int { get }
+    var evictedBodyCount: Int { get }
+    var lastHistoryResetAt: Date? { get }
 
     /// Total bytes of inline body data (`request.bodyData` + `response?.bodyData`)
     /// currently retained across all sessions. Updated incrementally on each mutation.
@@ -84,6 +86,8 @@ final class InMemorySessionStore: SessionStore {
     }
 
     private(set) var droppedSessionCount: Int = 0
+    private(set) var lastHistoryResetAt: Date?
+    private(set) var evictedBodyCount = 0
     private(set) var retainedBodyBytes: Int = 0
     private(set) var retainedHeaderFieldCount = 0
     /// Ordered logical indices of records with inline bodies, including late body updates.
@@ -210,8 +214,14 @@ final class InMemorySessionStore: SessionStore {
                 let index = logical - indexOffset
                 var record = storedSessions[index]
                 retainedBodyBytes -= bodyByteCount(record)
-                record.request = record.request.strippingBodyData()
-                record.response = record.response?.strippingBodyData()
+                if let bytes = record.request.bodyData, !bytes.isEmpty {
+                    record.request = record.request.strippingBodyData()
+                    evictedBodyCount += 1
+                }
+                if let response = record.response, let bytes = response.bodyData, !bytes.isEmpty {
+                    record.response = response.strippingBodyData()
+                    evictedBodyCount += 1
+                }
                 storedSessions[index] = record
                 stripped.append(record)
             }
@@ -264,6 +274,8 @@ final class InMemorySessionStore: SessionStore {
         retainedBodyBytes = 0
         retainedHeaderFieldCount = 0
         droppedSessionCount = 0
+        evictedBodyCount = 0
+        lastHistoryResetAt = Date()
         bodyBearingIndices = []
         indexOffset = 0
         DeferredRelease.schedule(retiredStorage)
@@ -281,6 +293,8 @@ final class InMemorySessionStore: SessionStore {
         retainedBodyBytes = sessions.reduce(0) { $0 + bodyByteCount($1) }
         retainedHeaderFieldCount = sessions.reduce(0) { $0 + headerFieldCount($1) }
         droppedSessionCount = 0
+        evictedBodyCount = 0
+        lastHistoryResetAt = Date()
         _ = enforceRetention()
         sessionChangesSubject.send(.loaded(sessions: storedSessions, reason: epochChangeReason))
     }
@@ -314,7 +328,7 @@ final class InMemorySessionStore: SessionStore {
 
 // MARK: - Body-stripping helpers
 
-private extension CapturedRequest {
+extension CapturedRequest {
     /// Returns a copy of this request with `bodyData` set to `nil`. `bodySize` is
     /// preserved so the UI can still report how large the original body was.
     func strippingBodyData() -> CapturedRequest {
@@ -330,8 +344,8 @@ private extension CapturedRequest {
             bodyData: nil,
             bodySize: bodySize,
             bodyTruncated: bodyTruncated,
-            recordingBodyOmissionReason: recordingBodyOmissionReason,
-            bodyDeferred: bodyDeferred,
+            recordingBodyOmissionReason: .retentionEvicted,
+            bodyDeferred: false,
             clientAddress: clientAddress,
             localCACertificateSHA256Fingerprint: localCACertificateSHA256Fingerprint,
             remoteTrustState: remoteTrustState
@@ -339,7 +353,7 @@ private extension CapturedRequest {
     }
 }
 
-private extension CapturedResponse {
+extension CapturedResponse {
     /// Returns a copy of this response with `bodyData` set to `nil`. `bodySize` is
     /// preserved so the UI can still report how large the original body was.
     func strippingBodyData() -> CapturedResponse {
@@ -351,8 +365,8 @@ private extension CapturedResponse {
             source: source,
             sourceDescription: sourceDescription,
             bodyTruncated: bodyTruncated,
-            recordingBodyOmissionReason: recordingBodyOmissionReason,
-            bodyDeferred: bodyDeferred,
+            recordingBodyOmissionReason: .retentionEvicted,
+            bodyDeferred: false,
             mcpAttribution: mcpAttribution,
             localCACertificateSHA256Fingerprint: localCACertificateSHA256Fingerprint
         )

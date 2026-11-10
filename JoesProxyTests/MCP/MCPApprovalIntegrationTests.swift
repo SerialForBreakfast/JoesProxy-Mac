@@ -287,6 +287,11 @@ final class MCPApprovalIntegrationTests: XCTestCase {
             return try XCTUnwrap(structured["payload"] as? [String: Any])
         }
         let before = try payload(await callRuntimeControl(stack: stack, name: "capture_digest"))
+        XCTAssertNil(before["captureWarning"])
+        for tool in ["sessions_list", "sessions_search"] {
+            let page = try payload(await callRuntimeControl(stack: stack, name: tool))
+            XCTAssertNil(page["captureWarning"])
+        }
         let reservation = try XCTUnwrap(admission.reserve(bytes: 128 * 1_024 * 1_024))
         defer { admission.release(reservation) }
         XCTAssertNil(admission.reserve(bytes: 1))
@@ -297,6 +302,11 @@ final class MCPApprovalIntegrationTests: XCTestCase {
             arguments: ["ifStateToken": try XCTUnwrap(before["stateToken"] as? String)]))
         XCTAssertEqual(after["unchanged"] as? Bool, false)
         XCTAssertEqual((after["captureStatus"] as? [String: Any])?["admissionPaused"] as? Bool, true)
+        XCTAssertNotNil(after["captureWarning"])
+        for tool in ["sessions_list", "sessions_search"] {
+            let page = try payload(await callRuntimeControl(stack: stack, name: tool))
+            XCTAssertNotNil(page["captureWarning"])
+        }
     }
 
     func testResumeRejectsForgedForceArgumentsBeforeApproval() async throws {

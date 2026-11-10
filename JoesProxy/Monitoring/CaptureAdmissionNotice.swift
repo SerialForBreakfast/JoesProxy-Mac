@@ -1,40 +1,58 @@
 import SwiftUI
 
-/// Samples only aggregate admission state; never subscribes to captured records.
+/// Samples aggregate counters without observing individual records.
 struct CaptureAdmissionNotice: View {
     let budget: CaptureAdmissionBudget
+    let store: any SessionStore
+    @Binding var dismissedGap: UInt64?
+    let openCapacitySettings: (() -> Void)?
     @Environment(\.appTextScale) private var textScale
     @State private var showsDetails = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { _ in
             let snapshot = budget.snapshot
-            if snapshot.rejectedCaptures > 0 || snapshot.metadataOnlyCaptures > 0 {
+            let gap = snapshot.gaps.last
+            let showGap = snapshot.showsCapacityEpisode(dismissed: dismissedGap, historyResetAt: store.lastHistoryResetAt)
+            let removedBodies = store.evictedBodyCount
+            let removedSessions = store.droppedSessionCount
+            if showGap || removedBodies > 0 || removedSessions > 0 {
                 Button { showsDetails.toggle() } label: {
-                    Label(snapshot.paused ? "Capture reduced · Details" : "Capture recovered · Details",
-                          systemImage: snapshot.paused ? "exclamationmark.circle" : "info.circle")
+                    Text(showGap ? (snapshot.paused ? "Busy capture · Some evidence skipped" : "Capture recovered · Details") : "History limit reached · Details")
                         .appFont(.caption, scale: textScale)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(snapshot.paused ? Color.orange : Color.secondary)
-                .padding(8)
+                .padding(6)
                 .accessibilityIdentifier("captureAdmissionGap")
-                .accessibilityHint("Shows current capture capacity and previous missing evidence. Does not change device routing.")
                 .popover(isPresented: $showsDetails) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(snapshot.paused ? "Saving fewer bodies" : "Body capture available")
-                            .appFont(.headline, scale: textScale)
-                        Text("Capture does not wait for memory. Under pressure, response bodies are skipped first; request details are kept when capacity allows. Recovery is automatic.")
-                            .appFont(.caption, scale: textScale)
-                        Text(verbatim: "Since launch: \(snapshot.metadataOnlyCaptures) response bodies skipped · \(snapshot.rejectedCaptures) requests not recorded.")
-                            .appFont(.caption, scale: textScale)
-                        Text(verbatim: "\(snapshot.pendingCaptures) pending · \(ByteCountFormatter.string(fromByteCount: Int64(snapshot.reservedBytes), countStyle: .memory)) reserved of \(ByteCountFormatter.string(fromByteCount: Int64(snapshot.byteLimit), countStyle: .memory)).")
-                            .appFont(.caption, scale: textScale)
-                        Text("Unlimited applies to history, not in-flight memory. Missing evidence cannot be recovered. This status does not diagnose playback failures.")
-                            .appFont(.caption, scale: textScale)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if showGap, let gap {
+                                Text(snapshot.paused ? "Too much traffic to capture at once" : "Capture is back to normal")
+                                    .appFont(.headline, scale: textScale)
+                                Text("During this episode: \(gap.metadataOnlyCaptures ?? 0) response bodies skipped · \(gap.rejectedCaptures) requests not recorded.")
+                                Text("Traffic continues. Capture recovers automatically. Lower Per-Response Body Cap or reduce parallel requests if this recurs.")
+                                if !snapshot.paused {
+                                    Button("Dismiss recovered episode") {
+                                        dismissedGap = gap.id
+                                        showsDetails = false
+                                    }
+                                }
+                            }
+                            if removedBodies > 0 {
+                                Text("Older bodies removed to stay within your history limit: \(removedBodies). Increase the history budget or save earlier to keep future bodies.")
+                            }
+                            if removedSessions > 0 {
+                                Text("Older sessions removed to keep the latest \(store.retentionPolicy.sessionLimit?.formatted() ?? "sessions"): \(removedSessions). Save earlier or increase the session limit.")
+                            }
+                            if let openCapacitySettings {
+                                Button("Open Long Capture Storage Settings…", action: openCapacitySettings)
+                            }
+                        }
+                        .appFont(.body, scale: textScale)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding()
                     }
-                    .padding()
-                    .frame(maxWidth: 340)
+                    .frame(width: 340, height: 280)
                 }
             }
         }
