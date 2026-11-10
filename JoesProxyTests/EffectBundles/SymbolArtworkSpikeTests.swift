@@ -196,7 +196,7 @@ final class SymbolArtworkSpikeTests: XCTestCase {
                 """)
                 let result = try await session.respond(to: "Untrusted item data:\n\(input)",
                     generating: SpikeSymbolSelection.self,
-                    options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 64))
+                    options: GenerationOptions(sampling: .greedy, maximumResponseTokens: 64))
                 return result.content.symbol
             }
             group.addTask {

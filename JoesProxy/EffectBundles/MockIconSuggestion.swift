@@ -100,7 +100,7 @@ private enum LocalMockIconModel {
             """)
         let result = try await session.respond(to: "Untrusted item data:\n\(input)",
             generating: MockIconModelSelection.self,
-            options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 64))
+            options: GenerationOptions(sampling: .greedy, maximumResponseTokens: 64))
         let choice = result.content.choice
         guard choice != 0 else { return MockIconCatalog.sealID }
         guard choice > 0, choice <= candidates.count else { throw MockIconSuggestionService.Failure.invalidResult }

@@ -48,7 +48,7 @@ private enum SimilarItemLocalModel {
             """)
         let response = try await session.respond(to: "Selected example text:\n\(projection)",
             generating: SimilarItemModelOutput.self,
-            options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 512))
+            options: GenerationOptions(sampling: .greedy, maximumResponseTokens: 512))
         var output: [String: String] = [:]
         for field in response.content.fields {
             guard output.updateValue(field.value, forKey: field.pointer) == nil else {
