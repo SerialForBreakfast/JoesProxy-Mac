@@ -1,6 +1,6 @@
 # Source validation
 
-Revision 2026-11-08. This source targets the replacement private candidate 1.9.0 (23), with unchanged pinned dependencies and MCP capabilities revision 29. Publishing remains on hold.
+Revision 2026-11-09. This source targets candidate 1.9.0 (23), with unchanged pinned dependencies and MCP capabilities revision 29. It was published on November 9, 2026; the local results below predate publication and commit `6cec757`, which has no recorded build or test run here.
 
 The text-size correction scales Compact HUD fonts and dimensions, main-window health statistics and inherited controls. The header adapts its layout to larger reading text. Build 23 retains marketing version 1.9.0 and advances only the monotonic build number through the build-only version helper.
 
@@ -19,7 +19,9 @@ The text-size correction scales Compact HUD fonts and dimensions, main-window he
 | Build-only version and release-controller checks | 6 passed, 21 assertions; shell syntax passed |
 | Earlier synthetic HTTP UI walkthrough | 1 passed, zero failures/skips; one runtime warning |
 | Source secret scan | Eight synthetic/type-annotation exceptions are narrowly reviewed by whole-file hash; the final export scan and its content-free results accompany the source packet |
-| Hosted build, code analysis and repository security settings | Not executed/configured remotely; destination setup remains pending |
+| Hosted build and secret scan | Passed on initial commit `bd55cdb`; not run on `6cec757` |
+| Hosted Swift code analysis | Failed on `bd55cdb`: traced analysis is not supported on macOS 27 or Xcode 27; no analysis exists. The job now targets Xcode 26.6 on macos-26; that lane is unrun |
+| Repository security settings | Private vulnerability reporting is not enabled; other settings were not checked |
 
 The verified private image is JoesProxy-1.9.0.dmg, SHA-256 916a3eac4e14fb5adf9fa6b7d079dd6947a49c482e4b90fd4a2a7f67616865df after stapling. All 2,499 recorded release inputs remained byte-identical across packaging. The mounted app passed deep, strict signature verification and Gatekeeper assessment, and the image was ejected. It was not installed or published by this run.
 
@@ -31,4 +33,4 @@ Source export excludes private history, device profiles, raw evidence, old scree
 
 Fresh installation, manual replacement/upgrade, saved recording and inactive-bundle reopening, and human Compare once allow/deny/revocation acceptance remain pending for build 23. The owner previously confirmed preference persistence from 1.8.3 to build 22; that did not prove live resizing. The new candidate requires its own manual check. Spoken VoiceOver and physical older-supported-OS/model-unavailable checks retain their existing deferrals.
 
-The earlier source audit restored the required owned seal input and uses neutral workstation fixtures. The public source has no private Git history. Captured-service credentials were not authenticated or rotated by the privacy scan. Signing/notarization use private operator credentials that are not part of the source packet. Hosted security workflows remain prepared but unrun. No independent security audit, public release or automatic-update acceptance is claimed.
+The earlier source audit restored the required owned seal input and uses neutral workstation fixtures. The public source has no private Git history. Captured-service credentials were not authenticated or rotated by the privacy scan. Signing/notarization use private operator credentials that are not part of the source packet. Hosted workflow results are listed in the table above. No independent security audit or automatic-update acceptance is claimed.

@@ -26,7 +26,8 @@ module PublicPreviewSecurity
     raise "Workflows must queue independently by branch" unless document.fetch("concurrency") ==
       { "group" => expected_group, "cancel-in-progress" => false }
     document.fetch("jobs").each do |name, job|
-      expected_runner = name == "secrets" ? "ubuntu-24.04" : "xcode-27"
+      # CodeQL cannot trace builds on macOS 27 or Xcode 27; only that job uses the macOS 26 image.
+      expected_runner = { "secrets" => "ubuntu-24.04", "codeql" => "macos-26" }.fetch(name, "xcode-27")
       raise "Unexpected runner" unless job.fetch("runs-on") == expected_runner
       raise "Missing bounded timeout" unless (1..60).cover?(job.fetch("timeout-minutes"))
       permissions = job.fetch("permissions", { "contents" => "read" })

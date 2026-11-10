@@ -1,23 +1,24 @@
 # Public-source and candidate readiness
 
-Revision November 9, 2026. Prepared destination: **JoesProxy-Mac**. Repository creation,
-account/availability checks and publication have not occurred. Private history remains separate.
+Revision November 9, 2026. Destination: **JoesProxy-Mac**, published November 9, 2026 as the
+public repository `SerialForBreakfast/JoesProxy-Mac` with release `1.9.0`. Private history remains
+separate. See [snapshot provenance](../PUBLIC-SNAPSHOT.md) for the checked publication status.
 
 ## Current candidate
 
 The starting point is the reviewed 1.9.0 (23) source export: 2,722 original files, verified
 against its manifest before editing. Source archive SHA-256:
 `cd08d18fe7b27e0495cdaaa4c68bf20a4d6a271f776702c8fefc824649cc46d5`.
-Project links now target `SerialForBreakfast/JoesProxy-Mac`; these are planned URLs, not
-verified live services. Later link/documentation edits require validation of the derivative.
+Project links target `SerialForBreakfast/JoesProxy-Mac`. The repository and its release page
+are live; the project website was not checked. Later source edits require their own validation.
 
-The unchanged [build-23 installer](1.9.0-build23.md) and checksum are staged in `Releases/`.
-The DMG is ignored by Git and contains original embedded links. It does not match the edited
-source byte for byte. Choose that binary with explicit provenance or validate/package a replacement
-after authorization. Upload approved binaries as release assets, not source commits.
+The unchanged [build-23 installer](1.9.0-build23.md) is the `1.9.0` release asset; its hosted
+digest matches the checksum in `Releases/`. The DMG is ignored by Git and contains original
+embedded links. It does not match the published source byte for byte, and it predates commit
+`6cec757`. Upload any replacement binary as a release asset, not a source commit.
 
-Builds, previews, UI runs, Git writes and publication remain on hold. No installer was rebuilt,
-installed or hosted. Remaining manual acceptance and hosted checks are not implied by notarization.
+No installer was rebuilt for publication. Remaining manual acceptance is not implied by
+notarization. Hosted code analysis has not succeeded and the latest commit has no hosted run.
 
 ## Retained layout
 
@@ -25,7 +26,9 @@ Source targets, locked dependencies, synthetic fixtures and portable guidance re
 README introduces the product; bundled Help owns runtime guidance; RELEASE.md owns release
 procedure. The private task board and raw audit evidence are intentionally excluded.
 
-## Owner decisions before public distribution
+## Owner decisions recorded before public distribution
+
+Publication has since occurred. Items below that were not completed remain open follow-ups.
 
 - Original-material rights and retained identity decisions were recorded November 7. Changed
   material still needs review. Original signing identifiers grant no signing authority.
@@ -34,8 +37,6 @@ procedure. The private task board and raw audit evidence are intentionally exclu
   absence of secrets. Complete remaining manual acceptance and authorized hosted security checks.
 - Configure and verify private vulnerability reporting at the destination. External code contributions remain closed.
 - Classify/rotate historical private credentials if needed. Exclusion from a fresh snapshot does not revoke them.
-
-These public-distribution decisions do not authorize publication and do not prevent preparing the requested private test candidate.
 
 ## Preserved local material
 

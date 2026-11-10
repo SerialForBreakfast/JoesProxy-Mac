@@ -35,6 +35,14 @@ class PublicPreviewSecurityTests < Minitest::Test
     assert_raises(RuntimeError) { PublicPreviewSecurity.validate_workflow(document) }
   end
 
+  def test_code_analysis_requires_the_traceable_toolchain_runner
+    path = File.join(PublicPreviewSecurity::ROOT, ".github/workflows/public-preview-codeql.yml")
+    document = YAML.safe_load(File.read(path), aliases: false)
+    assert_equal "macos-26", document["jobs"]["codeql"]["runs-on"]
+    document["jobs"]["codeql"]["runs-on"] = "xcode-27"
+    assert_raises(RuntimeError) { PublicPreviewSecurity.validate_workflow(document) }
+  end
+
   def test_rejects_branch_and_permission_expansion
     document = workflow
     document["on"]["push"]["branches"] << "**"

@@ -1,8 +1,16 @@
 # Security checks for the public preview
 
-Revision 2026-11-07. Three hosted workflow files are prepared. Hosted execution awaits the chosen destination; no hosted security badge is claimed.
+Revision 2026-11-09. The preview is published at `SerialForBreakfast/JoesProxy-Mac`. No hosted security badge is claimed.
 
-## Before making the preview available
+## Hosted results, checked November 9, 2026
+
+- Build and SDK tests: passed on initial commit `bd55cdb`.
+- Secret scan: passed on `bd55cdb`.
+- Swift CodeQL: failed on `bd55cdb` at the traced app build. CodeQL reports that traced analysis is not supported on macOS 27 or above and asks for macOS 26 and Xcode 26 or below. No code-scanning analysis exists and none is claimed. The job has since been moved to an Xcode 26.6 lane, described below, which has not yet run.
+- Commit `6cec757` has no hosted run of any workflow.
+- Private vulnerability reporting is not enabled. Steps 2 to 4 below were not verified.
+
+## Setup checklist written before publication
 
 1. Select the public destination and confirm that its project links point to the intended repository.
 2. Enable private vulnerability reporting and verify that the security reporting button is visible. Update SECURITY.md to describe the working route after verification.
@@ -10,7 +18,7 @@ Revision 2026-11-07. Three hosted workflow files are prepared. Hosted execution 
 4. Inspect dependency discovery and alerts. Record which lockfiles and dependencies were recognized. Swift/Xcode package coverage requires confirmation.
 5. Configure build/test and code scanning on standard public macOS runners with a compatible Xcode version. The source was tested with Xcode 27.0. Record successful extraction and scanned Swift targets for CodeQL.
 
-These remote settings require a destination and maintainer access. They are separate from the current publication hold.
+These remote settings require maintainer access to the repository.
 
 ## Build and code scanning setup
 
@@ -22,9 +30,11 @@ Use repository-content read permission by default. Grant security-events write o
 
 The prepared workflows are [build and SDK tests](../.github/workflows/public-preview-build.yml), [Swift CodeQL](../.github/workflows/public-preview-codeql.yml), and [secret scanning](../.github/workflows/public-preview-secrets.yml). They run only on main pushes, manual dispatch and the stated weekly schedules. They accept no pull-request trigger.
 
-Checkout, artifact upload and CodeQL actions are pinned to reviewed immutable official revisions. Secret scanning fetches Gitleaks 8.30.1 and verifies its fixed SHA-256 before extraction. No scanner is installed globally by that workflow. The build helper uses Xcode 27.0, pinned package resolution, unsigned app compilation, offline CLI checks and SDK tests. CodeQL traces both the app/CLI build and the separate SDK test build. Full app Policy remains separate from these hosted jobs because the test host needs a validated signing configuration.
+Checkout, artifact upload and CodeQL actions are pinned to reviewed immutable official revisions. Secret scanning fetches Gitleaks 8.30.1 and verifies its fixed SHA-256 before extraction. No scanner is installed globally by that workflow. The build helper uses Xcode 27.0 for the build job, pinned package resolution, unsigned app compilation, offline CLI checks and SDK tests. CodeQL traces both the app/CLI build and the separate SDK test build. Full app Policy remains separate from these hosted jobs because the test host needs a validated signing configuration.
 
-The macOS jobs use the dedicated xcode-27 image and default DEVELOPER_DIR to /Applications/Xcode_27.0.app/Contents/Developer. The image inventory was checked to include Xcode 27.0 build 27A266a at that path. A maintainer can set the JOESPROXY_DEVELOPER_DIR repository variable to an installed equivalent. The helper rejects a selected Xcode version other than 27.0. If a later hosted image lacks that toolchain, the job fails for inspection; it never downloads another Xcode or substitutes a different toolchain automatically. The standard macos-26 image was inspected and lacks the required version.
+The build job uses the dedicated xcode-27 image and defaults DEVELOPER_DIR to /Applications/Xcode_27.0.app/Contents/Developer. The image inventory was checked to include Xcode 27.0 build 27A266a at that path. A maintainer can set the JOESPROXY_DEVELOPER_DIR repository variable to an installed equivalent. The helper rejects a selected Xcode version other than the expected one, 27.0 by default. If a later hosted image lacks that toolchain, the job fails for inspection; it never downloads another Xcode or substitutes a different toolchain automatically. The standard macos-26 image lacks Xcode 27.0.
+
+The CodeQL job alone runs on the standard macos-26 image with Xcode 26.6 at /Applications/Xcode_26.6.app, and sets JOESPROXY_PREVIEW_XCODE_VERSION to 26.6 so the helper accepts it. The published image inventory lists that path. This lane is an experiment: the source has only been built with Xcode 27.0, and the companion SDK manifest requires Swift tools 6.3. If the app or SDK does not compile there, the job fails and no code analysis is claimed. A successful run analyzes an Xcode 26.6 build, which is not the tested Xcode 27.0 build.
 
 Each workflow queues by branch in its own concurrency group, so build and CodeQL requests cannot replace each other's pending jobs. Native commands run serially within each isolated hosted job. Build and scan evidence expires after three days. Scanner artifacts contain only the content-free summary; redacted raw findings remain on the disposable runner. Each accepted fixture finding must match its reviewed rule, line and whole-file SHA-256 in Fixtures/Security/ReviewedSecretFindings.json. A new finding or changed fixture requires explicit review.
 

@@ -1,6 +1,20 @@
 # Public source snapshot
 
-Revision 2026-11-08. Prepared from 1.9.0 (23) source, MCP capabilities revision 29.
+Revision 2026-11-09. Prepared from 1.9.0 (23) source, MCP capabilities revision 29.
+
+## Publication status, checked November 9, 2026
+
+This source is published at the public repository `SerialForBreakfast/JoesProxy-Mac`. Release
+`1.9.0` carries the build-23 disk image as an asset; its hosted SHA-256 digest and size match
+`Releases/SHA256SUMS`. On the initial commit `bd55cdb` the hosted build and secret scan passed.
+The Swift CodeQL job failed because traced analysis is not supported on macOS 27 or Xcode 27, so
+no code-scanning analysis exists. Commit `6cec757` changed app, CLI and test source afterward and
+has no hosted build or scan. Private vulnerability reporting is not enabled.
+
+## Preparation record
+
+The entries below were written before publication. Where they say the repository was not
+initialized or that publication is on hold, the status above supersedes them.
 
 Source review November 9: updated stale release/readiness documents, corrected download OS/size
 facts, contribution policy and local-versus-shared privacy claims. Added portable build-23 notes
