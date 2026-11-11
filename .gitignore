@@ -63,3 +63,5 @@ fastlane/test_output
 
 # Keep local installers out of source history; upload them as release assets.
 /Releases/*.dmg
+/build
+/DerivedData
