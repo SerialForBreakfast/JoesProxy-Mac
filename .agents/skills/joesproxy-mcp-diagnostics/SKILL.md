@@ -8,7 +8,7 @@ description: >
   behind.
 compatibility: [claude-code, codex, cursor]
 metadata:
-  version: 1.9.0
+  version: 1.9.1
   source: JoesProxy built-in diagnostic prompt (joesproxy_diagnose)
 ---
 
@@ -70,7 +70,7 @@ directory, including `references/`, in your agent's skills directory. Do not cop
 - [Enrollment, connection configuration and Compact workspace](references/connection.md)
 - [Diagnostic runs, native prompts, connection checks and CLI sandbox recovery](references/workflow.md)
 - [CLI authentication, filtering and structured output](references/cli.md)
-- [Bounded reads, pagination, polling and response budgets](references/efficient-reads.md)
+- [Filtered counts, batch calculations, projections, diffs and bounded reads](references/efficient-reads.md)
 - [Session capture, playback transport triage, reversible HTTPS rules and exports](references/capture-and-edits.md)
 - [Media analysis, CODECS experiments and playlist rewriting](references/media-inspection.md)
 - [Body inspection, edit previews, field-mapping diagnosis and persistent drafts](references/response-edits.md)

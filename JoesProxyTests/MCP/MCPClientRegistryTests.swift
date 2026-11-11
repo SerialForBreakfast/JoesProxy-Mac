@@ -16,6 +16,24 @@ final class MCPClientRegistryTests: XCTestCase {
         XCTAssertEqual(authenticated.id, enrollment.client.id)
     }
 
+    func testReturningCurrentVerifierRecoversEnrollmentWithoutRotation() throws {
+        let store = MCPInMemoryCredentialStore()
+        let url = temporaryURL(named: "recover.json")
+        let registry = MCPClientRegistry(persistenceURL: url, credentialStore: store)
+        try registry.load()
+        let enrollment = try registry.enroll(displayName: "Synthetic CLI")
+        let record = enrollment.client
+        let verifier = try XCTUnwrap(store.loadVerifier(clientID: record.id, generation: record.credentialGeneration))
+        try store.deleteVerifier(clientID: record.id, generation: record.credentialGeneration)
+        try registry.load()
+        XCTAssertEqual(registry.client(id: record.id)?.credentialState, .needsRotation)
+        try store.saveVerifier(clientID: record.id, generation: record.credentialGeneration, verifier: verifier)
+        XCTAssertThrowsError(try registry.authenticate(bearerToken: "incorrect"))
+        XCTAssertEqual(try registry.authenticate(bearerToken: enrollment.plaintextCredential).id, record.id)
+        try registry.load()
+        XCTAssertEqual(try registry.authenticate(bearerToken: enrollment.plaintextCredential).credentialGeneration, record.credentialGeneration)
+    }
+
     func testRevokedCredentialFails() throws {
         let store = MCPInMemoryCredentialStore()
         let registry = MCPClientRegistry(

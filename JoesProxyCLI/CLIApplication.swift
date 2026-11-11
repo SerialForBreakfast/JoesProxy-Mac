@@ -2706,7 +2706,7 @@ final class CLIApplication {
     private func doctorFailure(for error: CLIError) -> (state: String, recommendedCommand: String) {
         switch error {
         case .authenticationFailed:
-            return ("authentication_required", "joesproxyctl auth login")
+            return ("authentication_required", "Verify the configured endpoint and retry joesproxyctl doctor after Keychain access returns. Review enrollment if rejection persists.")
         case .policyDenied:
             return ("policy_action_required", "Review this CLI client in JoesProxy MCP Management.")
         case .rateLimited:
@@ -3515,7 +3515,7 @@ final class CLIApplication {
         case .serverUnavailable:
             recommendedAction = "Run joesproxyctl doctor with the same endpoint. Start MCP only if stopped. If an apply was interrupted, inspect its status before retrying; do not assume it failed or create a replacement proposal."
         case .authenticationFailed:
-            recommendedAction = "Rotate or reenroll the JoesProxy CLI client, then run joesproxyctl auth login."
+            recommendedAction = "Check the endpoint and retry a read after Keychain access returns. If the credential is revoked or the current verifier is permanently missing, review enrollment in MCP Management."
         case .policyDenied:
             recommendedAction = "Review the client profile, Runtime Control grant, and cleanup state in MCP Management."
         case .rateLimited:

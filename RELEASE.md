@@ -20,3 +20,7 @@ The existing `fastlane mac release` lane runs serial Policy tests, creates a uni
 Keep compiler outputs and test results under build/. Release artifacts belong in release downloads. Keep source and dependency notices together. Validate the exact source, version and final installer checksum. Exclude build/, .build/, vendor/, .bundle/, user workspace state and fastlane/report.xml from source exports; these can contain generated or private local data. Private workstation credentials and history are excluded from this snapshot.
 
 Publishing, installation and host UI acceptance are separate operator actions. The prepared snapshot has no public publication approval. Fresh-install and manual-upgrade testing remain required for a distributable installer. Automated updates require a configured and verified signing key and feed.
+
+## 1.9.1 build 24
+
+The private test candidate uses the normal Developer ID release lane and its production entitlements. Keep its archive and notarization evidence in build/PrivateCandidate191Build24 and its user-facing DMG under Releases/. Verify the final checksum after stapling. After second-Mac approval, review the candidate changes in a PR to main, tag the approved source and attach that exact DMG and checksum to the release. Use the [candidate notes](docs/releases/1.9.1-build24.md) as the release description.

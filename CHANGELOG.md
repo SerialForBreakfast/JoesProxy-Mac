@@ -2,6 +2,23 @@
 
 JoesProxy development began on November 5, 2024, by Joseph McCraw. The 1.9.0 source preview follows two years of development.
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+## [1.9.1] - 2026-11-10
+
+App version **1.9.1** (build **24**). See [release workflow](RELEASE.md).
+
+- Filter and calculate retained capture metadata over a bounded time window from MCP or the CLI. Search by response characteristics, request endpoint groups, or inspect scoped credential continuity.
+- Use structured predicates and batch calculations for supported selected sources. Request bounded field projections, value differences, and rule near-miss diagnostics.
+- Capture details distinguish busy-traffic omissions, body retention, and session eviction. See the [candidate notes](docs/releases/1.9.1-build24.md) for validation scope.
+
+
 ## 1.9.0 source release (build 23)
 
 - Live text-size changes scale the Compact HUD's text and layout, main-window health statistics and inherited controls. The main header selects a layout with room for larger reading text.

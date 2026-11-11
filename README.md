@@ -44,6 +44,9 @@ Drill from a host into an endpoint to find the individual request you want to in
 
 ![Compact monitoring window showing capture stopped](docs/assets/screenshots/compact.png)
 
+See the [1.9.1 candidate notes](docs/releases/1.9.1-build24.md) for the optimized agent workflows and their measured scope.
+
+
 ## Build from source
 
 

@@ -301,7 +301,7 @@ final class MCPCLIClient {
     private func throwHTTPError(_ response: MCPCLIResponse) throws -> Never {
         switch response.statusCode {
         case 401:
-            throw CLIError.authenticationFailed("The CLI credential was rejected. Enroll or rotate the JoesProxy CLI client, then run `joesproxyctl auth login`.")
+            throw CLIError.authenticationFailed("The MCP server rejected the stored credential. Check that the endpoint belongs to the intended JoesProxy instance.")
         case 403:
             throw CLIError.policyDenied("The enrolled CLI profile does not permit this operation.")
         case 404:

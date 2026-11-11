@@ -10,12 +10,15 @@
 - **Compact discovery:** start routine triage with `agent_toolset_select` set to `core`
   (CLI `toolset select core`), then select the task-specific catalog when needed. Preserve
   existing client preferences; use `all` for coverage audits. Discovery does not change authority.
+- **Find examples:** use `sessions_search` for status, duration, body availability or override-hit filters. Endpoint groups summarize the returned page. Request auth-chain evidence only for credential continuity.
+- **Review a rule after a marker:** use `capture_activity_since_marker` with the rule ID and marker or sequence. Near misses describe predicate mismatches. Verify delivery against recorded evidence.
+- **Count across a time window:** use `capture_calculate` with `filter.startedAfter` and `filter.startedBefore`, dataset `sessionMetadata`, empty selectionPointer, and one rowCount or groupCount on /statusCode. CLI: `capture calculate --started-after <ISO8601> --started-before <ISO8601> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode`. Inspect retained coverage and possible gaps before interpreting a zero.
 - **Local calculations:** use `capture_calculate` (CLI `capture calculate`) for explicit live
   session IDs: group allowed session metadata or calculate one complete JSON response at an
   explicit pointer. Six operations: rowCount, fieldStats, distinctCount, numericSummary,
   groupCount, topRows. Each operation accepts an optional structured `where` predicate (`eq`,
   `neq`, `gt`, `gte`, `lt`, `lte`, `isNull`, `isMissing`, `contains`), and `operations` (CLI
-  `--operations-json`) batches 1–4 operations in a single pass over one `sourceSHA256`. Existing sensitive-read authority is required, including for counts.
+  `--operations-json`) batches 1–4 bounded operations against one `sourceSHA256`. Existing sensitive-read authority is required, including for counts.
   Limits: 1 MiB JSON, 10,000 rows, 256 identities and 16 KiB output; decimal operands support
   12 integer and six fractional digits. Overflow, incomplete input and selected-source changes
   return no numeric result. Inspect sourceRevisions/sourceSHA256, coverage and omittedGroups.

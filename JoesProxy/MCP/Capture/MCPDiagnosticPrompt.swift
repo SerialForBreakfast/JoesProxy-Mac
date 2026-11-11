@@ -448,11 +448,10 @@ enum MCPDiagnosticPrompt {
        manifest digest, skill version, and an explicit compatibility result. Treat an incompatible
        result as a hard restaging signal: use the bounded recommended actions instead of inferring that
        a stored credential or a recently modified file belongs to the running app.
-    3. **A previously-stored CLI credential can be silently rejected** (`authentication_required`,
-       "The CLI credential was rejected") with no diagnostic as to why. The CLI cannot self-serve a
-       fresh one — by design, a credential must never appear in a command argument or chat transcript.
-       A human must mint a new one-time credential in the app's MCP Management UI; then run
-       `joesproxyctl auth login` again.
+    3. For a stored credential rejected by the server, check the endpoint first. When the current
+       Keychain verifier becomes available again, retry a read after 30 seconds. Check enrollment
+       in MCP Management if rejection persists. A revoked or permanently lost credential needs
+       human enrollment or rotation and `joesproxyctl auth login`.
     4. **The client's disclosure profile must be Shareable (not the default Metadata Only), with no
        Always-Deny runtime-control rule, before runtime-control tools even exist as callable tools at
        all** — this is a hard gate, not merely an approval step. On Metadata Only, calling
@@ -815,12 +814,15 @@ enum MCPDiagnosticPrompt {
     - **Compact discovery:** start routine triage with `agent_toolset_select` set to `core`
       (CLI `toolset select core`), then select the task-specific catalog when needed. Preserve
       existing client preferences; use `all` for coverage audits. Discovery does not change authority.
+    - **Find examples:** use `sessions_search` for status, duration, body availability or override-hit filters. Endpoint groups summarize the returned page. Request auth-chain evidence only for credential continuity.
+    - **Review a rule after a marker:** use `capture_activity_since_marker` with the rule ID and marker or sequence. Near misses describe predicate mismatches. Verify delivery against recorded evidence.
+    - **Count across a time window:** use `capture_calculate` with `filter.startedAfter` and `filter.startedBefore`, dataset `sessionMetadata`, empty selectionPointer, and one rowCount or groupCount on /statusCode. CLI: `capture calculate --started-after <ISO8601> --started-before <ISO8601> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode`. Inspect retained coverage and possible gaps before interpreting a zero.
     - **Local calculations:** use `capture_calculate` (CLI `capture calculate`) for explicit live
       session IDs: group allowed session metadata or calculate one complete JSON response at an
       explicit pointer. Six operations: rowCount, fieldStats, distinctCount, numericSummary,
       groupCount, topRows. Each operation accepts an optional structured `where` predicate (`eq`,
       `neq`, `gt`, `gte`, `lt`, `lte`, `isNull`, `isMissing`, `contains`), and `operations` (CLI
-      `--operations-json`) batches 1–4 operations in a single pass over one `sourceSHA256`. Existing sensitive-read authority is required, including for counts.
+      `--operations-json`) batches 1–4 bounded operations against one `sourceSHA256`. Existing sensitive-read authority is required, including for counts.
       Limits: 1 MiB JSON, 10,000 rows, 256 identities and 16 KiB output; decimal operands support
       12 integer and six fractional digits. Overflow, incomplete input and selected-source changes
       return no numeric result. Inspect sourceRevisions/sourceSHA256, coverage and omittedGroups.

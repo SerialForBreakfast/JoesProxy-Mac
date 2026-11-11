@@ -25,7 +25,7 @@ enum MCPDiagnosticSkill {
         .init(fileName: "connection.md", heading: "## Cold-start bootstrap", purpose: "Enrollment, connection configuration and Compact workspace"),
         .init(fileName: "workflow.md", heading: "## Start here: task router and the real-device mutation loop", purpose: "Diagnostic runs, native prompts, connection checks and CLI sandbox recovery"),
         .init(fileName: "cli.md", heading: "## Bundled JoesProxy CLI", purpose: "CLI authentication, filtering and structured output"),
-        .init(fileName: "efficient-reads.md", heading: "## Efficiency conventions (apply to every tool below)", purpose: "Bounded reads, pagination, polling and response budgets"),
+        .init(fileName: "efficient-reads.md", heading: "## Efficiency conventions (apply to every tool below)", purpose: "Filtered counts, batch calculations, projections, diffs and bounded reads"),
         .init(fileName: "capture-and-edits.md", heading: "## Feature catalog", purpose: "Session capture, playback transport triage, reversible HTTPS rules and exports"),
         .init(fileName: "media-inspection.md", heading: "### Media discovery & inspection", purpose: "Media analysis, CODECS experiments and playlist rewriting"),
         .init(fileName: "response-edits.md", heading: "### Generic captured-response inspection (G2)", purpose: "Body inspection, edit previews, field-mapping diagnosis and persistent drafts"),
