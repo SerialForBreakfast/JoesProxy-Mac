@@ -523,6 +523,14 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         let transcript = ["baseline": baselineMessages + baselineDetail,
                           "candidate": [single.measurementMessages] + candidateDetail]
         print("aggregate latency baseline=\(baselineElapsed) candidate=\(candidateElapsed); follow-up baselineCalls=1 candidateCalls=2")
+        for (arm, messages) in transcript.sorted(by: { $0.key < $1.key }) {
+            let aggregate = arm == "baseline" ? baselineCalls : 1
+            for count in [aggregate, messages.count] {
+                let requests = messages.prefix(count).reduce(0) { $0 + ($1["request"]?.utf8.count ?? 0) }
+                let responses = messages.prefix(count).reduce(0) { $0 + ($1["response"]?.utf8.count ?? 0) }
+                print("filtered-capture-300 arm=\(arm) calls=\(count) requestBytes=\(requests) responseBytes=\(responses)")
+            }
+        }
         let attachment = XCTAttachment(data: try JSONEncoder().encode(transcript), uniformTypeIdentifier: "public.json")
         attachment.name = "filtered-capture-300-rpc-bodies"
         attachment.lifetime = .keepAlways

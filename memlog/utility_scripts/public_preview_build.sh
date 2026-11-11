@@ -49,6 +49,18 @@ case "${1:-}" in
       '.success and .result.version == $version and .result.build == $build' "$EVIDENCE/cli-version.json"
     jq -e '.success and .result.incomplete == false' "$EVIDENCE/cli-help.json"
     ;;
+  filtered-calculations)
+    xcodebuild test "${COMMON[@]}" -disableAutomaticPackageResolution -configuration Debug \
+      -destination "platform=macOS" -testPlan JoesProxy-Policy -parallel-testing-enabled NO \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationChecksAuthorityAndQualifiesEmptyWindows \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredWindowDetectsLateCompletion \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredGroupsReconcileTiesHistoryLossAndWorkLimit \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationAgainstPagedSearchAndExplicitBatches \
+      -only-testing:JoesProxyTests/CLIArtifactArgumentsTests/testFilteredMetadataArgumentsRequireExactlyOneSelection \
+      -only-testing:JoesProxyTests/JoesProxyCLITests/testCalculationCLIUsesRealTransportAndPreservesUnavailableExit \
+      -jobs 2 CODE_SIGN_IDENTITY=- 2>&1 | tee "$EVIDENCE/filtered-calculations.log"
+    grep -F "filtered-capture-300 baselineCalls=" "$EVIDENCE/filtered-calculations.log"
+    ;;
   sdk)
     swift test --package-path Companion/JoesProxySDK --scratch-path "$BUILD_ROOT/SDKTests" \
       --disable-automatic-resolution --skip-update 2>&1 | tee "$EVIDENCE/sdk-tests.log"
