@@ -346,6 +346,190 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertTrue(missing["result"] is NSNull)
     }
 
+    func testFilteredCalculationChecksAuthorityAndQualifiesEmptyWindows() async throws {
+        let stack = try await makeStack(profile: .metadataOnly)
+        let scope = ["startedAfter": "1970-01-01T00:00:00Z", "startedBefore": "1970-01-01T00:00:00Z"]
+        var args: [String: Any] = ["filter": scope, "dataset": "sessionMetadata", "selectionPointer": "",
+                                   "operation": ["kind": "rowCount"]]
+        args["filter"] = scope.merging(["path": "/secret"]) { _, new in new }
+        let denied = try await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args)
+        XCTAssertNotNil(denied.errorData)
+        let permitted = try await makeStack()
+        _ = try permitted.grantStore.addGrant(clientID: permitted.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        args["filter"] = scope
+        let empty = try summaryPayload(from: await callSessionSummary(stack: permitted, toolName: "capture_calculate", toolArguments: args))
+        XCTAssertEqual(empty["rows"] as? Int, 0)
+        XCTAssertEqual(empty["admissionCoverage"] as? String, "unknown")
+        args["sessionIDs"] = [permitted.session.id.uuidString]
+        let mixed = try summaryPayload(from: await callSessionSummary(stack: permitted, toolName: "capture_calculate", toolArguments: args))
+        XCTAssertEqual(mixed["status"] as? String, "unavailable")
+    }
+
+    func testFilteredWindowDetectsLateCompletion() async throws {
+        let gate = ArtifactTestGate()
+        let stack = try await makeStack(worker: ArtifactAnalysisWorker(beforeWork: { gate.wait() }))
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        var row = stack.session
+        row.response = nil
+        row.state = .pending
+        stack.sessionStore.update(row)
+        let args: [String: Any] = ["filter": ["startedAfter": "1970-01-01T00:00:00Z", "startedBefore": "2099-01-01T00:00:00Z"],
+                                   "dataset": "sessionMetadata", "selectionPointer": "", "operation": ["kind": "rowCount"]]
+        let call = Task { try await self.callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args) }
+        for _ in 0..<100 where !gate.entered { try await Task.sleep(for: .milliseconds(5)) }
+        XCTAssertTrue(gate.entered)
+        stack.sessionStore.update(stack.session)
+        gate.open()
+        let result = try summaryPayload(from: await call.value)
+        XCTAssertEqual(result["reason"] as? String, "source_changed")
+        XCTAssertTrue(result["result"] is NSNull)
+    }
+
+    func testFilteredGroupsReconcileTiesHistoryLossAndWorkLimit() async throws {
+        let stack = try await makeStack()
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let timing = SessionTiming(startedAt: Date(timeIntervalSince1970: 0))
+        let rows = [503, 200, 503, 200].map { status in
+            SessionRecord(request: stack.session.request, response: CapturedResponse(statusCode: status, headers: [],
+                bodyData: nil, bodySize: 0), state: .completed, timing: timing)
+        }
+        stack.sessionStore.load(sessions: rows)
+        let scope = ["startedAfter": "1970-01-01T00:00:00Z", "startedBefore": "1970-01-01T00:00:00Z"]
+        let args: [String: Any] = ["filter": scope, "dataset": "sessionMetadata", "selectionPointer": "",
+                                   "operation": ["kind": "groupCount", "fieldPointer": "/statusCode", "limit": 1]]
+        let budget = CaptureAdmissionBudget(byteLimit: 1, countLimit: 1)
+        XCTAssertNil(budget.reserve(bytes: 2))
+        stack.protocolService.setCaptureStatusProvider {
+            MCPCaptureStatusDTO(proxyState: "running", admission: budget.snapshot, perResponseByteLimit: 1, retainedBodyByteLimit: nil)
+        }
+        let tied = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args))
+        XCTAssertNil(tied["possibleCaptureGap"], "A later rejection cannot affect this earlier window")
+        XCTAssertEqual(tied["rowsInOmittedGroups"] as? Int, 2)
+        let groups = try XCTUnwrap((tied["result"] as? [String: Any])?["groups"] as? [[String: Any]])
+        XCTAssertEqual((groups.first?["key"] as? [String: String])?["value"], "200")
+        stack.sessionStore.clear()
+        var wide = args
+        wide["filter"] = ["startedAfter": scope["startedAfter"]!, "startedBefore": "2099-01-01T00:00:00Z"]
+        let cleared = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: wide))
+        XCTAssertEqual(cleared["historyChangedSinceWindowStart"] as? Bool, true)
+        XCTAssertEqual(cleared["possibleCaptureGap"] as? Bool, true)
+        stack.sessionStore.load(sessions: (0...10_000).map { _ in
+            SessionRecord(request: stack.session.request, state: .pending, timing: timing)
+        })
+        let over = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args))
+        XCTAssertEqual(over["reason"] as? String, "input_limit")
+        XCTAssertTrue(over["result"] is NSNull)
+    }
+
+    func testFilteredCalculationAgainstPagedSearchAndExplicitBatches() async throws {
+        let stack = try await makeStack()
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let start = Date(timeIntervalSince1970: 0)
+        let records = (0...300).map { i in
+            SessionRecord(id: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", i))!,
+                request: stack.session.request, response: i == 299 ? nil : stack.session.response,
+                state: i == 299 ? .pending : .completed,
+                timing: SessionTiming(startedAt: start.addingTimeInterval(Double(i))))
+        }
+        stack.sessionStore.load(sessions: records)
+        let scope = ["method": "get", "path": "/APP/", "startedAfter": "1970-01-01T00:00:00Z",
+                     "startedBefore": "1970-01-01T00:04:59Z"]
+        let base: [String: Any] = ["dataset": "sessionMetadata", "selectionPointer": "",
+                                   "operation": ["kind": "groupCount", "fieldPointer": "/statusCode"]]
+        let candidateStart = ContinuousClock.now
+        let single = try await callSessionSummary(stack: stack, toolName: "capture_calculate",
+            toolArguments: base.merging(["filter": scope]) { _, new in new })
+        let candidateElapsed = candidateStart.duration(to: .now)
+        let result = try summaryPayload(from: single)
+        XCTAssertEqual(result["rows"] as? Int, 300)
+        XCTAssertNil(result["sessionIDs"])
+        func counts(_ result: [String: Any]) throws -> [String: Int] {
+            let groups = try XCTUnwrap((result["result"] as? [String: Any])?["groups"] as? [[String: Any]])
+            var values: [String: Int] = [:]
+            for group in groups {
+                let key = try XCTUnwrap(group["key"] as? [String: String])
+                values[key["value"] ?? "missing"] = try XCTUnwrap(group["count"] as? Int)
+            }
+            return values
+        }
+        let manifestURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/FilteredCapture/busy-window.json")
+        struct Oracle: Decodable {
+            let firstID: String
+            let lastID: String
+            let rows: Int
+            let counts: [String: Int]
+        }
+        let oracle = try JSONDecoder().decode(Oracle.self, from: Data(contentsOf: manifestURL))
+        let expected = oracle.counts
+        XCTAssertEqual(result["rows"] as? Int, oracle.rows)
+        XCTAssertEqual(try counts(result), expected)
+        var search: [String: Any] = scope
+        search["limit"] = 50
+        var ids: [String] = []
+        var baselineMessages: [[String: String]] = []
+        var baselineCalls = 0
+        var baselineBytes = 0
+        let baselineStart = ContinuousClock.now
+        repeat {
+            let response = try await callSessionSummary(stack: stack, toolName: "sessions_search", toolArguments: search)
+            baselineCalls += 1
+            baselineBytes += response.requestBytes + response.wireBytes
+            baselineMessages.append(response.measurementMessages)
+            let page = try summaryPayload(from: response)
+            let items = try XCTUnwrap(page["items"] as? [[String: Any]])
+            ids += try items.map { try XCTUnwrap($0["id"] as? String) }
+            search["cursor"] = page["nextCursor"] as? String
+        } while search["cursor"] != nil && baselineCalls < 301
+        let membership = Set(ids.map { $0.lowercased() })
+        XCTAssertEqual(ids.count, oracle.rows)
+        XCTAssertEqual(membership.count, oracle.rows)
+        XCTAssertEqual(membership.min(), oracle.firstID)
+        XCTAssertEqual(membership.max(), oracle.lastID)
+        XCTAssertEqual(membership, Set(records.prefix(oracle.rows).map { $0.id.uuidString.lowercased() }))
+        var pooled: [String: Int] = [:]
+        // Leave room for UUID strings and operation fields in the 8 KiB RPC argument budget.
+        for offset in stride(from: 0, to: ids.count, by: 192) {
+            let batch = Array(ids.dropFirst(offset).prefix(192))
+            let response = try await callSessionSummary(stack: stack, toolName: "capture_calculate",
+                toolArguments: base.merging(["sessionIDs": batch]) { _, new in new })
+            baselineCalls += 1
+            baselineBytes += response.requestBytes + response.wireBytes
+            baselineMessages.append(response.measurementMessages)
+            for (key, value) in try counts(summaryPayload(from: response)) { pooled[key, default: 0] += value }
+        }
+        let baselineElapsed = baselineStart.duration(to: .now)
+        XCTAssertEqual(pooled, expected)
+        let candidateBytes = single.requestBytes + single.wireBytes
+        XCTAssertGreaterThan(baselineCalls, 1)
+        XCTAssertLessThan(candidateBytes, baselineBytes)
+        // Both consumers ask for one concrete example after seeing the counts.
+        var sampleQuery: [String: Any] = scope
+        sampleQuery["limit"] = 1
+        func followUp() async throws -> [[String: String]] {
+            let page = try await callSessionSummary(stack: stack, toolName: "sessions_search", toolArguments: sampleQuery)
+            let items = try XCTUnwrap(try summaryPayload(from: page)["items"] as? [[String: Any]])
+            let id = try XCTUnwrap(items.first?["id"] as? String)
+            XCTAssertEqual(id.lowercased(), records[0].id.uuidString.lowercased())
+            let detail = try await callSessionSummary(stack: stack, toolArguments: ["sessionID": id])
+            XCTAssertEqual(try summaryPayload(from: detail)["statusCode"] as? Int, 502)
+            return [page.measurementMessages, detail.measurementMessages]
+        }
+        let baselineExample = try await callSessionSummary(stack: stack, toolArguments: ["sessionID": try XCTUnwrap(ids.first)])
+        XCTAssertEqual(try summaryPayload(from: baselineExample)["statusCode"] as? Int, 502)
+        let baselineDetail = [baselineExample.measurementMessages]
+        let candidateDetail = try await followUp()
+        let transcript = ["baseline": baselineMessages + baselineDetail,
+                          "candidate": [single.measurementMessages] + candidateDetail]
+        print("aggregate latency baseline=\(baselineElapsed) candidate=\(candidateElapsed); follow-up baselineCalls=1 candidateCalls=2")
+        let attachment = XCTAttachment(data: try JSONEncoder().encode(transcript), uniformTypeIdentifier: "public.json")
+        attachment.name = "filtered-capture-300-rpc-bodies"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        print("filtered-capture-300 baselineCalls=\(baselineCalls) candidateCalls=1 baselineRPCBytes=\(baselineBytes) candidateRPCBytes=\(candidateBytes) providerTokens=unmeasured")
+    }
+
     func testLiveMetadataGroupingIsExplicitAndBounded() async throws {
         let stack = try await makeStack()
         _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
@@ -786,6 +970,8 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         let result: [String: Any]?
         let errorData: [String: Any]?
         var wireBytes = 0
+        var requestBytes = 0
+        var measurementMessages: [String: String] = [:]
     }
 
     func makeStack(includeResponseBody: Bool = true, responseBody: Data? = nil,
@@ -892,7 +1078,13 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         if let error = object["error"] as? [String: Any] {
             return ToolResponse(result: nil, errorData: error["data"] as? [String: Any] ?? error, wireBytes: response.body.count)
         }
-        return ToolResponse(result: object["result"] as? [String: Any], errorData: nil, wireBytes: response.body.count)
+        var result = ToolResponse(result: object["result"] as? [String: Any], errorData: nil,
+                                  wireBytes: response.body.count, requestBytes: body.count)
+        if let name = params["name"] as? String, ["sessions_search", "session_summary", "capture_calculate"].contains(name) {
+            result.measurementMessages = ["request": String(decoding: body, as: UTF8.self),
+                                          "response": String(decoding: response.body, as: UTF8.self)]
+        }
+        return result
     }
 
     func summaryPayload(from response: ToolResponse) throws -> [String: Any] {

@@ -30,7 +30,20 @@ enum CLIArtifactArguments {
             }
         }
         var result: [String: Any] = ["selectionPointer": invocation.options["selection-pointer"] ?? "", "operation": operation]
-        if live {
+        if live && invocation.options["session-ids"] == nil {
+            let names = ["started-after": "startedAfter", "started-before": "startedBefore",
+                         "path-contains": "path", "method": "method", "domain": "domain"]
+            allowed.formUnion(names.keys)
+            var filter: [String: String] = [:]
+            for (option, key) in names { filter[key] = invocation.options[option] }
+            guard dataset == "sessionMetadata", filter["startedAfter"] != nil, filter["startedBefore"] != nil,
+                  result["selectionPointer"] as? String == "",
+                  operationName == "rowCount" || (operationName == "groupCount" && invocation.options["field-pointer"] == "/statusCode") else {
+                throw CLIError.invalidArguments("Filtered capture calculations require both time bounds and rowCount or groupCount on /statusCode.")
+            }
+            result["filter"] = filter
+            result["dataset"] = dataset
+        } else if live {
             allowed.insert("session-ids")
             guard ["responseJSON", "sessionMetadata"].contains(dataset) else { throw CLIError.invalidArguments("Live calculations require responseJSON or sessionMetadata.") }
             let ids = try required("session-ids", invocation).split(separator: ",", omittingEmptySubsequences: false).map(String.init)

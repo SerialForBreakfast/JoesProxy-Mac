@@ -31,6 +31,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
         let observed: CaptureObservationInstant
         let gaps: [Gap]
         let evictedThrough: CaptureObservationInstant?
+        var firstRejectedAt: Date?
         var lastRejectedAt: Date?
         var lastBodySkippedAt: Date?
         var byteLimit: Int = 0
@@ -91,6 +92,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
     private var lastRejectionReason: RejectionReason?
     private var bytes = 0
     private var peak = 0
+    private var firstRejectedAt: Date?
     private var lastRejectedAt: Date?
     private var lastBodySkippedAt: Date?
     private var rejected = 0
@@ -167,6 +169,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
                     return CaptureReservation(id: insertReservation(bytes: metadataBytes), metadataOnly: true)
                 }
                 lastRejectedAt = now().date
+                if firstRejectedAt == nil { firstRejectedAt = lastRejectedAt }
                 rejected += 1
                 gaps[gaps.count - 1].rejectedCaptures += 1
                 return nil
@@ -239,7 +242,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
                 rejectedCaptures: rejected, paused: paused, gapStartedAt: gapStartedAt,
                 lastGapEndedAt: gapEndedAt, historyStarted: historyStarted, observed: now(),
                 gaps: gaps, evictedThrough: evictedThrough,
-                lastRejectedAt: lastRejectedAt, lastBodySkippedAt: lastBodySkippedAt,
+                firstRejectedAt: firstRejectedAt, lastRejectedAt: lastRejectedAt, lastBodySkippedAt: lastBodySkippedAt,
                 byteLimit: byteLimit, countLimit: countLimit,
                 admittedCount: reservations.values.filter { $0.stage == .admitted }.count,
                 collectingCount: reservations.values.filter { $0.stage == .collecting }.count,

@@ -3571,6 +3571,7 @@ final class CLIApplication {
         [--include-headers] [--include-response-headers] [--include-body]
         [--body-source response|request] [--header-source both|request|response]
       joesproxyctl session brief <session-id> [--selection-pointer /items] [--include-structure]
+      joesproxyctl capture calculate --started-after <ISO8601> --started-before <ISO8601> [--method GET] [--domain <text>] [--path-contains <text>] --dataset sessionMetadata --operation rowCount
       joesproxyctl capture calculate --session-ids <id,id> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode
       joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items --operation numericSummary --field-pointer /price
       joesproxyctl artifact brief --handle <handle> --snapshot-revision <revision> --record-index <ordinal> [--selection-pointer /items] [--include-structure]

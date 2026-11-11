@@ -6,11 +6,16 @@ enum ArtifactToolSchema {
         let pointer: [String: Any] = ["type": "string", "maxLength": 512]
         switch name {
         case "capture_calculate":
-            return object(["sessionIDs": ["type": "array", "minItems": 1, "maxItems": 256,
+            let filter = object(["startedAfter": ["type": "string", "format": "date-time"],
+                "startedBefore": ["type": "string", "format": "date-time"], "method": ["type": "string"],
+                "domain": ["type": "string"], "path": ["type": "string"]], required: ["startedAfter", "startedBefore"])
+            var schema = object(["filter": filter, "sessionIDs": ["type": "array", "minItems": 1, "maxItems": 256,
                 "uniqueItems": true, "items": ["type": "string", "format": "uuid"]],
                 "dataset": ["type": "string", "enum": ["responseJSON", "sessionMetadata"]],
                 "selectionPointer": pointer, "operation": operation, "approval": ["type": "object"]],
-                required: ["sessionIDs", "dataset", "selectionPointer", "operation"])
+                required: ["dataset", "selectionPointer", "operation"])
+            schema["oneOf"] = [["required": ["sessionIDs"]], ["required": ["filter"]]]
+            return schema
         case "artifact_inventory", "artifact_search":
             var fields: [String: Any] = ["handle": identity, "snapshotRevision": identity, "cursor": identity,
                 "limit": ["type": "integer", "minimum": 1, "maximum": 50], "method": ["type": "string", "maxLength": 256],

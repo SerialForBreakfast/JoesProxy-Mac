@@ -229,6 +229,10 @@ final class MCPSessionSnapshotService {
     }
 
     private func matchesFilter(_ record: SessionRecord, filter: ListFilter?) -> Bool {
+        Self.matchesFilter(record, filter: filter, disclosure: nil)
+    }
+
+    nonisolated static func matchesFilter(_ record: SessionRecord, filter: ListFilter?, disclosure: MCPDisclosureSerializer?) -> Bool {
         guard let filter, !filter.isEmpty else { return true }
         if let method = filter.method,
            record.request.method.caseInsensitiveCompare(method) != .orderedSame {
@@ -252,11 +256,11 @@ final class MCPSessionSnapshotService {
             }
         }
         if let domain = filter.domain,
-           !record.request.host.localizedCaseInsensitiveContains(domain) {
+           !(disclosure?.sanitizedHost(record.request.host) ?? record.request.host).localizedCaseInsensitiveContains(domain) {
             return false
         }
         if let path = filter.pathContains,
-           !record.request.path.localizedCaseInsensitiveContains(path) {
+           !(disclosure?.sanitizedPath(record.request.path) ?? record.request.path).localizedCaseInsensitiveContains(path) {
             return false
         }
         if let startedAfter = filter.startedAfter, record.timing.startedAt < startedAfter {

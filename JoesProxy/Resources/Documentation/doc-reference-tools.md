@@ -70,7 +70,9 @@ of silently presenting a missing companion list as a complete search.
 
 ## capture_calculate {#capture-calculate}
 
-Count, group or summarize explicit captured session metadata or one complete JSON response using exact bounded decimal arithmetic. Requires sensitive-read approval. Source changes discard results; no refetch or raw body output.
+Calculate over explicit session IDs or filter retained metadata by an inclusive time window for rowCount or status-code groupCount. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.
+
+Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. A scan above 50,000 retained sessions or 10,000 matches returns unavailable.
 
 Capability category: bodyRead.
 

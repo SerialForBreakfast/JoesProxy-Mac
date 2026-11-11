@@ -62,7 +62,7 @@ enum MCPCapabilitiesManifestBuilder {
 
     /// Production MCP tools mirrored by ``MCPProtocolService/handleToolsList``.
     static let productionTools: [ProductionTool] = [
-        ProductionTool(name: "capture_calculate", description: "Count, group or summarize explicit captured session metadata or one complete JSON response using exact bounded decimal arithmetic. Requires sensitive-read approval. Source changes discard results; no refetch or raw body output.", capability: .bodyRead),
+        ProductionTool(name: "capture_calculate", description: "Calculate over explicit session IDs or filter retained metadata by an inclusive time window for rowCount or status-code groupCount. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.", capability: .bodyRead),
         ProductionTool(name: "artifact_source_register", description: "Request local file selection and review of one immutable temporary source. No remote path input. The local user selects and shares; retry the same request key after approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_status", description: "Owner-only pending source state; no selected-file metadata before approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_inspect", description: "Inspect an owned unexpired source descriptor. No raw content or local filenames.", capability: .artifactSourceAccess),

@@ -2269,9 +2269,91 @@ final class MCPProtocolService {
         }
     }
 
+    private func filteredCalculation(id: Any?, arguments: [String: Any], client: MCPClientRecord,
+                                     context: RequestContext) async throws -> [String: Any] {
+        guard try JSONSerialization.data(withJSONObject: MCPArgumentDigest.dispatchArguments(arguments)).count <= 8192,
+              Set(arguments.keys).isSubset(of: ["filter", "operation", "dataset", "selectionPointer", "approval"]),
+              arguments["dataset"] as? String == "sessionMetadata", arguments["selectionPointer"] as? String == "",
+              let operation = arguments["operation"] as? [String: Any],
+              let scope = arguments["filter"] as? [String: String],
+              Set(scope.keys).isSubset(of: ["method", "domain", "path", "startedAfter", "startedBefore"]),
+              scope.values.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= 512 }),
+              let filter = sessionsSearchFilter(arguments: scope), let start = filter.startedAfter,
+              let end = filter.startedBefore, start <= end else { throw ArtifactAnalysisFailure.malformedRequest }
+        let query = try ArtifactCalculation.Query(selectionPointer: "", operation: operation)
+        guard query.kind == .rowCount || (query.kind == .groupCount && query.fieldPointer == "/statusCode") else {
+            throw ArtifactAnalysisFailure.malformedRequest
+        }
+        let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
+        var fields: Set<MCPPolicyFieldClass> = [.timestamps]
+        if filter.pathContains != nil { fields.insert(.sanitizedPath) }
+        if filter.domain != nil { fields.insert(.sanitizedHost) }
+        if filter.method != nil { fields.insert(.method) }
+        if query.kind == .groupCount { fields.insert(.statusCode) }
+        guard fields.isSubset(of: profile.allowedFieldClasses) else {
+            throw MCPStructuredError(code: .policyDenied, message: "Profile does not grant the selected metadata.")
+        }
+        guard !artifactWorker.busy else { throw ArtifactAnalysisFailure.busy }
+        var approval = arguments
+        approval["includeBody"] = true
+        _ = try resolveSensitiveReadApproval(toolName: "capture_calculate", arguments: approval, client: client,
+            capability: .bodyRead, mcpSessionID: context.headers[MCPNetworkConstants.sessionIDHeader.lowercased()],
+            reason: "Count retained metadata in the selected capture window.")
+        let revision = snapshotService.stateRevision
+        let epoch = snapshotService.captureEpoch
+        let policy = policyStore.policyRevision
+        let records = snapshotService.sourceSessionStore.sessions
+        guard records.count <= 50_000 else { throw ArtifactAnalysisFailure.inputLimit }
+        let serializer = disclosureSerializer
+        let report = try await artifactWorker.perform {
+            let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+            var rows: [ArtifactJSONValue] = []
+            for (index, record) in records.enumerated() {
+                if index.isMultiple(of: 64) { try ArtifactSnapshotReader.check(deadline) }
+                guard MCPSessionSnapshotService.matchesFilter(record, filter: filter, disclosure: serializer) else { continue }
+                guard rows.count < 10_000 else { throw ArtifactAnalysisFailure.inputLimit }
+                if query.kind == .groupCount, let status = record.response?.statusCode {
+                    rows.append(.object([("statusCode", .number(String(status)))]))
+                } else {
+                    rows.append(.object([]))
+                }
+            }
+            return try ArtifactCalculation.analyze(rows: rows, query: query, deadline: deadline)
+        }
+        guard let current = clientRegistry.client(id: client.id), current.credentialState == .active,
+              current.credentialGeneration == client.credentialGeneration, current.assignedProfileID == client.assignedProfileID,
+              policy == policyStore.policyRevision, policyEvaluator.effectiveAllows(capability: .bodyRead, client: current)
+        else { throw ArtifactAnalysisFailure.sourceUnavailable }
+        guard revision == snapshotService.stateRevision, epoch == snapshotService.captureEpoch else {
+            throw ArtifactAnalysisFailure.sourceChanged
+        }
+        var payload = try jsonObject(from: encoder.encode(report))
+        payload["filter"] = scope
+        payload["captureEpoch"] = epoch.rawValue
+        payload["stateRevision"] = revision
+        payload["scannedRows"] = records.count
+        payload["snapshotSemantics"] = "retained_sessions_at_revision"
+        if let reset = snapshotService.epochMetadata.lastEpochChangeAt, start <= reset {
+            payload["historyChangedSinceWindowStart"] = true
+        }
+        if let status = captureStatusProvider?() {
+            if status.rejectedCaptures > 0, (status.lastIncompleteCaptureAt ?? .distantFuture) >= start,
+               (status.firstIncompleteCaptureAt ?? .distantPast) <= end {
+                payload["possibleCaptureGap"] = true
+            }
+        } else { payload["admissionCoverage"] = "unknown" }
+        if snapshotService.droppedSessionCount > 0 { payload["historyTrimmed"] = true }
+        if let groups = report.result.groups {
+            payload["rowsInOmittedGroups"] = report.rows - groups.reduce(0) { $0 + $1.count }
+        }
+        guard try JSONSerialization.data(withJSONObject: payload).count <= 16_384 else { throw ArtifactAnalysisFailure.outputLimit }
+        return toolStructuredResult(id: id, payload: payload)
+    }
+
     private func captureCalculateTool(id: Any?, arguments: [String: Any], client: MCPClientRecord,
                                       context: RequestContext) async -> [String: Any] {
         do {
+            if arguments["filter"] != nil { return try await filteredCalculation(id: id, arguments: arguments, client: client, context: context) }
             let allowed: Set<String> = ["sessionIDs", "dataset", "selectionPointer", "operation", "approval"]
             guard Set(arguments.keys).isSubset(of: allowed),
                   let strings = arguments["sessionIDs"] as? [String], !strings.isEmpty, strings.count <= 256,

@@ -62,6 +62,18 @@ final class JoesProxyCLITests: XCTestCase {
         let params = try XCTUnwrap(try calls.first?.bodyData().jsonObject()["params"] as? [String: Any])
         XCTAssertEqual(params["name"] as? String, "capture_calculate")
         XCTAssertEqual((params["arguments"] as? [String: Any])?["selectionPointer"] as? String, "/items")
+
+        let filtered = await app.run(arguments: ["capture", "calculate", "--started-after", "1970-01-01T00:00:00Z",
+            "--started-before", "1970-01-01T00:01:00Z", "--dataset", "sessionMetadata", "--method", "POST",
+            "--operation", "rowCount", "--json"])
+        XCTAssertEqual(filtered, .partialResult)
+        let requests = MockCLIURLProtocol.state.recordedRequests()
+        XCTAssertEqual(requests.count, 2)
+        let filteredParams = try XCTUnwrap(try requests.last?.bodyData().jsonObject()["params"] as? [String: Any])
+        XCTAssertEqual(filteredParams["name"] as? String, "capture_calculate")
+        let args = try XCTUnwrap(filteredParams["arguments"] as? [String: Any])
+        XCTAssertEqual((args["filter"] as? [String: String])?["method"], "POST")
+        XCTAssertNil(args["sessionIDs"])
     }
 
     func testReceiptCollectionOverheadPreservesRequestCount() async throws {

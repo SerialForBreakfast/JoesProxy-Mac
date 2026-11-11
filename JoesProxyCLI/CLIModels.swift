@@ -77,7 +77,7 @@ struct CLIInvocation {
             "client-address",
             "image-file", "image-pointer", "retain-image-url", "image-delivery-url", "image-reference", "images", "related-responses",
             "endpoint", "timeout", "projection", "limit", "cursor", "since-sequence", "if-state-token",
-            "method", "host-category", "session-id-prefix", "analysis",
+            "method", "host-category", "session-id-prefix", "analysis", "started-after", "started-before", "path-contains",
             "sample-time", "format", "output", "interval", "approval-timeout",
             "if-brief-digest", "selection-pointer", "body-source", "header-source", "scheme", "host", "port", "path", "match-mode", "json-path",
             "operation", "value", "value-type", "repeat-policy", "label",
