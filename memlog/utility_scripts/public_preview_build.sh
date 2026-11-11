@@ -50,6 +50,13 @@ case "${1:-}" in
     jq -e '.success and .result.incomplete == false' "$EVIDENCE/cli-help.json"
     ;;
   filtered-calculations)
+    # The disposable hosted checkout signs the XCTest host ad hoc.
+    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+      app_entitlements=JoesProxy/JoesProxy.entitlements
+      cp "$app_entitlements" "$BUILD_ROOT/fixture-original.entitlements"
+      trap 'cp "$BUILD_ROOT/fixture-original.entitlements" "$app_entitlements"; verify_locks' EXIT
+      /usr/libexec/PlistBuddy -c "Delete :keychain-access-groups" "$app_entitlements"
+    fi
     xcodebuild test "${COMMON[@]}" -disableAutomaticPackageResolution -configuration Debug \
       -resultBundlePath "$EVIDENCE/filtered-calculations.xcresult" \
       -destination "platform=macOS" -testPlan JoesProxy-Policy -parallel-testing-enabled NO \
