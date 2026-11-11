@@ -57,7 +57,17 @@ case "${1:-}" in
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredGroupsReconcileTiesHistoryLossAndWorkLimit \
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationAgainstPagedSearchAndExplicitBatches \
       -only-testing:JoesProxyTests/CLIArtifactArgumentsTests/testFilteredMetadataArgumentsRequireExactlyOneSelection \
-      -only-testing:JoesProxyTests/JoesProxyCLITests/testCalculationCLIUsesRealTransportAndPreservesUnavailableExit \
+      -only-testing:JoesProxyTests/JoesProxyCLITests \
+      -only-testing:JoesProxyTests/ArtifactCalculationTests \
+      -only-testing:JoesProxyTests/ResponseEvidenceBriefTests \
+      -only-testing:JoesProxyTests/InvestigationComparisonBriefTests \
+      -only-testing:JoesProxyTests/AuthChainBriefTests \
+      -only-testing:JoesProxyTests/MCPCaptureActivitySinceMarkerTests \
+      -only-testing:JoesProxyTests/MCPMediaDiscoveryTests \
+      -only-testing:JoesProxyTests/MCPAgentExportTests \
+      -only-testing:JoesProxyTests/MCPRuntimeIdentityTests \
+      -only-testing:JoesProxyTests/MCPDiagnosticRunServiceTests \
+      -only-testing:JoesProxyTests/DocumentationCatalogTests \
       -jobs 2 CODE_SIGN_IDENTITY=- 2>&1 | tee "$EVIDENCE/filtered-calculations.log"
     grep -F "filtered-capture-300 baselineCalls=" "$EVIDENCE/filtered-calculations.log"
     ;;

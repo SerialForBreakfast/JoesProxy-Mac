@@ -4667,6 +4667,126 @@ final class JoesProxyCLITests: XCTestCase {
         XCTAssertEqual(missingShowResult, .invalidArguments)
     }
 
+    func testEdgeEfficiencyCLIFlagsMapToMCPToolArguments() async throws {
+        MockCLIURLProtocol.state.reset()
+        let endpoint = URL(string: "http://127.0.0.1:9091/mcp")!
+        let credentials = MemoryCLICredentialStore()
+        try credentials.save("synthetic", endpoint: endpoint)
+        let store = MemoryCLISessionStore()
+        try store.save(.init(
+            endpoint: endpoint.absoluteString,
+            sessionID: "edge-efficiency-cli",
+            protocolVersion: MCPCLIClient.preferredProtocolVersion,
+            updatedAt: Date()
+        ))
+        MockCLIURLProtocol.state.configure { request in
+            let call = try request.bodyData().jsonObject()
+            return try .json(status: 200, object: [
+                "jsonrpc": "2.0",
+                "id": call["id"] as Any,
+                "result": ["structuredContent": ["status": "complete"]]
+            ])
+        }
+        let session = makeMockURLSession()
+        defer { session.invalidateAndCancel() }
+        let app = CLIApplication(credentialStore: credentials, sessionStore: store, appLauncher: MockCLIAppLauncher(),
+            clientFactory: { endpoint, credential, store, timeout in
+                MCPCLIClient(endpoint: endpoint, credential: credential, sessionStore: store, timeout: timeout, urlSession: session)
+            })
+
+        let sid1 = UUID().uuidString
+        let sid2 = UUID().uuidString
+        let ruleID = UUID().uuidString
+
+        let rSearch = await app.run(arguments: [
+            "sessions", "search",
+            "--status-code", "401", "--status-class", "4xx", "--min-duration-ms", "150",
+            "--has-override-hit", "--no-body-available", "--deduplicate-by", "endpoint",
+            "--include-auth-chain", "--quiet"
+        ])
+        XCTAssertEqual(rSearch, .success)
+
+        let rBrief = await app.run(arguments: [
+            "session", "brief", sid1,
+            "--selection-pointer", "/items",
+            "--field-pointers", "/id,/status",
+            "--row-limit", "10", "--quiet"
+        ])
+        XCTAssertEqual(rBrief, .success)
+
+        let rCompare = await app.run(arguments: [
+            "investigate", "compare",
+            "--baseline-sessions", sid1,
+            "--candidate-sessions", sid2,
+            "--include-value-diff",
+            "--ignore-pointers", "/requestId,/timestamp", "--quiet"
+        ])
+        XCTAssertEqual(rCompare, .success)
+
+        let rActivity = await app.run(arguments: [
+            "capture", "activity",
+            "--since-sequence", "42",
+            "--rule", ruleID, "--quiet"
+        ])
+        XCTAssertEqual(rActivity, .success)
+
+        let rLineage = await app.run(arguments: [
+            "lineage", "trace",
+            "--auth-chain", "--quiet"
+        ])
+        XCTAssertEqual(rLineage, .success)
+
+        let rCalc = await app.run(arguments: [
+            "capture", "calculate",
+            "--session-ids", sid1,
+            "--dataset", "responseJSON",
+            "--selection-pointer", "/items",
+            "--operations-json", #"[{"kind":"rowCount","where":{"fieldPointer":"/status","op":"gte","value":400}}]"#,
+            "--quiet"
+        ])
+        XCTAssertEqual(rCalc, .success)
+
+        let requests = try MockCLIURLProtocol.state.recordedRequests().map {
+            try $0.bodyData().jsonObject()["params"] as? [String: Any] ?? [:]
+        }
+        XCTAssertEqual(requests.count, 6)
+
+        XCTAssertEqual(requests[0]["name"] as? String, "sessions_search")
+        let searchArgs = try XCTUnwrap(requests[0]["arguments"] as? [String: Any])
+        XCTAssertEqual(searchArgs["statusCode"] as? Int, 401)
+        XCTAssertEqual(searchArgs["statusClass"] as? String, "4xx")
+        XCTAssertEqual(searchArgs["minDurationMs"] as? Double, 150)
+        XCTAssertEqual(searchArgs["hasOverrideHit"] as? Bool, true)
+        XCTAssertEqual(searchArgs["bodyAvailable"] as? Bool, false)
+        XCTAssertEqual(searchArgs["deduplicateBy"] as? String, "endpoint")
+        XCTAssertEqual(searchArgs["includeAuthChain"] as? Bool, true)
+
+        XCTAssertEqual(requests[1]["name"] as? String, "response_evidence_brief")
+        let briefArgs = try XCTUnwrap(requests[1]["arguments"] as? [String: Any])
+        XCTAssertEqual(briefArgs["fieldPointers"] as? [String], ["/id", "/status"])
+        XCTAssertEqual(briefArgs["rowLimit"] as? Int, 10)
+
+        XCTAssertEqual(requests[2]["name"] as? String, "investigation_compare_brief")
+        let compareArgs = try XCTUnwrap(requests[2]["arguments"] as? [String: Any])
+        XCTAssertEqual(compareArgs["includeValueDiff"] as? Bool, true)
+        XCTAssertEqual(compareArgs["ignorePointers"] as? [String], ["/requestId", "/timestamp"])
+
+        XCTAssertEqual(requests[3]["name"] as? String, "capture_activity_since_marker")
+        let activityArgs = try XCTUnwrap(requests[3]["arguments"] as? [String: Any])
+        XCTAssertEqual((activityArgs["sinceSequence"] as? NSNumber)?.intValue, 42)
+        XCTAssertEqual(activityArgs["overrideID"] as? String, ruleID)
+
+        XCTAssertEqual(requests[4]["name"] as? String, "trace_data_lineage")
+        let lineageArgs = try XCTUnwrap(requests[4]["arguments"] as? [String: Any])
+        XCTAssertEqual(lineageArgs["mode"] as? String, "authChain")
+
+        XCTAssertEqual(requests[5]["name"] as? String, "capture_calculate")
+        let calcArgs = try XCTUnwrap(requests[5]["arguments"] as? [String: Any])
+        let ops = try XCTUnwrap(calcArgs["operations"] as? [[String: Any]])
+        XCTAssertEqual(ops.count, 1)
+        XCTAssertEqual(ops[0]["kind"] as? String, "rowCount")
+    }
+
     private func makeMockURLSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockCLIURLProtocol.self]

@@ -772,6 +772,12 @@ enum MCPDiagnosticPrompt {
     - `--path <path>` — Filter by request path or path prefix (e.g. `--path /v1/auth` or `--path .m3u8`).
     - `--method <method>` — Filter by HTTP method (e.g. `--method POST`, `--method GET`).
     - `--host-category <category>` — Filter by classified category (`direct_origin`, `synthetic_asset`, `capture_marker`, `ad_telemetry`, etc.).
+    - `--status-code <code>` / `--status-class 2xx|3xx|4xx|5xx|error|non200` — Filter by exact HTTP status or family.
+    - `--min-duration-ms <ms>` — Filter by minimum session duration in milliseconds.
+    - `--has-override-hit` / `--no-override-hit` — Filter by whether an active rule or effect matched.
+    - `--body-available` / `--no-body-available` — Filter by retained response body availability.
+    - `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside matched items.
+    - `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report across matched sessions.
     - `--since <iso-timestamp>` / `--until <iso-timestamp>` — Filter by start timestamp range.
     - `--session-id-prefix <prefix>` — Filter by the starting hex/UUID characters of the session ID.
     - `--limit <n>` — Maximum number of sessions to return (default: 50).
@@ -812,7 +818,9 @@ enum MCPDiagnosticPrompt {
     - **Local calculations:** use `capture_calculate` (CLI `capture calculate`) for explicit live
       session IDs: group allowed session metadata or calculate one complete JSON response at an
       explicit pointer. Six operations: rowCount, fieldStats, distinctCount, numericSummary,
-      groupCount, topRows. Existing sensitive-read authority is required, including for counts.
+      groupCount, topRows. Each operation accepts an optional structured `where` predicate (`eq`,
+      `neq`, `gt`, `gte`, `lt`, `lte`, `isNull`, `isMissing`, `contains`), and `operations` (CLI
+      `--operations-json`) batches 1–4 operations in a single pass over one `sourceSHA256`. Existing sensitive-read authority is required, including for counts.
       Limits: 1 MiB JSON, 10,000 rows, 256 identities and 16 KiB output; decimal operands support
       12 integer and six fractional digits. Overflow, incomplete input and selected-source changes
       return no numeric result. Inspect sourceRevisions/sourceSHA256, coverage and omittedGroups.
@@ -833,7 +841,8 @@ enum MCPDiagnosticPrompt {
       automatically retry analysis, or convert byte savings into token/cost claims.
     - **`response_evidence_brief`** (CLI `session brief <session-id> --selection-pointer /items`)
       computes deterministic counts/types and immediate field missing/null counts locally, without
-      returning scalar values. Discover support from the running build. Existing body-read approval
+      returning scalar values unless optional `fieldPointers` (CLI `--field-pointers`, 1–8 pointers,
+      `rowLimit` 1–50) is supplied for compact tabular projection with automatic sensitive-key redaction. Discover support from the running build. Existing body-read approval
       is required. Empty selectionPointer selects root; only complete JSON responses up to 256 KiB
       are analyzed. Check status, coverage and omittedFieldCount: at most 32 short field names are
       returned, and missing counts use object items only. Opt in to includeStructure (CLI
@@ -844,7 +853,9 @@ enum MCPDiagnosticPrompt {
       IDs are live locators, not immutable body handles. Small bodies may be cheaper to read directly.
     - **`investigation_compare_brief`** (CLI `investigate compare --baseline-sessions <id,id>
       --candidate-sessions <id,id>`) compares explicit selections of 1–16 IDs per side. Optional
-      selectionPointer scopes JSON analysis on both sides. Structural metadata disclosure and
+      selectionPointer scopes JSON analysis on both sides; opt in to `includeValueDiff` (CLI
+      `--include-value-diff`, optional `ignorePointers` / `--ignore-pointers`) for bounded RFC 6902-style
+      scalar diffs and `volatileChangeCount`. Structural metadata disclosure and
       body-read approval are required. Analysis is limited to 1 MiB decoded text across unique
       sources; outputs contain at most 32 changes. Missing sources and traversal/budget limits
       remain incomplete, never a pass. Alignment reuses chronological matching on method, origin

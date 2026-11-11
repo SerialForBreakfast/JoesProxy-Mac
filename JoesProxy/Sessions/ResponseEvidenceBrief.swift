@@ -7,6 +7,10 @@ import CryptoKit
 enum ResponseEvidenceBrief {
     static let maximumInputBytes = 262_144
     static let maximumFields = 32
+    static let maximumProjectionPointers = 8
+    static let maximumProjectionRows = 50
+    static let defaultProjectionRows = 25
+    static let maximumScalarPreviewBytes = 256
 
     struct Field: Codable, Equatable, Sendable {
         var name: String
@@ -14,6 +18,12 @@ enum ResponseEvidenceBrief {
         var missing: Int
         var null: Int
         var types: [String: Int]
+    }
+
+    struct ProjectedTable: Codable, Equatable, Sendable {
+        var columns: [String]
+        var rows: [[String?]]
+        var omittedRowCount: Int
     }
 
     struct Report: Codable, Equatable, Sendable {
@@ -32,11 +42,36 @@ enum ResponseEvidenceBrief {
         var structure: [StructureNode]?
         var structureCoverage: String?
         var structureLimits: [String]?
+        var projection: ProjectedTable?
         var contentTrust = "captured_untrusted"
         var scope = "Selected value; array elements or one non-array item. Immediate object fields only; missing counts use object items. No semantic validity or duplicate-identity claim."
     }
 
-    static func analyze(text: String?, truncated: Bool, unavailableReason: String?, pointer: String, includeStructure: Bool = false) -> Report {
+    static func validateProjection(fieldPointers: [String], rowLimit: Int) -> Bool {
+        guard !fieldPointers.isEmpty,
+              fieldPointers.count <= maximumProjectionPointers,
+              (1...maximumProjectionRows).contains(rowLimit) else {
+            return false
+        }
+        for pointer in fieldPointers {
+            guard !pointer.isEmpty, pointer.utf8.count <= 128,
+                  let tokens = try? CollectionMockCompiler.pointer(pointer),
+                  !tokens.isEmpty, tokens.count <= 8 else {
+                return false
+            }
+        }
+        return true
+    }
+
+    static func analyze(
+        text: String?,
+        truncated: Bool,
+        unavailableReason: String?,
+        pointer: String,
+        includeStructure: Bool = false,
+        fieldPointers: [String] = [],
+        projectionLimit: Int = defaultProjectionRows
+    ) -> Report {
         var report = Report(status: "unavailable", selectionPointer: pointer)
         guard unavailableReason == nil else { return report }
         guard !truncated else { report.status = "incomplete_body"; return report }
@@ -82,7 +117,77 @@ enum ResponseEvidenceBrief {
             report.structureLimits = nested.limits
             report.structureCoverage = nested.limits.isEmpty ? "complete" : "bounded"
         }
+        if !fieldPointers.isEmpty, validateProjection(fieldPointers: fieldPointers, rowLimit: projectionLimit) {
+            report.projection = project(items: items, fieldPointers: fieldPointers, limit: projectionLimit)
+        }
         return report
+    }
+
+    private static func project(items: [Any], fieldPointers: [String], limit: Int) -> ProjectedTable {
+        let parsedPointers: [(pointer: String, tokens: [String], isSensitive: Bool)] = fieldPointers.compactMap { pointer in
+            guard let tokens = try? CollectionMockCompiler.pointer(pointer) else { return nil }
+            let isSensitive = tokens.contains { SensitiveDataRedaction.isSensitiveKey($0) }
+            return (pointer, tokens, isSensitive)
+        }
+        let slice = items.prefix(limit)
+        var rows: [[String?]] = []
+        rows.reserveCapacity(slice.count)
+        for item in slice {
+            var row: [String?] = []
+            row.reserveCapacity(parsedPointers.count)
+            for column in parsedPointers {
+                guard let val = select(item, tokens: column.tokens), !(val is NSNull) else {
+                    row.append(nil)
+                    continue
+                }
+                if column.isSensitive {
+                    row.append("<redacted>")
+                } else {
+                    row.append(formatProjectedScalar(val))
+                }
+            }
+            rows.append(row)
+        }
+        return ProjectedTable(
+            columns: parsedPointers.map(\.pointer),
+            rows: rows,
+            omittedRowCount: max(0, items.count - slice.count)
+        )
+    }
+
+    static func formatProjectedScalar(_ value: Any, sensitiveKey: Bool = false) -> String? {
+        if value is NSNull { return nil }
+        if sensitiveKey { return "<redacted>" }
+        if let str = value as? String {
+            let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lower = trimmed.lowercased()
+            if lower.hasPrefix("bearer ") || lower.hasPrefix("basic ") || looksLikeJWT(trimmed) {
+                return "<redacted>"
+            }
+            if str.utf8.count <= maximumScalarPreviewBytes {
+                return str
+            }
+            return String(decoding: str.utf8.prefix(maximumScalarPreviewBytes), as: UTF8.self) + "…"
+        }
+        if let number = value as? NSNumber {
+            if CFGetTypeID(number) == CFBooleanGetTypeID() {
+                return number.boolValue ? "true" : "false"
+            }
+            return number.stringValue
+        }
+        if let dict = value as? [String: Any] {
+            return "<object:\(dict.count)>"
+        }
+        if let arr = value as? [Any] {
+            return "<array:\(arr.count)>"
+        }
+        return nil
+    }
+
+    private static func looksLikeJWT(_ value: String) -> Bool {
+        guard value.hasPrefix("eyJ") else { return false }
+        let parts = value.split(separator: ".", omittingEmptySubsequences: false)
+        return parts.count == 3 && parts.allSatisfy { $0.count >= 4 }
     }
 
     struct StructureNode: Codable, Equatable, Sendable {
@@ -137,7 +242,7 @@ enum ResponseEvidenceBrief {
         return (nodes, limits.sorted())
     }
 
-    private static func select(_ root: Any, tokens: [String]) -> Any? {
+    static func select(_ root: Any, tokens: [String]) -> Any? {
         var value = root
         for token in tokens {
             if let object = value as? [String: Any], let next = object[token] { value = next }
@@ -148,7 +253,7 @@ enum ResponseEvidenceBrief {
         return value
     }
 
-    private static func type(_ value: Any) -> String {
+    static func type(_ value: Any) -> String {
         if value is NSNull { return "null" }
         if value is [String: Any] { return "object" }
         if value is [Any] { return "array" }

@@ -120,4 +120,25 @@ final class ResponseEvidenceBriefTests: XCTestCase {
             print("EVIDENCE_BRIEF_BENCHMARK case=\(name) bodyUTF8Bytes=\(data.count) briefJSONBytes=\(bytes) analysisDuration=\(elapsed) providerTokens=unavailable")
         }
     }
+
+    func testFieldPointersProjectsCompactTableAndRedactsSensitiveKeys() throws {
+        let json = #"{"items":[{"id":"101","status":"ready","accessToken":"secret-jwt-value"},{"id":"102","status":null,"accessToken":"other-secret"},{"id":"103","status":"failed"}]}"#
+        let report = ResponseEvidenceBrief.analyze(
+            text: json,
+            truncated: false,
+            unavailableReason: nil,
+            pointer: "/items",
+            fieldPointers: ["/id", "/status", "/accessToken"],
+            projectionLimit: 2
+        )
+        XCTAssertEqual(report.status, "complete")
+        let projection = try XCTUnwrap(report.projection)
+        XCTAssertEqual(projection.columns, ["/id", "/status", "/accessToken"])
+        XCTAssertEqual(projection.rows.count, 2)
+        XCTAssertEqual(projection.rows[0], ["101", "ready", "<redacted>"])
+        XCTAssertEqual(projection.rows[1], ["102", nil, "<redacted>"])
+        XCTAssertEqual(projection.omittedRowCount, 1)
+        let encoded = String(decoding: try JSONEncoder().encode(report), as: UTF8.self)
+        XCTAssertFalse(encoded.contains("secret-jwt-value"))
+    }
 }

@@ -35,11 +35,24 @@ final class MCPSessionSnapshotService {
         var startedAfter: Date?
         /// Inclusive upper bound on `SessionTiming.startedAt`.
         var startedBefore: Date?
+        /// Exact HTTP response status code match (100...599).
+        var statusCode: Int?
+        /// Status code family match: "2xx", "3xx", "4xx", "5xx", "error" (>=400 or failed), or "non200".
+        var statusClass: String?
+        /// Inclusive lower bound on request duration in milliseconds.
+        var minDurationMs: Double?
+        /// Matches sessions where an override/rewrite/MCP effect applied (true) or upstream only (false).
+        var hasOverrideHit: Bool?
+        /// Matches sessions with a retained non-empty response body (true) or missing/empty body (false).
+        var bodyAvailable: Bool?
 
         var isEmpty: Bool {
             method == nil && hostCategory == nil && sessionIDPrefix == nil
                 && domain == nil && pathContains == nil
                 && startedAfter == nil && startedBefore == nil
+                && statusCode == nil && statusClass == nil
+                && minDurationMs == nil && hasOverrideHit == nil
+                && bodyAvailable == nil
         }
     }
 
@@ -269,7 +282,167 @@ final class MCPSessionSnapshotService {
         if let startedBefore = filter.startedBefore, record.timing.startedAt > startedBefore {
             return false
         }
+        if let expectedStatus = filter.statusCode {
+            guard record.response?.statusCode == expectedStatus else { return false }
+        }
+        if let statusClass = filter.statusClass?.lowercased() {
+            let status = record.response?.statusCode
+            switch statusClass {
+            case "2xx":
+                guard let status, (200...299).contains(status) else { return false }
+            case "3xx":
+                guard let status, (300...399).contains(status) else { return false }
+            case "4xx":
+                guard let status, (400...499).contains(status) else { return false }
+            case "5xx":
+                guard let status, (500...599).contains(status) else { return false }
+            case "error":
+                let isFailed = record.state == .failed || (status ?? 0) >= 400
+                guard isFailed else { return false }
+            case "non200":
+                guard let status, status != 200 else { return false }
+            default:
+                return false
+            }
+        }
+        if let minDurationMs = filter.minDurationMs {
+            guard let durationSeconds = record.timing.duration,
+                  durationSeconds * 1000.0 >= minDurationMs else {
+                return false
+            }
+        }
+        if let hasOverrideHit = filter.hasOverrideHit {
+            let isHit = (record.response?.source != nil && record.response?.source != .upstream)
+                || !(record.response?.mcpAttribution?.effectKinds.isEmpty ?? true)
+            guard isHit == hasOverrideHit else { return false }
+        }
+        if let bodyAvailable = filter.bodyAvailable {
+            let hasBody = !(record.response?.bodyData?.isEmpty ?? true)
+                && record.response?.bodyDeferred != true
+            guard hasBody == bodyAvailable else { return false }
+        }
         return true
+    }
+
+    /// Collapses repetitive polling/segment traffic into bounded endpoint groups while preserving
+    /// status distributions, duration maxima, override hit counts, and first/last session locators.
+    nonisolated static func deduplicateEndpoints(
+        items: [IndexedSession],
+        profile: MCPDisclosureProfileDocument,
+        disclosure: MCPDisclosureSerializer
+    ) -> [MCPEndpointGroupDTO] {
+        struct Builder {
+            var signature: String
+            var method: String?
+            var sanitizedHost: String?
+            var normalizedPath: String?
+            var count: Int = 0
+            var firstSessionID: String
+            var lastSessionID: String
+            var firstSequence: UInt64
+            var lastSequence: UInt64
+            var statusCounts: [String: Int] = [:]
+            var maxDurationSeconds: Double?
+            var overrideHitCount: Int = 0
+        }
+
+        let allowMethod = profile.allowedFieldClasses.contains(.method)
+        let allowHost = profile.allowedFieldClasses.contains(.sanitizedHost)
+        let allowPath = profile.allowedFieldClasses.contains(.sanitizedPath)
+        let allowStatus = profile.allowedFieldClasses.contains(.statusCode)
+        let allowDuration = profile.allowedFieldClasses.contains(.duration)
+        let allowProvenance = profile.allowedFieldClasses.contains(.provenance)
+
+        var groupsBySignature: [String: Builder] = [:]
+        var orderedSignatures: [String] = []
+
+        for indexed in items {
+            let record = indexed.record
+            let method = allowMethod ? record.request.method : nil
+            let host = allowHost ? disclosure.sanitizedHost(record.request.host) : (
+                profile.allowedFieldClasses.contains(.hostCategory)
+                    ? MCPHostCategory.classify(host: record.request.host).rawValue
+                    : nil
+            )
+            let normPath = allowPath ? normalizeEndpointPath(disclosure.sanitizedPath(record.request.path)) : nil
+            let signature = [method ?? "*", host ?? "*", normPath ?? "*"].joined(separator: " ")
+
+            let statusKey: String
+            if allowStatus {
+                statusKey = record.response.map { String($0.statusCode) } ?? record.state.rawValue
+            } else {
+                statusKey = "undisclosed"
+            }
+            let isHit = allowProvenance && (
+                (record.response?.source != nil && record.response?.source != .upstream)
+                || !(record.response?.mcpAttribution?.effectKinds.isEmpty ?? true)
+            )
+
+            if var existing = groupsBySignature[signature] {
+                existing.count += 1
+                existing.lastSessionID = record.id.uuidString
+                existing.lastSequence = indexed.captureSequence
+                existing.statusCounts[statusKey, default: 0] += 1
+                if allowDuration, let duration = record.timing.duration {
+                    existing.maxDurationSeconds = max(existing.maxDurationSeconds ?? duration, duration)
+                }
+                if isHit { existing.overrideHitCount += 1 }
+                groupsBySignature[signature] = existing
+            } else {
+                let builder = Builder(
+                    signature: signature,
+                    method: method,
+                    sanitizedHost: host,
+                    normalizedPath: normPath,
+                    count: 1,
+                    firstSessionID: record.id.uuidString,
+                    lastSessionID: record.id.uuidString,
+                    firstSequence: indexed.captureSequence,
+                    lastSequence: indexed.captureSequence,
+                    statusCounts: [statusKey: 1],
+                    maxDurationSeconds: allowDuration ? record.timing.duration : nil,
+                    overrideHitCount: isHit ? 1 : 0
+                )
+                groupsBySignature[signature] = builder
+                orderedSignatures.append(signature)
+            }
+        }
+
+        return orderedSignatures.prefix(32).compactMap { sig in
+            guard let b = groupsBySignature[sig] else { return nil }
+            return MCPEndpointGroupDTO(
+                signature: b.signature,
+                method: b.method,
+                sanitizedHost: b.sanitizedHost,
+                normalizedPath: b.normalizedPath,
+                count: b.count,
+                firstSessionID: b.firstSessionID,
+                lastSessionID: b.lastSessionID,
+                firstSequence: b.firstSequence,
+                lastSequence: b.lastSequence,
+                statusCounts: b.statusCounts,
+                maxDurationSeconds: b.maxDurationSeconds,
+                overrideHitCount: b.overrideHitCount
+            )
+        }
+    }
+
+    nonisolated static func normalizeEndpointPath(_ sanitizedPath: String) -> String {
+        let segments = sanitizedPath.split(separator: "/", omittingEmptySubsequences: false)
+        let normalized = segments.map { segment -> String in
+            let text = String(segment)
+            guard !text.isEmpty else { return text }
+            if text.allSatisfy(\.isNumber) { return ":id" }
+            if UUID(uuidString: text) != nil { return ":uuid" }
+            let lower = text.lowercased()
+            for ext in [".ts", ".m4s", ".cmfv", ".cmfa", ".aac", ".vtt", ".webvtt", ".mp4"] {
+                if lower.hasSuffix(ext), lower.dropLast(ext.count).contains(where: \.isNumber) {
+                    return ":segment\(ext)"
+                }
+            }
+            return text
+        }
+        return normalized.joined(separator: "/")
     }
 
     private func candidateEntries(for filter: ListFilter?) -> [IndexEntry] {

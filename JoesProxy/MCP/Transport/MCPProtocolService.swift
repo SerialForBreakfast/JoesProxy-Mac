@@ -1237,7 +1237,7 @@ final class MCPProtocolService {
         case "session_summary":
             return await sessionSummaryTool(id: id, arguments: arguments, client: client, context: context)
         case "response_evidence_brief":
-            let allowed: Set<String> = ["sessionID", "selectionPointer", "includeStructure", "ifBriefDigest", "approval"]
+            let allowed: Set<String> = ["sessionID", "selectionPointer", "includeStructure", "fieldPointers", "rowLimit", "ifBriefDigest", "approval"]
             guard Set(arguments.keys).isSubset(of: allowed),
                   MCPBriefReadCache.validDigest(arguments["ifBriefDigest"]),
                   arguments["includeStructure"] == nil || (arguments["includeStructure"] as? NSNumber).map({ CFGetTypeID($0) == CFBooleanGetTypeID() }) == true,
@@ -1542,6 +1542,33 @@ final class MCPProtocolService {
                 return try encodedToolResult(id: id, payload: MCPDTOEnvelope(payload: pageDTO))
             }
             let responseBudget = try normalizedResponseBudget(arguments["maxResponseBytes"])
+            let deduplicateBy: String?
+            if let rawDedup = arguments["deduplicateBy"] {
+                guard let text = rawDedup as? String, text == "endpoint" else {
+                    throw MCPStructuredError.malformedRequest(message: "deduplicateBy must be endpoint.")
+                }
+                deduplicateBy = text
+            } else {
+                deduplicateBy = nil
+            }
+            let includeAuthChain: Bool
+            if let rawAuth = arguments["includeAuthChain"] {
+                guard let flag = rawAuth as? Bool else {
+                    throw MCPStructuredError.malformedRequest(message: "includeAuthChain must be a boolean.")
+                }
+                if flag {
+                    guard profile.allowedFieldClasses.contains(.sanitizedHost),
+                          profile.allowedFieldClasses.contains(.safeHeaders) else {
+                        throw MCPStructuredError(
+                            code: .policyDenied,
+                            message: "Auth chain analysis requires sanitizedHost and safeHeaders disclosure."
+                        )
+                    }
+                }
+                includeAuthChain = flag
+            } else {
+                includeAuthChain = false
+            }
 
             var limit = requestedLimit
             var truncatedByBudget = false
@@ -1572,6 +1599,12 @@ final class MCPProtocolService {
                     )
                     return projectedSessionSummary(summary, projection: projection)
                 }
+                let endpointGroups = deduplicateBy == "endpoint"
+                    ? MCPSessionSnapshotService.deduplicateEndpoints(items: page.items, profile: profile, disclosure: disclosureSerializer)
+                    : nil
+                let authChain = includeAuthChain
+                    ? AuthChainBrief.analyze(records: page.items.map(\.record), disclosure: disclosureSerializer)
+                    : nil
                 let pageDTO = MCPSessionListPageDTO(
                     captureWarning: capacityWarning(status: capacity, records: page.items.map(\.record), includesHistory: true),
                     items: items,
@@ -1583,7 +1616,9 @@ final class MCPProtocolService {
                     truncationReason: truncatedByBudget ? "response_exceeded_requested_budget" : nil,
                     projection: projection,
                     latestSequence: snapshotService.highWaterSequence,
-                    stateToken: stateToken
+                    stateToken: stateToken,
+                    endpointGroups: endpointGroups,
+                    authChain: authChain
                 )
                 encodedData = try encoder.encode(MCPDTOEnvelope(payload: pageDTO))
 
@@ -1621,7 +1656,12 @@ final class MCPProtocolService {
         let path = arguments["path"] as? String ?? ""
         let startedAfter = arguments["startedAfter"] as? String ?? ""
         let startedBefore = arguments["startedBefore"] as? String ?? ""
-        return "search:\(method):\(hostCategory):\(sessionIDPrefix):\(domain):\(path):\(startedAfter):\(startedBefore)"
+        let statusCode = (arguments["statusCode"] as? NSNumber)?.stringValue ?? ""
+        let statusClass = arguments["statusClass"] as? String ?? ""
+        let minDurationMs = (arguments["minDurationMs"] as? NSNumber)?.stringValue ?? ""
+        let hasOverrideHit = (arguments["hasOverrideHit"] as? Bool).map(String.init) ?? ""
+        let bodyAvailable = (arguments["bodyAvailable"] as? Bool).map(String.init) ?? ""
+        return "search:\(method):\(hostCategory):\(sessionIDPrefix):\(domain):\(path):\(startedAfter):\(startedBefore):\(statusCode):\(statusClass):\(minDurationMs):\(hasOverrideHit):\(bodyAvailable)"
     }
 
     private func captureDigestTool(id: Any?, arguments: [String: Any]) -> [String: Any] {
@@ -2057,6 +2097,27 @@ final class MCPProtocolService {
         let path = (arguments["path"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let startedAfter = isoDate(arguments["startedAfter"])
         let startedBefore = isoDate(arguments["startedBefore"])
+        let statusCode: Int?
+        if let number = arguments["statusCode"] as? NSNumber,
+           CFGetTypeID(number) != CFBooleanGetTypeID(),
+           number.doubleValue == Double(number.intValue),
+           (100...599).contains(number.intValue) {
+            statusCode = number.intValue
+        } else {
+            statusCode = nil
+        }
+        let statusClass = (arguments["statusClass"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let minDurationMs: Double?
+        if let number = arguments["minDurationMs"] as? NSNumber,
+           CFGetTypeID(number) != CFBooleanGetTypeID(),
+           number.doubleValue.isFinite,
+           number.doubleValue >= 0 {
+            minDurationMs = number.doubleValue
+        } else {
+            minDurationMs = nil
+        }
+        let hasOverrideHit = arguments["hasOverrideHit"] as? Bool
+        let bodyAvailable = arguments["bodyAvailable"] as? Bool
         let filter = MCPSessionSnapshotService.ListFilter(
             method: method?.isEmpty == true ? nil : method,
             hostCategory: hostCategory?.isEmpty == true ? nil : hostCategory,
@@ -2064,7 +2125,12 @@ final class MCPProtocolService {
             domain: domain?.isEmpty == true ? nil : domain,
             pathContains: path?.isEmpty == true ? nil : path,
             startedAfter: startedAfter,
-            startedBefore: startedBefore
+            startedBefore: startedBefore,
+            statusCode: statusCode,
+            statusClass: statusClass?.isEmpty == true ? nil : statusClass,
+            minDurationMs: minDurationMs,
+            hasOverrideHit: hasOverrideHit,
+            bodyAvailable: bodyAvailable
         )
         return filter.isEmpty ? nil : filter
     }
@@ -2084,6 +2150,35 @@ final class MCPProtocolService {
         guard let sessionID = arguments["sessionID"] as? String,
               let uuid = UUID(uuidString: sessionID) else {
             return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32602, "sessionID is required."))
+        }
+        let fieldPointers: [String]
+        let rowLimit: Int
+        if brief {
+            if let rawPointers = arguments["fieldPointers"] {
+                guard let strings = rawPointers as? [String] else {
+                    return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32602, "fieldPointers must be an array of JSON Pointers."))
+                }
+                fieldPointers = strings
+            } else {
+                fieldPointers = []
+            }
+            if let rawLimit = arguments["rowLimit"] {
+                guard let number = rawLimit as? NSNumber,
+                      CFGetTypeID(number) != CFBooleanGetTypeID(),
+                      number.doubleValue == Double(number.intValue) else {
+                    return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32602, "rowLimit must be an integer from 1 through 50."))
+                }
+                rowLimit = number.intValue
+            } else {
+                rowLimit = ResponseEvidenceBrief.defaultProjectionRows
+            }
+            if !fieldPointers.isEmpty,
+               !ResponseEvidenceBrief.validateProjection(fieldPointers: fieldPointers, rowLimit: rowLimit) {
+                return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32602, "fieldPointers must contain 1...8 valid non-root JSON Pointers and rowLimit must be 1...50."))
+            }
+        } else {
+            fieldPointers = []
+            rowLimit = ResponseEvidenceBrief.defaultProjectionRows
         }
         do {
             let sensitiveCapabilities = MCPCapabilityRouter.sensitiveReadCapabilities(from: arguments)
@@ -2106,7 +2201,10 @@ final class MCPProtocolService {
             let briefScope = brief ? try MCPBriefReadCache.scope(["response-v2", client.id, profile.id.rawValue,
                 policyStore.policyRevision.rawValue, snapshotService.captureEpoch.rawValue,
                 snapshotService.sourceRevisionScope(for: [uuid]),
-                arguments["selectionPointer"] as? String ?? "", String(arguments["includeStructure"] as? Bool ?? false)]) : ""
+                arguments["selectionPointer"] as? String ?? "",
+                String(arguments["includeStructure"] as? Bool ?? false),
+                fieldPointers.joined(separator: ","),
+                String(rowLimit)]) : ""
             if brief, let unchanged = briefReadCache.unchanged(arguments["ifBriefDigest"] as? String,
                 owner: client.id, scope: briefScope) {
                 return toolStructuredResult(id: id, payload: unchanged)
@@ -2134,7 +2232,9 @@ final class MCPProtocolService {
                     truncated: input.truncated,
                     unavailableReason: input.unavailableReason,
                     pointer: arguments["selectionPointer"] as? String ?? "",
-                    includeStructure: arguments["includeStructure"] as? Bool ?? false
+                    includeStructure: arguments["includeStructure"] as? Bool ?? false,
+                    fieldPointers: fieldPointers,
+                    projectionLimit: rowLimit
                 )
                 while try encoder.encode(report).count > 60_000, report.structure?.isEmpty == false {
                     report.structure?.removeLast()
@@ -2179,7 +2279,10 @@ final class MCPProtocolService {
     /// belong to the same MainActor turn. Analysis is bounded to 32 sources and 1 MiB decoded text.
     private func investigationCompareBriefTool(id: Any?, arguments: [String: Any], client: MCPClientRecord,
                                                context: RequestContext) -> [String: Any] {
-        let allowed: Set<String> = ["baselineSessionIDs", "candidateSessionIDs", "selectionPointer", "ifBriefDigest", "approval"]
+        let allowed: Set<String> = [
+            "baselineSessionIDs", "candidateSessionIDs", "selectionPointer",
+            "ifBriefDigest", "includeValueDiff", "ignorePointers", "approval"
+        ]
         func identifiers(_ key: String) -> [UUID]? {
             guard let strings = arguments[key] as? [String], !strings.isEmpty,
                   strings.count <= InvestigationComparisonBrief.maximumSessionsPerSide else { return nil }
@@ -2190,8 +2293,20 @@ final class MCPProtocolService {
               MCPBriefReadCache.validDigest(arguments["ifBriefDigest"]),
               let baseline = identifiers("baselineSessionIDs"), let candidate = identifiers("candidateSessionIDs"),
               arguments["selectionPointer"] == nil || arguments["selectionPointer"] is String,
-              (try? CollectionMockCompiler.pointer(arguments["selectionPointer"] as? String ?? "")) != nil else {
+              (try? CollectionMockCompiler.pointer(arguments["selectionPointer"] as? String ?? "")) != nil,
+              arguments["includeValueDiff"] == nil || arguments["includeValueDiff"] is Bool else {
             return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32602, "Provide 1...16 distinct UUIDs per side and an optional valid selectionPointer."))
+        }
+        let includeValueDiff = arguments["includeValueDiff"] as? Bool ?? false
+        let ignorePointers: [String]
+        if let rawIgnore = arguments["ignorePointers"] {
+            guard let strings = rawIgnore as? [String],
+                  InvestigationComparisonBrief.validateIgnorePointers(strings) else {
+                return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32602, "ignorePointers must contain up to 16 non-empty JSON Pointers."))
+            }
+            ignorePointers = strings
+        } else {
+            ignorePointers = []
         }
         do {
             let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
@@ -2207,7 +2322,9 @@ final class MCPProtocolService {
                 policyStore.policyRevision.rawValue, snapshotService.captureEpoch.rawValue,
                 snapshotService.sourceRevisionScope(for: baseline + candidate),
                 baseline.map(\.uuidString).joined(separator: ","), candidate.map(\.uuidString).joined(separator: ","),
-                arguments["selectionPointer"] as? String ?? ""])
+                arguments["selectionPointer"] as? String ?? "",
+                String(includeValueDiff),
+                ignorePointers.joined(separator: ",")])
             if let unchanged = briefReadCache.unchanged(arguments["ifBriefDigest"] as? String, owner: client.id, scope: briefScope) {
                 return toolStructuredResult(id: id, payload: unchanged)
             }
@@ -2242,14 +2359,33 @@ final class MCPProtocolService {
                     includeStructure: true)
                 source.analysisStatus = brief.status
                 source.sourceSHA256 = brief.sourceSHA256
-                inputs[uuid] = .init(source: source, record: alignmentRecord, brief: brief)
+                inputs[uuid] = .init(
+                    source: source,
+                    record: alignmentRecord,
+                    brief: brief,
+                    bodyText: includeValueDiff ? input.text : nil
+                )
             }
-            var report = InvestigationComparisonBrief.compare(baseline: baseline.compactMap { inputs[$0] },
-                candidate: candidate.compactMap { inputs[$0] })
-            while try encoder.encode(report).count > 32_768, !report.changes.isEmpty {
-                report.changes.removeLast()
-                report.omittedChangeCount += 1
-                report.status = "incomplete"
+            var report = InvestigationComparisonBrief.compare(
+                baseline: baseline.compactMap { inputs[$0] },
+                candidate: candidate.compactMap { inputs[$0] },
+                selectionPointer: arguments["selectionPointer"] as? String ?? "",
+                includeValueDiff: includeValueDiff,
+                ignorePointers: ignorePointers
+            )
+            while try encoder.encode(report).count > 32_768 {
+                if var vChanges = report.valueChanges, !vChanges.isEmpty {
+                    vChanges.removeLast()
+                    report.valueChanges = vChanges
+                    report.omittedValueChangeCount = (report.omittedValueChangeCount ?? 0) + 1
+                    report.status = "incomplete"
+                } else if !report.changes.isEmpty {
+                    report.changes.removeLast()
+                    report.omittedChangeCount += 1
+                    report.status = "incomplete"
+                } else {
+                    break
+                }
             }
             var payload = try jsonObject(from: encoder.encode(report))
             payload["captureEpoch"] = snapshotService.captureEpoch.rawValue
@@ -2281,7 +2417,8 @@ final class MCPProtocolService {
               let filter = sessionsSearchFilter(arguments: scope), let start = filter.startedAfter,
               let end = filter.startedBefore, start <= end else { throw ArtifactAnalysisFailure.malformedRequest }
         let query = try ArtifactCalculation.Query(selectionPointer: "", operation: operation)
-        guard query.kind == .rowCount || (query.kind == .groupCount && query.fieldPointer == "/statusCode") else {
+        guard query.kind == .rowCount || (query.kind == .groupCount && query.fieldPointer == "/statusCode"),
+              query.predicate == nil || query.predicate?.fieldPointer == "/statusCode" else {
             throw ArtifactAnalysisFailure.malformedRequest
         }
         let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
@@ -2289,7 +2426,7 @@ final class MCPProtocolService {
         if filter.pathContains != nil { fields.insert(.sanitizedPath) }
         if filter.domain != nil { fields.insert(.sanitizedHost) }
         if filter.method != nil { fields.insert(.method) }
-        if query.kind == .groupCount { fields.insert(.statusCode) }
+        if query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode" { fields.insert(.statusCode) }
         guard fields.isSubset(of: profile.allowedFieldClasses) else {
             throw MCPStructuredError(code: .policyDenied, message: "Profile does not grant the selected metadata.")
         }
@@ -2305,6 +2442,7 @@ final class MCPProtocolService {
         let records = snapshotService.sourceSessionStore.sessions
         guard records.count <= 50_000 else { throw ArtifactAnalysisFailure.inputLimit }
         let serializer = disclosureSerializer
+        let needsStatus = query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode"
         let report = try await artifactWorker.perform {
             let deadline = ContinuousClock.now.advanced(by: .seconds(1))
             var rows: [ArtifactJSONValue] = []
@@ -2312,7 +2450,7 @@ final class MCPProtocolService {
                 if index.isMultiple(of: 64) { try ArtifactSnapshotReader.check(deadline) }
                 guard MCPSessionSnapshotService.matchesFilter(record, filter: filter, disclosure: serializer) else { continue }
                 guard rows.count < 10_000 else { throw ArtifactAnalysisFailure.inputLimit }
-                if query.kind == .groupCount, let status = record.response?.statusCode {
+                if needsStatus, let status = record.response?.statusCode {
                     rows.append(.object([("statusCode", .number(String(status)))]))
                 } else {
                     rows.append(.object([]))
@@ -2344,7 +2482,8 @@ final class MCPProtocolService {
         } else { payload["admissionCoverage"] = "unknown" }
         if snapshotService.droppedSessionCount > 0 { payload["historyTrimmed"] = true }
         if let groups = report.result.groups {
-            payload["rowsInOmittedGroups"] = report.rows - groups.reduce(0) { $0 + $1.count }
+            let activeRows = report.filteredRows ?? report.rows
+            payload["rowsInOmittedGroups"] = activeRows - groups.reduce(0) { $0 + $1.count }
         }
         guard try JSONSerialization.data(withJSONObject: payload).count <= 16_384 else { throw ArtifactAnalysisFailure.outputLimit }
         return toolStructuredResult(id: id, payload: payload)
@@ -2354,22 +2493,36 @@ final class MCPProtocolService {
                                       context: RequestContext) async -> [String: Any] {
         do {
             if arguments["filter"] != nil { return try await filteredCalculation(id: id, arguments: arguments, client: client, context: context) }
-            let allowed: Set<String> = ["sessionIDs", "dataset", "selectionPointer", "operation", "approval"]
+            let allowed: Set<String> = ["sessionIDs", "dataset", "selectionPointer", "operation", "operations", "approval"]
+            let hasSingle = arguments["operation"] != nil
+            let hasBatch = arguments["operations"] != nil
             guard Set(arguments.keys).isSubset(of: allowed),
+                  hasSingle != hasBatch,
                   let strings = arguments["sessionIDs"] as? [String], !strings.isEmpty, strings.count <= 256,
                   Set(strings).count == strings.count,
                   let dataset = arguments["dataset"] as? String,
                   dataset == "responseJSON" || dataset == "sessionMetadata",
                   dataset != "responseJSON" || strings.count == 1,
                   let pointer = arguments["selectionPointer"] as? String,
-                  let operation = arguments["operation"] as? [String: Any],
                   try JSONSerialization.data(withJSONObject: MCPArgumentDigest.dispatchArguments(arguments)).count <= 8192 else {
                 throw ArtifactAnalysisFailure.malformedRequest
             }
             let ids = strings.compactMap(UUID.init(uuidString:))
             guard ids.count == strings.count, Set(ids).count == ids.count else { throw ArtifactAnalysisFailure.malformedRequest }
-            let query = try ArtifactCalculation.Query(selectionPointer: pointer, operation: operation)
-            if dataset == "sessionMetadata" { try ArtifactSessionProjection.validateMetadata(query) }
+            let queries: [ArtifactCalculation.Query]
+            if let operation = arguments["operation"] as? [String: Any] {
+                queries = [try ArtifactCalculation.Query(selectionPointer: pointer, operation: operation)]
+            } else if let rawOps = arguments["operations"] as? [Any], !rawOps.isEmpty, rawOps.count <= 4 {
+                queries = try rawOps.map { item -> ArtifactCalculation.Query in
+                    guard let op = item as? [String: Any] else { throw ArtifactAnalysisFailure.malformedRequest }
+                    return try ArtifactCalculation.Query(selectionPointer: pointer, operation: op)
+                }
+            } else {
+                throw ArtifactAnalysisFailure.malformedRequest
+            }
+            if dataset == "sessionMetadata" {
+                for query in queries { try ArtifactSessionProjection.validateMetadata(query) }
+            }
             guard !artifactWorker.busy else { throw ArtifactAnalysisFailure.busy }
             var approvalArguments = arguments
             approvalArguments["includeBody"] = true
@@ -2385,18 +2538,32 @@ final class MCPProtocolService {
                 return indexed.record
             }
             let deadline = ContinuousClock.now.advanced(by: .seconds(1))
-            let evidence = try await artifactWorker.perform {
+            let evidence: (encodedReport: Data, analyzerVersion: String, sha256: String) = try await artifactWorker.perform {
                 let projections = records.map { ArtifactSessionProjection(record: $0, includeBody: dataset == "responseJSON") }
                 if dataset == "responseJSON" {
                     guard let bytes = projections[0].responseJSON else { throw ArtifactAnalysisFailure.incompleteSelection }
-                    return (try ArtifactCalculation.analyze(data: bytes, query: query, deadline: deadline), ArtifactSnapshotReader.hash(bytes))
+                    let sha = ArtifactSnapshotReader.hash(bytes)
+                    if hasBatch {
+                        let batch = try ArtifactCalculation.analyzeBatch(data: bytes, selectionPointer: pointer, queries: queries, deadline: deadline)
+                        return (try JSONEncoder().encode(batch), batch.analyzerVersion, sha)
+                    } else {
+                        let single = try ArtifactCalculation.analyze(data: bytes, query: queries[0], deadline: deadline)
+                        return (try JSONEncoder().encode(single), single.analyzerVersion, sha)
+                    }
                 }
                 guard records.reduce(0, { $0 + $1.request.method.utf8.count }) <= 1_048_576 else {
                     throw ArtifactAnalysisFailure.inputLimit
                 }
                 let rows = projections.map(\.metadata)
                 let bytes = try ArtifactJSONValue.array(rows).encoded(maximum: 1_048_576, deadline: deadline)
-                return (try ArtifactCalculation.analyze(rows: rows, query: query, deadline: deadline), ArtifactSnapshotReader.hash(bytes))
+                let sha = ArtifactSnapshotReader.hash(bytes)
+                if hasBatch {
+                    let batch = try ArtifactCalculation.analyzeBatch(rows: rows, selectionPointer: pointer, queries: queries, deadline: deadline)
+                    return (try JSONEncoder().encode(batch), batch.analyzerVersion, sha)
+                } else {
+                    let single = try ArtifactCalculation.analyze(rows: rows, query: queries[0], deadline: deadline)
+                    return (try JSONEncoder().encode(single), single.analyzerVersion, sha)
+                }
             }
             guard let currentClient = clientRegistry.client(id: client.id),
                   currentClient.credentialState == .active,
@@ -2408,11 +2575,11 @@ final class MCPProtocolService {
             }
             guard epoch == snapshotService.captureEpoch,
                   revisions == snapshotService.sourceRevisionScope(for: ids) else { throw ArtifactAnalysisFailure.sourceChanged }
-            var payload = try jsonObject(from: encoder.encode(evidence.0))
+            var payload = try jsonObject(from: evidence.encodedReport)
             payload["sourceKind"] = "live_capture"
-            payload["sourceSHA256"] = evidence.1
-            payload["queryDigest"] = try MCPBriefReadCache.scope([MCPArgumentDigest.normalized(arguments), evidence.1,
-                evidence.0.analyzerVersion, revisions, epoch.rawValue, policyRevision.rawValue, client.assignedProfileID.rawValue])
+            payload["sourceSHA256"] = evidence.sha256
+            payload["queryDigest"] = try MCPBriefReadCache.scope([MCPArgumentDigest.normalized(arguments), evidence.sha256,
+                evidence.analyzerVersion, revisions, epoch.rawValue, policyRevision.rawValue, client.assignedProfileID.rawValue])
             payload["sessionIDs"] = strings
             payload["sourceRevisions"] = ids.map { snapshotService.sourceRevision(for: $0) ?? 0 }
             payload["captureEpoch"] = epoch.rawValue
@@ -2579,27 +2746,47 @@ final class MCPProtocolService {
                 try Task.checkCancellation()
                 return toolStructuredResult(id: id, payload: payload)
             }
-            guard Set(arguments.keys) == ["handle", "snapshotRevision", "dataset", "selectionPointer", "operation"],
+            let hasSingle = arguments["operation"] != nil
+            let hasBatch = arguments["operations"] != nil
+            guard Set(arguments.keys).isSubset(of: ["handle", "snapshotRevision", "dataset", "selectionPointer", "operation", "operations"]),
+                  hasSingle != hasBatch,
                   let revision = arguments["snapshotRevision"] as? String, revision == request.revision,
                   request.scopes.contains("calculations-v1"),
                   policyEvaluator.effectiveAllows(capability: .artifactCalculate, client: client),
                   let snapshot = request.snapshot, let datasetObject = arguments["dataset"] as? [String: Any],
                   let pointer = arguments["selectionPointer"] as? String,
-                  let operation = arguments["operation"] as? [String: Any],
                   try JSONSerialization.data(withJSONObject: arguments).count <= 8192 else { throw ArtifactAnalysisFailure.malformedRequest }
-            let query = try ArtifactCalculation.Query(selectionPointer: pointer, operation: operation)
+            let queries: [ArtifactCalculation.Query]
+            if let operation = arguments["operation"] as? [String: Any] {
+                queries = [try ArtifactCalculation.Query(selectionPointer: pointer, operation: operation)]
+            } else if let rawOps = arguments["operations"] as? [Any], !rawOps.isEmpty, rawOps.count <= 4 {
+                queries = try rawOps.map { item -> ArtifactCalculation.Query in
+                    guard let op = item as? [String: Any] else { throw ArtifactAnalysisFailure.malformedRequest }
+                    return try ArtifactCalculation.Query(selectionPointer: pointer, operation: op)
+                }
+            } else {
+                throw ArtifactAnalysisFailure.malformedRequest
+            }
             let dataset = try ArtifactCalculationDataset(datasetObject)
             let deadline = ContinuousClock.now.advanced(by: .seconds(1))
             registry.setInUse(request.id, true)
             defer { registry.setInUse(request.id, false) }
-            let report = try await artifactWorker.perform { try snapshot.calculate(dataset: dataset, query: query, deadline: deadline) }
+            let (encodedReport, analyzerVersion) = try await artifactWorker.perform {
+                if hasBatch {
+                    let batch = try snapshot.calculateBatch(dataset: dataset, selectionPointer: pointer, queries: queries, deadline: deadline)
+                    return (try JSONEncoder().encode(batch), batch.analyzerVersion)
+                } else {
+                    let single = try snapshot.calculate(dataset: dataset, query: queries[0], deadline: deadline)
+                    return (try JSONEncoder().encode(single), single.analyzerVersion)
+                }
+            }
             _ = try registry.inspect(handle: handle, owner: owner)
-            var payload = try jsonObject(from: encoder.encode(report))
+            var payload = try jsonObject(from: encodedReport)
             payload["handle"] = handle
             payload["snapshotRevision"] = revision
             payload["sourceSHA256"] = snapshot.sourceSHA256
             payload["queryDigest"] = try MCPBriefReadCache.scope([MCPArgumentDigest.normalized(arguments), snapshot.sourceSHA256,
-                report.analyzerVersion, revision, owner.policyRevision.rawValue, owner.profile.rawValue, request.scopes.joined(separator: ",")])
+                analyzerVersion, revision, owner.policyRevision.rawValue, owner.profile.rawValue, request.scopes.joined(separator: ",")])
             payload["sourceCoverage"] = snapshot.invalidRecordCount == 0 && !snapshot.warnings.contains("declared_count_mismatch") ? "complete" : "incomplete_source"
             payload["dataset"] = datasetObject
             payload["snapshotSemantics"] = "approved_immutable_copy; original file changes are not tracked"
@@ -3961,8 +4148,20 @@ final class MCPProtocolService {
         do {
             switch name {
             case "trace_data_lineage":
-                let targetValue = try requiredString(arguments["targetValue"], name: "targetValue")
+                let mode = (arguments["mode"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let candidateIDs = uuidArray(arguments["candidateSessionIDs"])
+                if mode == "authChain" {
+                    let dto = try dataLineageService.traceAuthChain(
+                        candidateSessionIDs: candidateIDs,
+                        disclosure: disclosureSerializer,
+                        policyRevision: policyStore.policyRevision
+                    )
+                    return toolStructuredResult(id: id, payload: try encodedObject(dto))
+                }
+                if let mode, !mode.isEmpty, mode != "value" {
+                    throw MCPStructuredError.malformedRequest(message: "mode must be value or authChain.")
+                }
+                let targetValue = try requiredString(arguments["targetValue"], name: "targetValue")
                 let dto = try dataLineageService.traceDataLineage(
                     targetValue: targetValue, candidateSessionIDs: candidateIDs,
                     policyRevision: policyStore.policyRevision
@@ -5262,6 +5461,17 @@ final class MCPProtocolService {
                 "enum": MCPHostCategory.allCases.map(\.rawValue)
             ]
             properties["sessionIDPrefix"] = ["type": "string", "description": "Opaque session ID prefix."]
+            properties["domain"] = ["type": "string", "description": "Case-insensitive substring match against the disclosed request host."]
+            properties["path"] = ["type": "string", "description": "Case-insensitive substring match against the disclosed request path."]
+            properties["startedAfter"] = ["type": "string", "format": "date-time", "description": "Inclusive lower bound (ISO 8601)."]
+            properties["startedBefore"] = ["type": "string", "format": "date-time", "description": "Inclusive upper bound (ISO 8601)."]
+            properties["statusCode"] = ["type": "integer", "minimum": 100, "maximum": 599, "description": "Exact HTTP status code."]
+            properties["statusClass"] = ["type": "string", "enum": ["2xx", "3xx", "4xx", "5xx", "error", "non200"], "description": "Status family filter."]
+            properties["minDurationMs"] = ["type": "number", "minimum": 0, "description": "Minimum total duration in milliseconds."]
+            properties["hasOverrideHit"] = ["type": "boolean", "description": "Filter by whether an active rule/effect matched."]
+            properties["bodyAvailable"] = ["type": "boolean", "description": "Filter by whether response body bytes are retained."]
+            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Optional grouping mode; endpoint collapses matched sessions into endpointGroups."]
+            properties["includeAuthChain"] = ["type": "boolean", "description": "Include zero-secret auth/cookie continuity report across matched sessions."]
             inputSchema = [
                 "type": "object",
                 "properties": properties,
@@ -5409,8 +5619,10 @@ final class MCPProtocolService {
                 "properties": [
                     "sessionID": ["type": "string", "format": "uuid"],
                     "selectionPointer": ["type": "string", "maxLength": 4096,
-                        "description": "RFC 6901 pointer; empty selects root. Complete JSON response up to 262144 UTF-8 bytes. Counts and at most 32 immediate fields; no scalar values. Body-read approval required."],
+                        "description": "RFC 6901 pointer; empty selects root. Complete JSON response up to 262144 UTF-8 bytes. Counts and at most 32 immediate fields; no scalar values unless fieldPointers is specified. Body-read approval required."],
                     "includeStructure": ["type": "boolean", "description": "Opt-in nested path counts; depth 4, 32 nodes and 20000 visited values. Check structureCoverage and structureLimits."],
+                    "fieldPointers": ["type": "array", "minItems": 1, "maxItems": 8, "items": ["type": "string", "minLength": 1, "maxLength": 128], "description": "Optional RFC 6901 pointers relative to each selected item to project into a compact tabular projection."],
+                    "rowLimit": ["type": "integer", "minimum": 1, "maximum": 50, "default": 25, "description": "Maximum projected rows when fieldPointers is supplied."],
                     "ifBriefDigest": ["type": "string", "pattern": "^[0-9a-f]{64}$"],
                     "approval": ["type": "object"]
                 ],
@@ -5425,6 +5637,8 @@ final class MCPProtocolService {
                     "candidateSessionIDs": ["type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": ["type": "string", "format": "uuid"]],
                     "ifBriefDigest": ["type": "string", "pattern": "^[0-9a-f]{64}$"],
                     "selectionPointer": ["type": "string", "maxLength": 4096],
+                    "includeValueDiff": ["type": "boolean", "description": "Opt-in bounded RFC 6902-style scalar/value diff across aligned pairs."],
+                    "ignorePointers": ["type": "array", "maxItems": 16, "items": ["type": "string", "minLength": 1, "maxLength": 128], "description": "Optional JSON Pointers (relative to selectionPointer) to exclude from valueChanges."],
                     "approval": ["type": "object"]
                 ],
                 "required": ["baselineSessionIDs", "candidateSessionIDs"],
@@ -5738,10 +5952,10 @@ final class MCPProtocolService {
                 "type": "object",
                 "properties": [
                     "markerSessionID": opaqueUUIDSchema(description: "sessionID returned by capture_marker_create."),
-                    "overrideID": opaqueUUIDSchema(description: "Optional response-override identifier to check for a hit since the marker."),
+                    "sinceSequence": ["type": "integer", "minimum": 0, "description": "Alternative to markerSessionID: inspect traffic newer than this captureSequence."],
+                    "overrideID": opaqueUUIDSchema(description: "Optional response-override identifier to check for hits and near-miss predicate diagnostics."),
                     "limit": ["type": "integer", "minimum": 1, "maximum": MCPResourceBudget.maxPageSize, "default": 20]
                 ],
-                "required": ["markerSessionID"],
                 "additionalProperties": false
             ]
         case "discover_response_structure":
@@ -6806,10 +7020,10 @@ final class MCPProtocolService {
             inputSchema = [
                 "type": "object",
                 "properties": [
-                    "targetValue": ["type": "string", "description": "The value to trace provenance for, e.g. a token or account identifier."],
+                    "targetValue": ["type": "string", "description": "The value to trace provenance for, e.g. a token or account identifier (required unless mode is authChain)."],
+                    "mode": ["type": "string", "enum": ["value", "authChain"], "description": "Lineage mode; authChain produces a zero-secret HMAC credential/cookie continuity report."],
                     "candidateSessionIDs": ["type": "array", "items": ["type": "string", "format": "uuid"]]
                 ],
-                "required": ["targetValue"],
                 "additionalProperties": false
             ]
         case "audit_analytics_attribution":

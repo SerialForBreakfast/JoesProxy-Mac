@@ -171,4 +171,45 @@ final class ArtifactCalculationTests: XCTestCase {
         let after = sampler.sample()
         print("EFFICIENCY_METRIC artifact-kernel-memory-v1 inputBytes=\(raw.count) baselinePhysicalBytes=\(before.physicalFootprintBytes) endPhysicalBytes=\(after.physicalFootprintBytes) processLifetimePeakResidentBytes=\(after.peakResidentMemoryBytes)")
     }
+
+    func testWherePredicatesAndMultiOperationBatching() throws {
+        let json = #"{"items":[{"status":200,"price":10,"tag":"ok"},{"status":503,"price":25,"tag":"err-timeout"},{"status":500,"price":15,"tag":null},{"price":99}]}"#
+        let data = Data(json.utf8)
+        let q1 = try ArtifactCalculation.Query(
+            selectionPointer: "/items",
+            operation: [
+                "kind": "numericSummary",
+                "fieldPointer": "/price",
+                "where": ["fieldPointer": "/status", "op": "gte", "value": 400]
+            ]
+        )
+        let q2 = try ArtifactCalculation.Query(
+            selectionPointer: "/items",
+            operation: [
+                "kind": "rowCount",
+                "where": ["fieldPointer": "/status", "op": "isMissing"]
+            ]
+        )
+        let q3 = try ArtifactCalculation.Query(
+            selectionPointer: "/items",
+            operation: [
+                "kind": "rowCount",
+                "where": ["fieldPointer": "/tag", "op": "contains", "value": "timeout"]
+            ]
+        )
+        let batch = try ArtifactCalculation.analyzeBatch(
+            data: data,
+            selectionPointer: "/items",
+            queries: [q1, q2, q3],
+            deadline: .now.advanced(by: .seconds(5))
+        )
+        XCTAssertEqual(batch.rows, 4)
+        XCTAssertEqual(batch.results.count, 3)
+        XCTAssertEqual(batch.results[0].filteredRows, 2)
+        XCTAssertEqual(batch.results[0].result.sum, "40")
+        XCTAssertEqual(batch.results[1].filteredRows, 1)
+        XCTAssertEqual(batch.results[1].result.count, 1)
+        XCTAssertEqual(batch.results[2].filteredRows, 1)
+        XCTAssertEqual(batch.results[2].result.count, 1)
+    }
 }

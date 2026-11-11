@@ -12,8 +12,10 @@ enum ArtifactToolSchema {
             var schema = object(["filter": filter, "sessionIDs": ["type": "array", "minItems": 1, "maxItems": 256,
                 "uniqueItems": true, "items": ["type": "string", "format": "uuid"]],
                 "dataset": ["type": "string", "enum": ["responseJSON", "sessionMetadata"]],
-                "selectionPointer": pointer, "operation": operation, "approval": ["type": "object"]],
-                required: ["dataset", "selectionPointer", "operation"])
+                "selectionPointer": pointer, "operation": operation,
+                "operations": ["type": "array", "minItems": 1, "maxItems": 4, "items": operation],
+                "approval": ["type": "object"]],
+                required: ["dataset", "selectionPointer"])
             schema["oneOf"] = [["required": ["sessionIDs"]], ["required": ["filter"]]]
             return schema
         case "artifact_inventory", "artifact_search":
@@ -44,8 +46,9 @@ enum ArtifactToolSchema {
                     object(["kind": ["const": "responseJSON"], "recordIndex": ["type": "integer", "minimum": 0, "maximum": 999]], required: ["kind", "recordIndex"]),
                     object(["kind": ["const": "sessionMetadata"], "recordIndices": ["type": "array", "minItems": 1, "maxItems": 256,
                         "uniqueItems": true, "items": ["type": "integer", "minimum": 0, "maximum": 999]]], required: ["kind"])]],
-                "selectionPointer": pointer, "operation": operation],
-                required: ["handle", "snapshotRevision", "dataset", "selectionPointer", "operation"])
+                "selectionPointer": pointer, "operation": operation,
+                "operations": ["type": "array", "minItems": 1, "maxItems": 4, "items": operation]],
+                required: ["handle", "snapshotRevision", "dataset", "selectionPointer"])
         case "artifact_source_register":
             return object(["requestKey": ["type": "string", "format": "uuid"],
                 "kind": ["type": "string", "enum": ArtifactSourceKind.allCases.map(\.rawValue)],
@@ -58,9 +61,18 @@ enum ArtifactToolSchema {
         }
     }
 
+    private static var predicateSchema: [String: Any] {
+        object([
+            "fieldPointer": ["type": "string", "maxLength": 512],
+            "op": ["type": "string", "enum": ArtifactCalculation.Predicate.Operator.allCases.map(\.rawValue)],
+            "operator": ["type": "string", "enum": ArtifactCalculation.Predicate.Operator.allCases.map(\.rawValue)],
+            "value": ["oneOf": [["type": "string", "maxLength": 256], ["type": "number"], ["type": "boolean"]]]
+        ], required: ["fieldPointer"])
+    }
+
     private static var operation: [String: Any] {
         ["oneOf": ArtifactCalculation.Kind.allCases.map { kind in
-            var properties: [String: Any] = ["kind": ["const": kind.rawValue]]
+            var properties: [String: Any] = ["kind": ["const": kind.rawValue], "where": predicateSchema]
             var required = ["kind"]
             if kind != .rowCount {
                 properties["fieldPointer"] = ["type": "string", "maxLength": 512]

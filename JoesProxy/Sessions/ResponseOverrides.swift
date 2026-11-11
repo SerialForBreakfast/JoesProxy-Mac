@@ -2078,6 +2078,73 @@ actor ResponseOverrideStore {
         return true
     }
 
+    struct MatchDiagnostic: Sendable, Equatable {
+        let matched: Bool
+        let failedReasons: [String]
+        let isNearMiss: Bool
+    }
+
+    /// Evaluates why a captured request did or did not match a rule's configuration and enabled state.
+    nonisolated func diagnoseMatch(rule: ResponseOverrideRule, request: CapturedRequest) -> MatchDiagnostic {
+        var reasons: [String] = []
+        if !rule.isEnabled {
+            reasons.append("rule_disabled")
+        }
+        if let requiredClientAddress = rule.sourceClientAddress?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !requiredClientAddress.isEmpty {
+            let clientAddress = request.clientAddress?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if clientAddress != requiredClientAddress {
+                reasons.append("client_scope_mismatch")
+            }
+        }
+        let hostMatched = rule.host.caseInsensitiveCompare(normalizeHost(request.host)) == .orderedSame
+        if !hostMatched {
+            reasons.append("host_mismatch")
+        }
+        if rule.requestScheme != request.scheme {
+            reasons.append("scheme_mismatch")
+        }
+        if rule.requestMethod.caseInsensitiveCompare(request.method) != .orderedSame {
+            reasons.append("method_mismatch")
+        }
+        if canonicalPort(rule.port, scheme: rule.requestScheme) != canonicalPort(request.port, scheme: request.scheme) {
+            reasons.append("port_mismatch")
+        }
+        let normalizedRulePath = normalizedPathForMatch(rule.path, mode: rule.matchMode)
+        let normalizedRequestPath = normalizedPathForMatch(normalizePath(request.path), mode: rule.matchMode)
+        let basePathMatched = pathMatches(rulePath: normalizedRulePath, requestPath: normalizedRequestPath, mode: rule.matchMode)
+        if !basePathMatched {
+            reasons.append("path_mismatch")
+        } else if let names = rule.ignoredQueryNames {
+            let queryMatched = rule.matchMode == .ignoreQuery &&
+                rule.sourceClientAddress?.isEmpty == false &&
+                CapturedQueryMatcher.matches(request.path, baseline: rule.path, ignoring: names)
+            if !queryMatched {
+                reasons.append("query_predicate_mismatch")
+            }
+        }
+        if let requiredOperationName = rule.graphQLOperationName,
+           requestGraphQLOperationName(from: request) != requiredOperationName {
+            reasons.append("graphql_operation_mismatch")
+        }
+        if let requiredQueryKey = rule.matchQueryKey, let requiredQueryValue = rule.matchQueryValue,
+           requestQueryValue(for: requiredQueryKey, from: request) != requiredQueryValue {
+            if !reasons.contains("query_predicate_mismatch") {
+                reasons.append("query_predicate_mismatch")
+            }
+        }
+        if let requiredHeaderName = rule.matchHeaderName, let requiredHeaderValue = rule.matchHeaderValue,
+           requestHeaderValue(for: requiredHeaderName, from: request) != requiredHeaderValue {
+            reasons.append("header_predicate_mismatch")
+        }
+        let matched = reasons.isEmpty
+        let ruleLeaf = lastPathComponent(of: normalizedRulePath)
+        let reqLeaf = lastPathComponent(of: normalizedRequestPath)
+        let pathRelated = basePathMatched || (!ruleLeaf.isEmpty && ruleLeaf != "/" && ruleLeaf == reqLeaf)
+        let isNearMiss = !matched && (hostMatched || pathRelated)
+        return MatchDiagnostic(matched: matched, failedReasons: reasons, isNearMiss: isNearMiss)
+    }
+
     private func rulesShareMatcher(_ lhs: ResponseOverrideRule, _ rhs: ResponseOverrideRule) -> Bool {
         lhs.requestMethod.caseInsensitiveCompare(rhs.requestMethod) == .orderedSame &&
             lhs.requestScheme == rhs.requestScheme &&

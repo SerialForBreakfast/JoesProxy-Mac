@@ -43,6 +43,7 @@ struct MCPDataLineageSearchResultDTO: Codable, Sendable, Equatable {
     var candidateSessionsInspected: Int
     var matchingFlowsCount: Int
     var flows: [MCPDataLineageFlowDTO]
+    var authChain: AuthChainBrief.Report? = nil
     var disclosure: MCPMediaDisclosureContextDTO
 }
 

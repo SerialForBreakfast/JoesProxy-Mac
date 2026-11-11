@@ -44,5 +44,6 @@ jobs:
             build/PublicPreview/evidence/cli-version.json
             build/PublicPreview/evidence/cli-help.json
             build/PublicPreview/evidence/sdk-tests.log
+            build/PublicPreview/evidence/filtered-calculations.log
           retention-days: 3
           if-no-files-found: warn

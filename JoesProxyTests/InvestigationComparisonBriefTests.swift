@@ -12,7 +12,7 @@ final class InvestigationComparisonBriefTests: XCTestCase {
             pointer: "", includeStructure: true)
         return .init(source: .init(sessionID: record.id.uuidString, captureSequence: 1,
             analysisStatus: brief.status, unavailableReason: text == nil ? "body_missing" : nil, sourceSHA256: brief.sourceSHA256),
-            record: record, brief: brief)
+            record: record, brief: brief, bodyText: text)
     }
 
     func testComparisonUsesObservedStructureWithoutLeakingValues() throws {
@@ -69,5 +69,30 @@ final class InvestigationComparisonBriefTests: XCTestCase {
         XCTAssertEqual(report.changes.count, 32)
         XCTAssertEqual(report.omittedChangeCount, 8)
         XCTAssertEqual(report.status, "incomplete")
+    }
+
+    func testIncludeValueDiffEmitsScalarDeltasFlagsVolatileFieldsAndHonorsIgnorePointers() throws {
+        let before = input(#"{"featureEnabled":false,"requestId":"11111111-1111-1111-1111-111111111111","authToken":"secret-before","ignored":{"counter":1}}"#)
+        let after = input(#"{"featureEnabled":true,"requestId":"22222222-2222-2222-2222-222222222222","authToken":"secret-after","ignored":{"counter":2}}"#)
+        let report = InvestigationComparisonBrief.compare(
+            baseline: [before],
+            candidate: [after],
+            includeValueDiff: true,
+            ignorePointers: ["/ignored"]
+        )
+        let valueChanges = try XCTUnwrap(report.valueChanges)
+        XCTAssertEqual(valueChanges.count, 3)
+        XCTAssertFalse(valueChanges.contains { $0.pointer.hasPrefix("/ignored") })
+        let featureChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/featureEnabled" })
+        XCTAssertEqual(featureChange.kind, "modified")
+        XCTAssertEqual(featureChange.beforePreview, "false")
+        XCTAssertEqual(featureChange.afterPreview, "true")
+        XCTAssertFalse(featureChange.isLikelyVolatile)
+        let reqIDChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/requestId" })
+        XCTAssertTrue(reqIDChange.isLikelyVolatile)
+        XCTAssertEqual(report.volatileChangeCount, 1)
+        let tokenChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/authToken" })
+        XCTAssertEqual(tokenChange.beforePreview, "<redacted>")
+        XCTAssertEqual(tokenChange.afterPreview, "<redacted>")
     }
 }

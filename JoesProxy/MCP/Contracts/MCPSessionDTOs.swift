@@ -89,6 +89,22 @@ struct MCPDisclosedQueryParameter: Equatable, Sendable, Codable {
     var value: String
 }
 
+/// Aggregated endpoint group for `sessions_search(deduplicateBy: "endpoint")`.
+struct MCPEndpointGroupDTO: Equatable, Sendable, Codable {
+    var signature: String
+    var method: String?
+    var sanitizedHost: String?
+    var normalizedPath: String?
+    var count: Int
+    var firstSessionID: String
+    var lastSessionID: String
+    var firstSequence: UInt64
+    var lastSequence: UInt64
+    var statusCounts: [String: Int]
+    var maxDurationSeconds: Double?
+    var overrideHitCount: Int
+}
+
 /// Paginated MCP session list payload with schema version 1 envelope.
 struct MCPSessionListPageDTO: Equatable, Sendable, Codable {
     var captureWarning: String? = nil
@@ -107,6 +123,8 @@ struct MCPSessionListPageDTO: Equatable, Sendable, Codable {
     var latestSequence: UInt64 = 0
     var stateToken: String = ""
     var unchanged: Bool = false
+    var endpointGroups: [MCPEndpointGroupDTO]? = nil
+    var authChain: AuthChainBrief.Report? = nil
 }
 
 /// Small, cache-friendly capture state used to decide whether a broader read is justified.

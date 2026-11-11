@@ -393,15 +393,42 @@ final class MCPMutationService {
         guard let snapshotService else {
             throw MCPStructuredError(code: .internalFailure, message: "Session snapshot service is unavailable.")
         }
-        guard let markerSessionIDString = arguments["markerSessionID"] as? String,
-              let markerSessionID = UUID(uuidString: markerSessionIDString) else {
-            throw MCPStructuredError(code: .malformedRequest, message: "markerSessionID is required.")
-        }
-        guard let marker = snapshotService.indexedSession(id: markerSessionID) else {
+        let hasMarkerID = arguments["markerSessionID"] != nil
+        let hasSinceSeq = arguments["sinceSequence"] != nil
+        guard hasMarkerID != hasSinceSeq else {
             throw MCPStructuredError(
                 code: .malformedRequest,
-                message: "markerSessionID not found — it may predate the current capture epoch or have been cleared."
+                message: hasMarkerID ? "Provide either markerSessionID or sinceSequence, not both." : "markerSessionID or sinceSequence is required."
             )
+        }
+
+        let markerSessionIDString: String?
+        let markerCaptureSequence: UInt64
+        let markerStartedAt: Date?
+        if hasMarkerID {
+            guard let idString = arguments["markerSessionID"] as? String,
+                  let markerSessionID = UUID(uuidString: idString) else {
+                throw MCPStructuredError(code: .malformedRequest, message: "markerSessionID must be a valid session UUID.")
+            }
+            guard let marker = snapshotService.indexedSession(id: markerSessionID) else {
+                throw MCPStructuredError(
+                    code: .malformedRequest,
+                    message: "markerSessionID not found — it may predate the current capture epoch or have been cleared."
+                )
+            }
+            markerSessionIDString = markerSessionID.uuidString
+            markerCaptureSequence = marker.captureSequence
+            markerStartedAt = marker.record.timing.startedAt
+        } else {
+            guard let number = arguments["sinceSequence"] as? NSNumber,
+                  CFGetTypeID(number) != CFBooleanGetTypeID(),
+                  number.int64Value >= 0,
+                  number.doubleValue == Double(number.int64Value) else {
+                throw MCPStructuredError(code: .malformedRequest, message: "sinceSequence must be a non-negative integer.")
+            }
+            markerSessionIDString = nil
+            markerCaptureSequence = UInt64(number.int64Value)
+            markerStartedAt = nil
         }
 
         let limit = min(max(1, arguments["limit"] as? Int ?? 20), MCPResourceBudget.maxPageSize)
@@ -409,10 +436,10 @@ final class MCPMutationService {
             request: MCPSessionSnapshotService.PageRequest(
                 limit: limit,
                 cursor: nil,
-                queryDigest: "capture_activity_since_marker:\(markerSessionID.uuidString)",
+                queryDigest: "capture_activity_since_marker:\(markerSessionIDString ?? "seq-\(markerCaptureSequence)")",
                 orderingDigest: "sequence_asc",
                 filter: nil,
-                minimumSequenceExclusive: marker.captureSequence
+                minimumSequenceExclusive: markerCaptureSequence
             ),
             clientID: client.id,
             policyRevision: policyStore.policyRevision
@@ -431,8 +458,8 @@ final class MCPMutationService {
         }
 
         var result: [String: Any] = [
-            "markerSessionID": markerSessionID.uuidString,
-            "markerCaptureSequence": marker.captureSequence,
+            "markerSessionID": markerSessionIDString as Any,
+            "markerCaptureSequence": markerCaptureSequence,
             "newRequestCount": page.items.count,
             "hasMore": page.nextCursor != nil,
             "newRequests": newRequests
@@ -444,13 +471,32 @@ final class MCPMutationService {
             }
             let rules = await responseOverrideStore.rules()
             if let rule = rules.first(where: { $0.id == overrideID }) {
-                let matchedSinceMarker = rule.lastMatchedAt.map { $0 > marker.record.timing.startedAt } ?? false
+                var matchedSessionIDs: [String] = []
+                var nearMisses: [[String: Any]] = []
+                for indexed in page.items {
+                    let diag = responseOverrideStore.diagnoseMatch(rule: rule, request: indexed.record.request)
+                    if diag.matched {
+                        matchedSessionIDs.append(indexed.record.id.uuidString)
+                    } else if diag.isNearMiss && nearMisses.count < 10 {
+                        nearMisses.append([
+                            "sessionID": indexed.record.id.uuidString,
+                            "captureSequence": indexed.captureSequence,
+                            "method": indexed.record.request.method,
+                            "failedPredicates": diag.failedReasons
+                        ])
+                    }
+                }
+                let matchedByTimestamp = markerStartedAt.flatMap { start in rule.lastMatchedAt.map { $0 > start } } ?? false
+                let matchedSinceMarker = matchedByTimestamp || !matchedSessionIDs.isEmpty
                 result["rule"] = [
                     "overrideID": overrideID.uuidString,
                     "found": true,
+                    "isEnabled": rule.isEnabled,
                     "hitCountTotal": rule.hitCount,
                     "lastMatchedAt": rule.lastMatchedAt.map { ISO8601DateFormatter().string(from: $0) } as Any,
-                    "matchedSinceMarker": matchedSinceMarker
+                    "matchedSinceMarker": matchedSinceMarker,
+                    "matchedSessionIDs": matchedSessionIDs,
+                    "nearMisses": nearMisses
                 ]
             } else {
                 result["rule"] = ["overrideID": overrideID.uuidString, "found": false]

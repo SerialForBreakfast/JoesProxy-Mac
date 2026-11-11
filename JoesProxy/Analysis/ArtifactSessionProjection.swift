@@ -41,7 +41,8 @@ struct ArtifactSessionProjection: Sendable {
         let fields: Set<String> = ["/method", "/statusCode", "/requestBodyRetainedBytes",
             "/responseBodyRetainedBytes", "/responseBodyDeclaredBytes", "/responseBodyComplete"]
         guard query.selectionPointer.isEmpty,
-              query.kind == .rowCount || fields.contains(query.fieldPointer) else {
+              query.kind == .rowCount || fields.contains(query.fieldPointer),
+              query.predicate == nil || fields.contains(query.predicate?.fieldPointer ?? "") else {
             throw ArtifactAnalysisFailure.malformedRequest
         }
     }
