@@ -51,6 +51,7 @@ case "${1:-}" in
     ;;
   filtered-calculations)
     xcodebuild test "${COMMON[@]}" -disableAutomaticPackageResolution -configuration Debug \
+      -resultBundlePath "$EVIDENCE/filtered-calculations.xcresult" \
       -destination "platform=macOS" -testPlan JoesProxy-Policy -parallel-testing-enabled NO \
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationChecksAuthorityAndQualifiesEmptyWindows \
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredWindowDetectsLateCompletion \
