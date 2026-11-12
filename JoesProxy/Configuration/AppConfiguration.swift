@@ -158,6 +158,10 @@ protocol AppConfiguration: AnyObject {
     var rollingCaptureRestorePromptEnabled: Bool { get set }
     /// When true, periodically records content-free diagnostics for previous-run recovery.
     var previousRunDiagnosticsEnabled: Bool { get set }
+    /// Master permission allowing Map Remote rules to target authorized local Mac ports (`false` by default).
+    var isLoopbackMapRemoteEnabled: Bool { get set }
+    /// Explicit TCP destination ports authorized for local-server Map Remote forwarding (`[]` by default).
+    var authorizedLoopbackMapRemotePorts: [Int] { get set }
     /// Seconds between debounced rolling saves while capture is active.
     var rollingCaptureSaveIntervalSeconds: Int { get set }
     /// Flush rolling save after this many newly captured sessions.
@@ -236,6 +240,23 @@ extension AppConfiguration {
         get { 500 }
         set { _ = newValue }
     }
+
+    var isLoopbackMapRemoteEnabled: Bool {
+        get { false }
+        set { _ = newValue }
+    }
+
+    var authorizedLoopbackMapRemotePorts: [Int] {
+        get { [] }
+        set { _ = newValue }
+    }
+
+    var loopbackDestinationPolicy: LoopbackDestinationPolicy {
+        LoopbackDestinationPolicy(
+            isEnabled: isLoopbackMapRemoteEnabled,
+            authorizedPorts: Set(authorizedLoopbackMapRemotePorts)
+        )
+    }
 }
 
 final class UserDefaultsAppConfiguration: AppConfiguration {
@@ -285,6 +306,8 @@ final class UserDefaultsAppConfiguration: AppConfiguration {
         static let rollingCaptureRetentionCount = "rollingCaptureRetentionCount"
         static let rollingCaptureMaxDiskMB = "rollingCaptureMaxDiskMB"
         static let previousRunDiagnosticsEnabled = "previousRunDiagnosticsEnabled"
+        static let isLoopbackMapRemoteEnabled = "isLoopbackMapRemoteEnabled"
+        static let authorizedLoopbackMapRemotePorts = "authorizedLoopbackMapRemotePorts"
     }
 
     private enum Defaults {
@@ -333,6 +356,8 @@ final class UserDefaultsAppConfiguration: AppConfiguration {
         static let rollingCaptureRetentionCount = 5
         static let rollingCaptureMaxDiskMB = 500
         static let previousRunDiagnosticsEnabled = true
+        static let isLoopbackMapRemoteEnabled = false
+        static let authorizedLoopbackMapRemotePorts: [Int] = []
     }
 
     private let userDefaults: UserDefaults
@@ -725,6 +750,30 @@ final class UserDefaultsAppConfiguration: AppConfiguration {
         Defaults.sdkEventServerPort
     }
 
+    var isLoopbackMapRemoteEnabled: Bool {
+        get {
+            userDefaults.object(forKey: Keys.isLoopbackMapRemoteEnabled) as? Bool
+                ?? Defaults.isLoopbackMapRemoteEnabled
+        }
+        set {
+            userDefaults.set(newValue, forKey: Keys.isLoopbackMapRemoteEnabled)
+            notifyDidChange()
+        }
+    }
+
+    var authorizedLoopbackMapRemotePorts: [Int] {
+        get {
+            let stored = userDefaults.array(forKey: Keys.authorizedLoopbackMapRemotePorts) as? [Int]
+                ?? Defaults.authorizedLoopbackMapRemotePorts
+            return Array(Set(stored.filter { (1...65_535).contains($0) })).sorted()
+        }
+        set {
+            let sanitized = Array(Set(newValue.filter { (1...65_535).contains($0) })).sorted()
+            userDefaults.set(sanitized, forKey: Keys.authorizedLoopbackMapRemotePorts)
+            notifyDidChange()
+        }
+    }
+
     var networkThrottleConfiguration: NetworkThrottleConfiguration {
         get {
             guard let data = userDefaults.data(forKey: Keys.networkThrottleConfigurationData),
@@ -932,6 +981,8 @@ final class UserDefaultsAppConfiguration: AppConfiguration {
         rollingCaptureRetentionCount = Defaults.rollingCaptureRetentionCount
         rollingCaptureMaxDiskMB = Defaults.rollingCaptureMaxDiskMB
         previousRunDiagnosticsEnabled = Defaults.previousRunDiagnosticsEnabled
+        isLoopbackMapRemoteEnabled = Defaults.isLoopbackMapRemoteEnabled
+        authorizedLoopbackMapRemotePorts = Defaults.authorizedLoopbackMapRemotePorts
     }
 
     private func notifyDidChange() {

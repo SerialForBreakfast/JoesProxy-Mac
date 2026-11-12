@@ -130,6 +130,7 @@ final class HTTPUpstreamConnector {
     @preconcurrency func executeStreaming(
         _ request: HTTPProxyRequest,
         scheme: SessionScheme,
+        validatedEndpoint: ValidatedUpstreamEndpoint? = nil,
         downstreamChannel: Channel,
         downstreamThrottleWriter: NetworkThrottleWriter,
         keepConnectionOpen: Bool,
@@ -179,7 +180,7 @@ final class HTTPUpstreamConnector {
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelOption(ChannelOptions.socketOption(.tcp_nodelay), value: 1)
 
-        return bootstrap.connect(host: request.host, port: request.port).flatMap { channel in
+        return connectChannel(bootstrap: bootstrap, request: request, validatedEndpoint: validatedEndpoint).flatMap { channel in
             timingRecorder.recordConnectionEstablished()
             do {
                 let forwarder = StreamingUpstreamForwarder(
@@ -212,13 +213,19 @@ final class HTTPUpstreamConnector {
                 )
 
                 if scheme == .https {
-                    try channel.pipeline.syncOperations.addHandler(self.makeClientTLSHandler(for: request.host))
+                    let sni = self.resolvedTLSServerName(for: request.host, validatedEndpoint: validatedEndpoint)
+                    try channel.pipeline.syncOperations.addHandler(self.makeClientTLSHandler(for: request.host, serverHostname: sni))
                 }
                 let forwarderFuture = channel.pipeline.addHandler(forwarder)
 
                 return forwarderFuture.flatMap {
                     if let cancel = forwarder.cancelForDownstreamClosure { onCancellationReady(cancel) }
-                    let outbound = self.makeUpstreamRequestBuffer(for: request, allocator: channel.allocator)
+                    let outbound = self.makeUpstreamRequestBuffer(
+                        for: request,
+                        scheme: scheme,
+                        hostHeaderOverride: validatedEndpoint?.httpHostHeaderValue,
+                        allocator: channel.allocator
+                    )
                     let upstreamThrottleWriter = NetworkThrottleWriter(
                         direction: .upstream,
                         configurationProvider: self.throttleConfigurationProvider
@@ -249,11 +256,16 @@ final class HTTPUpstreamConnector {
             }
         }.flatMapError { error in
             timingRecorder.transport.failed(error: error)
+            onSessionFailed(error)
             return self.group.next().makeFailedFuture(error)
         }
     }
 
-    @preconcurrency func execute(_ request: HTTPProxyRequest, scheme: SessionScheme) -> EventLoopFuture<HTTPUpstreamResponse> {
+    @preconcurrency func execute(
+        _ request: HTTPProxyRequest,
+        scheme: SessionScheme,
+        validatedEndpoint: ValidatedUpstreamEndpoint? = nil
+    ) -> EventLoopFuture<HTTPUpstreamResponse> {
         guard (1...Int(UInt16.max)).contains(request.port) else {
             return group.next().makeFailedFuture(HTTPUpstreamConnectorError.invalidPort(request.port))
         }
@@ -268,7 +280,7 @@ final class HTTPUpstreamConnector {
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelOption(ChannelOptions.socketOption(.tcp_nodelay), value: 1)
 
-        return bootstrap.connect(host: request.host, port: request.port).flatMap { channel in
+        return connectChannel(bootstrap: bootstrap, request: request, validatedEndpoint: validatedEndpoint).flatMap { channel in
             timingRecorder.recordConnectionEstablished()
             do {
                 let responsePromise = channel.eventLoop.makePromise(of: Data.self)
@@ -280,7 +292,8 @@ final class HTTPUpstreamConnector {
                 )
 
                 if scheme == .https {
-                    try channel.pipeline.syncOperations.addHandler(self.makeClientTLSHandler(for: request.host))
+                    let sni = self.resolvedTLSServerName(for: request.host, validatedEndpoint: validatedEndpoint)
+                    try channel.pipeline.syncOperations.addHandler(self.makeClientTLSHandler(for: request.host, serverHostname: sni))
                 }
                 let collectorFuture = channel.pipeline.addHandler(collector)
 
@@ -289,7 +302,12 @@ final class HTTPUpstreamConnector {
                         channel.close(promise: nil)
                     }
 
-                    let outbound = self.makeUpstreamRequestBuffer(for: request, allocator: channel.allocator)
+                    let outbound = self.makeUpstreamRequestBuffer(
+                        for: request,
+                        scheme: scheme,
+                        hostHeaderOverride: validatedEndpoint?.httpHostHeaderValue,
+                        allocator: channel.allocator
+                    )
                     let upstreamThrottleWriter = NetworkThrottleWriter(
                         direction: .upstream,
                         configurationProvider: self.throttleConfigurationProvider
@@ -319,7 +337,65 @@ final class HTTPUpstreamConnector {
         }
     }
 
-    private func makeClientTLSHandler(for host: String) throws -> NIOSSLClientHandler {
+    private func connectChannel(
+        bootstrap: ClientBootstrap,
+        request: HTTPProxyRequest,
+        validatedEndpoint: ValidatedUpstreamEndpoint?
+    ) -> EventLoopFuture<Channel> {
+        guard let validatedEndpoint else {
+            return bootstrap.connect(host: request.host, port: request.port)
+        }
+        return connectValidatedAddresses(
+            validatedEndpoint.candidateAddresses,
+            index: 0,
+            port: validatedEndpoint.port,
+            bootstrap: bootstrap
+        )
+    }
+
+    private func connectValidatedAddresses(
+        _ candidates: [ResolvedIPAddress],
+        index: Int,
+        port: Int,
+        bootstrap: ClientBootstrap
+    ) -> EventLoopFuture<Channel> {
+        guard candidates.indices.contains(index) else {
+            return group.next().makeFailedFuture(
+                MapRemoteValidationError.policyDenied(.resolutionFailed, "No validated socket addresses available.")
+            )
+        }
+        let socketAddress: SocketAddress
+        do {
+            if let v4 = candidates[index].unwrappedIPv4 {
+                socketAddress = try SocketAddress(ipAddress: ResolvedIPAddress.ipv4(v4).canonicalIPString, port: port)
+            } else {
+                socketAddress = try SocketAddress(ipAddress: candidates[index].canonicalIPString, port: port)
+            }
+        } catch {
+            if index + 1 < candidates.count {
+                return connectValidatedAddresses(candidates, index: index + 1, port: port, bootstrap: bootstrap)
+            }
+            return group.next().makeFailedFuture(error)
+        }
+        return bootstrap.connect(to: socketAddress).flatMapError { error in
+            if index + 1 < candidates.count {
+                return self.connectValidatedAddresses(candidates, index: index + 1, port: port, bootstrap: bootstrap)
+            }
+            return self.group.next().makeFailedFuture(error)
+        }
+    }
+
+    private func resolvedTLSServerName(for host: String, validatedEndpoint: ValidatedUpstreamEndpoint?) -> String? {
+        if let validatedEndpoint {
+            return validatedEndpoint.tlsServerName
+        }
+        if LoopbackAddressInspector.parseLiteralIP(host) != nil {
+            return nil
+        }
+        return LoopbackAddressInspector.stripBracketsAndTrailingDot(host).host
+    }
+
+    private func makeClientTLSHandler(for host: String, serverHostname: String?) throws -> NIOSSLClientHandler {
         let additionalTrustRoots = try configuration.trustedRootCertificates.map {
             try NIOSSLCertificate(bytes: Array($0), format: .der)
         }
@@ -331,7 +407,7 @@ final class HTTPUpstreamConnector {
 
         do {
             let context = try NIOSSLContext(configuration: tlsConfiguration)
-            return try NIOSSLClientHandler(context: context, serverHostname: host)
+            return try NIOSSLClientHandler(context: context, serverHostname: serverHostname)
         } catch {
             throw HTTPUpstreamConnectorError.tlsConfigurationFailed(
                 "Failed to configure the upstream TLS client for '\(host)': \(error.localizedDescription)"
@@ -339,14 +415,24 @@ final class HTTPUpstreamConnector {
         }
     }
 
-    private func makeUpstreamRequestBuffer(for request: HTTPProxyRequest, allocator: ByteBufferAllocator) -> ByteBuffer {
+    private func makeUpstreamRequestBuffer(
+        for request: HTTPProxyRequest,
+        scheme: SessionScheme,
+        hostHeaderOverride: String? = nil,
+        allocator: ByteBufferAllocator
+    ) -> ByteBuffer {
         var filteredHeaders = request.headers.filter { header in
             let name = header.name.lowercased()
             return name != "proxy-connection" && name != "connection"
         }
 
+        let resolvedHost = hostHeaderOverride ?? LoopbackAddressInspector.canonicalHostAuthority(
+            host: request.host,
+            port: request.port,
+            scheme: scheme
+        )
         filteredHeaders.removeAll { $0.name.caseInsensitiveCompare("Host") == .orderedSame }
-        filteredHeaders.append(HTTPHeaderField(name: "Host", value: hostHeaderValue(for: request)))
+        filteredHeaders.append(HTTPHeaderField(name: "Host", value: resolvedHost))
         filteredHeaders.append(HTTPHeaderField(name: "Connection", value: "close"))
 
         let noCachingPolicy = NoCachingPolicy(
@@ -407,15 +493,6 @@ final class HTTPUpstreamConnector {
             }
             return promise.futureResult
         }
-    }
-
-    private func hostHeaderValue(for request: HTTPProxyRequest) -> String {
-        let defaultPort = request.port == 443 ? 443 : 80
-        if request.port == defaultPort {
-            return request.host
-        }
-
-        return "\(request.host):\(request.port)"
     }
 
     private func logHTTPS(_ message: String) {

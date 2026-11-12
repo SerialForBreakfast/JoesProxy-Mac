@@ -341,7 +341,8 @@ final class MCPServerController: ObservableObject {
             throttleConfigurationReader: { configuration.networkThrottleConfiguration },
             throttleConfigurationWriter: { updated in
                 configuration.networkThrottleConfiguration = updated
-            }
+            },
+            loopbackPolicyReader: { configuration.loopbackDestinationPolicy }
         )
         service.hlsFixtureRunStore = fixtureRunStore
         service.activeScenarioIDsProvider = { [weak self] in
@@ -379,7 +380,8 @@ final class MCPServerController: ObservableObject {
             grantStore: grantStore,
             auditStore: auditStore,
             runningProxyPort: runningProxyPort,
-            throttleConfigurationReader: { configuration.networkThrottleConfiguration }
+            throttleConfigurationReader: { configuration.networkThrottleConfiguration },
+            loopbackPolicyReader: { configuration.loopbackDestinationPolicy }
         )
         openWorldService = service
         protocolService.setOpenWorldService(service)
@@ -483,7 +485,8 @@ final class MCPServerController: ObservableObject {
             throttleConfigurationReader: { configuration.networkThrottleConfiguration },
             throttleConfigurationWriter: { updated in
                 configuration.networkThrottleConfiguration = updated
-            }
+            },
+            loopbackPolicyReader: { configuration.loopbackDestinationPolicy }
         )
         scenarioRuntimeService = MCPScenarioRuntimeService(
             lifecycleCoordinator: scenarioLifecycleCoordinator,
@@ -505,7 +508,8 @@ final class MCPServerController: ObservableObject {
             policyStore: policyStore,
             grantStore: grantStore,
             approvalStore: approvalStore,
-            auditStore: auditStore
+            auditStore: auditStore,
+            loopbackPolicyReader: { configuration.loopbackDestinationPolicy }
         )
         protocolService.setScenarioService(scenarioService!)
     }

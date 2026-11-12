@@ -238,6 +238,23 @@ final class SettingsViewModel: ObservableObject {
             configuration.noCachingDomains = noCachingDomains
         }
     }
+    @Published var isLoopbackMapRemoteEnabled: Bool {
+        didSet {
+            guard oldValue != isLoopbackMapRemoteEnabled else { return }
+            configuration.isLoopbackMapRemoteEnabled = isLoopbackMapRemoteEnabled
+            if !isLoopbackMapRemoteEnabled {
+                revokeLoopbackAccess(forRemovedPorts: nil)
+            }
+        }
+    }
+    @Published private(set) var authorizedLoopbackPorts: [Int]
+    @Published var authorizedLoopbackPortsDraft: String {
+        didSet {
+            guard oldValue != authorizedLoopbackPortsDraft else { return }
+            loopbackPortsValidationMessage = nil
+        }
+    }
+    @Published private(set) var loopbackPortsValidationMessage: String?
     @Published var networkThrottleConfiguration: NetworkThrottleConfiguration {
         didSet {
             guard oldValue != networkThrottleConfiguration else { return }
@@ -277,16 +294,19 @@ final class SettingsViewModel: ObservableObject {
 
     private let configuration: AppConfiguration
     private let proxyRuntime: any ProxyRuntime
+    private let responseOverrideStore: ResponseOverrideStore?
     private var cancellables: Set<AnyCancellable> = []
 
     init(
         configuration: AppConfiguration,
         proxyRuntime: any ProxyRuntime,
-        diagnosticsCoordinator: PreviousRunDiagnosticsCoordinator? = nil
+        diagnosticsCoordinator: PreviousRunDiagnosticsCoordinator? = nil,
+        responseOverrideStore: ResponseOverrideStore? = nil
     ) {
         self.configuration = configuration
         self.proxyRuntime = proxyRuntime
         self.diagnosticsCoordinator = diagnosticsCoordinator
+        self.responseOverrideStore = responseOverrideStore
         self.appTextSize = AppTextSize(rawValue: configuration.appTextSizeRawValue) ?? .standard
         self.launchWorkspacePreference = configuration.launchWorkspacePreference
         self.isInspectorCopyRedactionEnabled = configuration.isInspectorCopyRedactionEnabled
@@ -310,6 +330,11 @@ final class SettingsViewModel: ObservableObject {
         self.showSystemProxyMenuBarItem = configuration.showSystemProxyMenuBarItem
         self.runInMenuBarOnly = configuration.runInMenuBarOnly
         self.noCachingDomains = configuration.noCachingDomains
+        self.isLoopbackMapRemoteEnabled = configuration.isLoopbackMapRemoteEnabled
+        self.authorizedLoopbackPorts = configuration.authorizedLoopbackMapRemotePorts
+        self.authorizedLoopbackPortsDraft = LoopbackDestinationPolicy.formatPortsList(
+            configuration.authorizedLoopbackMapRemotePorts
+        )
         self.networkThrottleConfiguration = MCPTargetRevisionFingerprint.throttleByApplyingRevision(
             configuration.networkThrottleConfiguration
         )
@@ -568,6 +593,50 @@ final class SettingsViewModel: ObservableObject {
         noCachingDomains.removeAll { $0 == domain }
     }
 
+    func commitAuthorizedLoopbackPortsDraft() {
+        let parsed = LoopbackDestinationPolicy.parsePortsList(authorizedLoopbackPortsDraft)
+        if !parsed.invalidTokens.isEmpty {
+            let joined = parsed.invalidTokens.joined(separator: ", ")
+            loopbackPortsValidationMessage = "Enter comma-separated ports between 1 and 65535 (invalid: \(joined))."
+            return
+        }
+        for port in parsed.ports {
+            if let owner = ReservedListenerRegistry.shared.conflictsWithPort(port) {
+                loopbackPortsValidationMessage = "Port \(port) is currently reserved by JoesProxy (\(owner))."
+                return
+            }
+        }
+        applyAuthorizedLoopbackPorts(parsed.ports)
+    }
+
+    func removeAuthorizedLoopbackPort(_ port: Int) {
+        let updated = authorizedLoopbackPorts.filter { $0 != port }
+        applyAuthorizedLoopbackPorts(updated)
+    }
+
+    private func applyAuthorizedLoopbackPorts(_ updatedPorts: [Int]) {
+        let sanitized = Array(Set(updatedPorts.filter { (1...65_535).contains($0) })).sorted()
+        let removed = Set(authorizedLoopbackPorts).subtracting(sanitized)
+        authorizedLoopbackPorts = sanitized
+        authorizedLoopbackPortsDraft = LoopbackDestinationPolicy.formatPortsList(sanitized)
+        configuration.authorizedLoopbackMapRemotePorts = sanitized
+        loopbackPortsValidationMessage = nil
+        if !removed.isEmpty {
+            revokeLoopbackAccess(forRemovedPorts: removed)
+        }
+    }
+
+    private func revokeLoopbackAccess(forRemovedPorts removedPorts: Set<Int>?) {
+        ActiveMapRemoteSessionRegistry.shared.cancelLoopbackSessions(forPorts: removedPorts)
+        guard let store = responseOverrideStore else { return }
+        Task { @MainActor in
+            let didChange = await store.disableLoopbackMapRemoteRules(forRemovedPorts: removedPorts)
+            if didChange {
+                configuration.responseOverridesData = try? await store.persistedData()
+            }
+        }
+    }
+
     func resetDefaults() {
         guard canResetDefaults else {
             proxyPortValidationMessage = "Stop the proxy before resetting defaults."
@@ -575,7 +644,9 @@ final class SettingsViewModel: ObservableObject {
         }
 
         configuration.resetToDefaults()
+        revokeLoopbackAccess(forRemovedPorts: nil)
         proxyPortValidationMessage = nil
+        loopbackPortsValidationMessage = nil
     }
 
     func refreshSDKEventServerStatus() async {
@@ -609,6 +680,12 @@ final class SettingsViewModel: ObservableObject {
         assignIfChanged(&showSystemProxyMenuBarItem, configuration.showSystemProxyMenuBarItem)
         assignIfChanged(&runInMenuBarOnly, configuration.runInMenuBarOnly)
         assignIfChanged(&noCachingDomains, configuration.noCachingDomains)
+        assignIfChanged(&isLoopbackMapRemoteEnabled, configuration.isLoopbackMapRemoteEnabled)
+        assignIfChanged(&authorizedLoopbackPorts, configuration.authorizedLoopbackMapRemotePorts)
+        assignIfChanged(
+            &authorizedLoopbackPortsDraft,
+            LoopbackDestinationPolicy.formatPortsList(configuration.authorizedLoopbackMapRemotePorts)
+        )
         assignIfChanged(&networkThrottleConfiguration, configuration.networkThrottleConfiguration)
         let throttleDrafts = Self.throttleDrafts(for: configuration.networkThrottleConfiguration.selectedPreset)
         assignIfChanged(&throttleDownstreamDraft, throttleDrafts.downstream)

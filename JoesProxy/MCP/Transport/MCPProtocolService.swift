@@ -7440,6 +7440,14 @@ final class MCPProtocolService {
                 "maxLength": 2048,
                 "description": "Replacement query string (no leading '?'), used only when remoteQueryPolicy is replace."
             ]
+            properties["allowLoopbackDestination"] = [
+                "type": "boolean",
+                "description": "Explicit per-rule opt-in allowing loopback destinations on this Mac (requires Settings > Proxy > Local-Server Routing enabled and destination port authorized)."
+            ]
+            properties["preserveHostHeader"] = [
+                "type": "boolean",
+                "description": "When true, preserves the validated original incoming HTTP Host authority instead of rewriting Host to remoteHost (TLS SNI and cert validation stay pinned to remoteHost)."
+            ]
             properties["graphqlOperationName"] = [
                 "type": "string",
                 "description": "Optional GraphQL operation-name predicate: only match a POST whose JSON body's top-level operationName equals this value. Omit to match every operation on this path."

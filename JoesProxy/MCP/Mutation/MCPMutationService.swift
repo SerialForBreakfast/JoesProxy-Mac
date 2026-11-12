@@ -60,6 +60,7 @@ final class MCPMutationService {
     let auditStore: MCPAuditStore
     let throttleConfigurationReader: () -> NetworkThrottleConfiguration
     let throttleConfigurationWriter: (NetworkThrottleConfiguration) -> Void
+    let loopbackPolicyReader: () -> LoopbackDestinationPolicy
     /// Read-only session/capture access for the structural-discovery and capture-only preview
     /// tools — `nil` in test stacks that don't need them (those two tools fail closed with a
     /// clear "unavailable" error rather than crashing when it's absent).
@@ -135,7 +136,8 @@ final class MCPMutationService {
         collectionMockAuthoringService: CollectionMockAuthoringService? = nil,
         enforcesLiveRewritePreview: Bool = true,
         throttleConfigurationReader: @escaping () -> NetworkThrottleConfiguration = { .defaults },
-        throttleConfigurationWriter: @escaping (NetworkThrottleConfiguration) -> Void = { _ in }
+        throttleConfigurationWriter: @escaping (NetworkThrottleConfiguration) -> Void = { _ in },
+        loopbackPolicyReader: @escaping () -> LoopbackDestinationPolicy = { .disabled }
     ) {
         self.bookmarkStore = bookmarkStore
         self.responseOverrideStore = responseOverrideStore
@@ -154,6 +156,7 @@ final class MCPMutationService {
         self.enforcesLiveRewritePreview = enforcesLiveRewritePreview
         self.throttleConfigurationReader = throttleConfigurationReader
         self.throttleConfigurationWriter = throttleConfigurationWriter
+        self.loopbackPolicyReader = loopbackPolicyReader
         self.encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         if let responseDraftStore, !responseDraftStore.isLoaded {
@@ -2153,7 +2156,16 @@ final class MCPMutationService {
             throw MCPMutationValidator.structuredError(for: .malformedRequest("remoteScheme must be http or https."))
         }
         let remotePort = arguments["remotePort"] as? Int
-        try MCPMutationValidator.validateMapRemoteDestination(host: remoteHost, port: remotePort, scheme: remoteScheme)
+        let allowLoopbackDestination = (arguments["allowLoopbackDestination"] as? Bool) ?? false
+        let preserveHostHeader = (arguments["preserveHostHeader"] as? Bool) ?? false
+        try MCPMutationValidator.validateMapRemoteDestination(
+            host: remoteHost,
+            port: remotePort,
+            scheme: remoteScheme,
+            allowLoopbackDestination: allowLoopbackDestination,
+            policy: loopbackPolicyReader(),
+            reservedRegistry: .shared
+        )
         let remotePath = arguments["remotePath"] as? String
         if let remotePath {
             try MCPMutationValidator.validateMapRemoteRequestTarget(remotePath)
@@ -2166,19 +2178,24 @@ final class MCPMutationService {
         if let remoteQuery {
             try MCPMutationValidator.validateMapRemoteQuery(remoteQuery)
         }
+        let normalizedRemoteHost = LoopbackAddressInspector.stripBracketsAndTrailingDot(remoteHost).host
+        let hostBehaviorNote = preserveHostHeader ? "; preserve original Host" : ""
+        let loopbackNote = allowLoopbackDestination ? " [local Mac loopback]" : ""
         let proposedID = UUID()
         let plan = MCPMutationPlan(
             capability: .createDisabledMapRemote,
             matcher: matcher,
             proposedTargetID: proposedID,
             effectKind: .mapRemote,
-            effectSummary: "Create disabled map-remote rule for \(matcher.method) \(matcher.host)\(matcher.path)\(remotePath.map { " (destination path override: \($0))" } ?? "").",
-            mapRemoteHost: remoteHost,
+            effectSummary: "Create disabled map-remote rule\(loopbackNote) for \(matcher.method) \(matcher.host)\(matcher.path) -> \(remoteScheme.rawValue)://\(normalizedRemoteHost)\(remotePort.map { ":\($0)" } ?? "")\(remotePath ?? "")\(hostBehaviorNote).",
+            mapRemoteHost: normalizedRemoteHost,
             mapRemotePort: remotePort,
             mapRemoteScheme: remoteScheme,
             mapRemotePath: remotePath,
             mapRemoteQueryPolicy: queryPolicy,
             mapRemoteQuery: remoteQuery,
+            mapRemoteAllowLoopback: allowLoopbackDestination,
+            mapRemotePreserveHostHeader: preserveHostHeader,
             rewriteLabel: arguments["label"] as? String
         )
         return try await propose(plan: plan, client: client, arguments: arguments)
@@ -2193,6 +2210,14 @@ final class MCPMutationService {
               let remoteScheme = plan.mapRemoteScheme else {
             throw MCPStructuredError(code: .staleProposal, message: "Proposal plan is incomplete.")
         }
+        try MCPMutationValidator.validateMapRemoteDestination(
+            host: remoteHost,
+            port: plan.mapRemotePort,
+            scheme: remoteScheme,
+            allowLoopbackDestination: plan.mapRemoteAllowLoopback,
+            policy: loopbackPolicyReader(),
+            reservedRegistry: .shared
+        )
         let provenance = makeProvenance(clientID: client.id, capability: .createDisabledMapRemote)
         let result = try await proposalCoordinator.applyProposal(
             token: proposal.token,
@@ -2211,6 +2236,8 @@ final class MCPMutationService {
                     remotePath: plan.mapRemotePath,
                     remoteQueryPolicy: plan.mapRemoteQueryPolicy,
                     remoteQuery: plan.mapRemoteQuery,
+                    allowLoopbackDestination: plan.mapRemoteAllowLoopback,
+                    preserveHostHeader: plan.mapRemotePreserveHostHeader,
                     label: plan.rewriteLabel,
                     provenance: provenance
                 )
@@ -3114,11 +3141,15 @@ final class MCPMutationService {
         remotePath: String? = nil,
         remoteQueryPolicy: MapRemoteQueryPolicy = .preserve,
         remoteQuery: String? = nil,
+        allowLoopbackDestination: Bool = false,
+        preserveHostHeader: Bool = false,
         label: String?,
         provenance: MCPProvenance
     ) async throws {
         let resolvedPort = remotePort ?? Self.defaultPort(for: remoteScheme)
-        let description = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(remoteHost):\(resolvedPort)\(remotePath ?? "")"
+        let normalizedHost = LoopbackAddressInspector.stripBracketsAndTrailingDot(remoteHost).host
+        let effectiveHost = normalizedHost.isEmpty ? remoteHost.lowercased() : normalizedHost
+        let description = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(effectiveHost):\(resolvedPort)\(remotePath ?? "")"
         let rule = ResponseOverrideRule(
             id: id,
             label: label,
@@ -3134,12 +3165,14 @@ final class MCPMutationService {
             headers: [],
             bodySource: .inline(nil),
             isEnabled: false,
-            mapRemoteHost: remoteHost.lowercased(),
+            mapRemoteHost: effectiveHost,
             mapRemotePort: resolvedPort,
             mapRemoteScheme: remoteScheme,
             mapRemotePath: remotePath,
             mapRemoteQueryPolicy: remoteQueryPolicy,
             mapRemoteQuery: remoteQuery,
+            allowLoopbackDestination: allowLoopbackDestination,
+            preserveHostHeader: preserveHostHeader,
             mcpOrigin: .mcp,
             mcpProvenance: provenance,
             graphQLOperationName: matcher.graphQLOperationName,
@@ -3564,6 +3597,8 @@ final class MCPMutationService {
             mapRemotePath: rule.mapRemotePath,
             mapRemoteQueryPolicy: rule.sourceKind == .mapRemote ? rule.mapRemoteQueryPolicy.rawValue : nil,
             mapRemoteQuery: rule.mapRemoteQuery,
+            allowLoopbackDestination: rule.sourceKind == .mapRemote ? rule.allowLoopbackDestination : nil,
+            preserveHostHeader: rule.sourceKind == .mapRemote ? rule.preserveHostHeader : nil,
             bookmarkRewriteMethod: bookmark?.method,
             bookmarkRewriteHost: bookmark?.host,
             bookmarkRewritePath: bookmark?.path,
@@ -3613,6 +3648,8 @@ final class MCPMutationService {
             mapRemoteScheme: summary.mapRemoteScheme,
             mapRemotePath: summary.mapRemotePath,
             mapRemoteQueryPolicy: summary.mapRemoteQueryPolicy,
+            allowLoopbackDestination: summary.allowLoopbackDestination,
+            preserveHostHeader: summary.preserveHostHeader,
             liveRewritePaths: summary.liveRewritePaths,
             fixtureRunID: summary.fixtureRunID,
             localDirectoryName: summary.localDirectoryName,

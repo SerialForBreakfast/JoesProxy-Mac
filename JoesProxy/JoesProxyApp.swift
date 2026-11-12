@@ -226,7 +226,8 @@ struct JoesProxyApp: App {
             wrappedValue: SettingsViewModel(
                 configuration: coordinator.configuration,
                 proxyRuntime: coordinator.proxyRuntime,
-                diagnosticsCoordinator: coordinator.previousRunDiagnosticsCoordinator
+                diagnosticsCoordinator: coordinator.previousRunDiagnosticsCoordinator,
+                responseOverrideStore: coordinator.responseOverrideStore
             )
         )
         let resolvedPresentationState = AppPresentationState(configuration: coordinator.configuration)

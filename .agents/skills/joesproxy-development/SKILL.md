@@ -31,6 +31,7 @@ exported MCP operating skill. Paths in commands are relative to the repository r
 - Builds/tests, including resuming an interrupted run: read [validation.md](references/validation.md).
 - UI fixes, screenshots or export failures: also read [ui-and-artifacts.md](references/ui-and-artifacts.md).
 - Hangs, memory, streaming or performance claims: also read [investigation.md](references/investigation.md).
+- HLS conformance & direct-vs-remapped `mediastreamvalidator` / `msvsummary` runs: also read [hls-validation.md](references/hls-validation.md).
 - Release work: read the repository's [RELEASE.md](../../../RELEASE.md) before acting. This skill
   grants no release, dependency, signing or git-write authority.
 - Documentation/skill reconciliation: preserve the currently tested package. Correct mirrored

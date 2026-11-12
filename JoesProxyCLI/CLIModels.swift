@@ -2,7 +2,7 @@ import Foundation
 
 enum CLIRuntimeIdentity {
     /// Kept equal to `MCPCapabilitiesRevision.current`; an app-target test prevents drift.
-    static let capabilitiesRevision = 30
+    static let capabilitiesRevision = 31
 
     static func expectation(bundle: Bundle = .main) -> [String: Any] {
         let marketingVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -109,7 +109,9 @@ struct CLIInvocation {
             "since-marker", "rule", "field",
             "status-class", "min-duration-ms", "deduplicate-by",
             "where-pointer", "where-op", "where-value", "operations-json",
-            "field-pointers", "row-limit", "ignore-pointers"
+            "field-pointers", "row-limit", "ignore-pointers",
+            "remote-host", "remote-port", "remote-scheme", "remote-path",
+            "remote-query-policy", "remote-query", "source-client-address"
         ]
         let booleanFlags: Set<String> = [
             "literal-stdin",
@@ -120,7 +122,8 @@ struct CLIInvocation {
             "evidence-matches", "error-detected", "client-crashed", "no-preserve-urls",
             "no-preserve-ids", "integrations",
             "has-override-hit", "no-override-hit", "body-available", "no-body-available",
-            "include-auth-chain", "include-value-diff", "auth-chain"
+            "include-auth-chain", "include-value-diff", "auth-chain",
+            "allow-loopback", "preserve-host"
         ]
 
         while index < arguments.count {

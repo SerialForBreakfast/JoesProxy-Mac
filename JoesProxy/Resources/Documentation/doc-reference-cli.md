@@ -1262,3 +1262,22 @@ joesproxyctl effect bundle discard prepare <bundle-id>
 ```text
 joesproxyctl effect bundle discard apply <token>
 ```
+
+## Command 179 {#command-map-remote-prepare}
+
+```text
+joesproxyctl response map-remote prepare --method <verb> --host <host> --path <path> --remote-host <host> [--remote-port <n>] [--remote-scheme http|https]
+```
+
+## Command 180 {#command-map-remote-apply}
+
+```text
+joesproxyctl response map-remote apply <proposal-token> [--wait-for-approval] [--idempotency-key <key>]
+```
+
+## Command 181 {#command-map-remote-activate}
+
+```text
+joesproxyctl response map-remote activate <override-id> [--wait-for-approval] [--idempotency-key <key>]
+```
+

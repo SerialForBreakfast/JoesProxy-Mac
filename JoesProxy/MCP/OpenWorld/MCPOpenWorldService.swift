@@ -22,6 +22,7 @@ final class MCPOpenWorldService {
     private let auditStore: MCPAuditStore
     private let runningProxyPort: () -> UInt16?
     private let throttleConfigurationReader: () -> NetworkThrottleConfiguration
+    private let loopbackPolicyReader: () -> LoopbackDestinationPolicy
     private let encoder: JSONEncoder
 
     init(
@@ -39,7 +40,8 @@ final class MCPOpenWorldService {
         grantStore: MCPClientGrantStore? = nil,
         auditStore: MCPAuditStore,
         runningProxyPort: @escaping () -> UInt16?,
-        throttleConfigurationReader: @escaping () -> NetworkThrottleConfiguration = { .defaults }
+        throttleConfigurationReader: @escaping () -> NetworkThrottleConfiguration = { .defaults },
+        loopbackPolicyReader: @escaping () -> LoopbackDestinationPolicy = { .disabled }
     ) {
         self.bookmarkStore = bookmarkStore
         self.sessionStore = sessionStore
@@ -58,6 +60,7 @@ final class MCPOpenWorldService {
         self.auditStore = auditStore
         self.runningProxyPort = runningProxyPort
         self.throttleConfigurationReader = throttleConfigurationReader
+        self.loopbackPolicyReader = loopbackPolicyReader
         self.encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys]
@@ -400,14 +403,33 @@ final class MCPOpenWorldService {
               let remoteScheme = rule.mapRemoteScheme else {
             throw MCPStructuredError(code: .malformedRequest, message: "Map Remote rule is missing destination fields.")
         }
+        do {
+            try MCPMutationValidator.validateMapRemoteDestination(
+                host: remoteHost,
+                port: remotePort,
+                scheme: remoteScheme,
+                allowLoopbackDestination: rule.allowLoopbackDestination,
+                policy: loopbackPolicyReader(),
+                reservedRegistry: .shared
+            )
+        } catch let error as MCPMutationValidationError {
+            throw MCPMutationValidator.structuredError(for: error)
+        }
 
+        let matcherScope = "\(rule.requestMethod) \(rule.requestScheme.rawValue)://\(rule.host)\(rule.path)"
+        let destScope = "\(remoteScheme.rawValue)://\(remoteHost):\(remotePort)\(rule.mapRemotePath ?? "")"
+        let hostBehavior = rule.preserveHostHeader
+            ? "preserve original HTTP Host authority (TLS SNI/certificate verification pinned to destination)"
+            : "use destination Host authority"
+        let clientScope = rule.sourceClientAddress.map { "client=\($0)" } ?? "all clients"
+        let loopbackScope = rule.allowLoopbackDestination ? " [LOCAL MAC LOOPBACK ALLOWED]" : ""
         let disclosure = MCPOpenWorldDisclosureDTO(
             destinationHost: remoteHost,
             destinationPort: remotePort,
             destinationScheme: remoteScheme.rawValue,
             method: rule.requestMethod,
             includesCredentials: false,
-            expectedSideEffect: "Enable Map Remote so matching traffic is forwarded to \(remoteScheme.rawValue)://\(remoteHost):\(remotePort).",
+            expectedSideEffect: "Enable Map Remote\(loopbackScope) for \(matcherScope) (\(clientScope)) -> \(destScope); Host behavior: \(hostBehavior).",
             riskTier: MCPCapabilityRiskTier.openWorldTool.rawValue,
             targetID: overrideID.uuidString
         )

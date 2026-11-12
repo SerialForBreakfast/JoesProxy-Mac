@@ -1966,6 +1966,98 @@ final class CLIApplication {
                 }
             }
             return success(commandName, guided)
+        case ["response", "map-remote", "prepare"]:
+            guard let method = invocation.options["method"], !method.isEmpty,
+                  let host = invocation.options["host"], !host.isEmpty,
+                  let path = invocation.options["path"], !path.isEmpty,
+                  let remoteHost = invocation.options["remote-host"], !remoteHost.isEmpty else {
+                throw CLIError.invalidArguments(
+                    "response map-remote prepare requires --method, --host, --path, and --remote-host."
+                )
+            }
+            var arguments: [String: Any] = [
+                "method": method,
+                "scheme": invocation.options["scheme"] ?? "https",
+                "host": host,
+                "path": path,
+                "matchMode": invocation.options["match-mode"] ?? "exactPath",
+                "remoteHost": remoteHost,
+                "remoteScheme": invocation.options["remote-scheme"] ?? "https"
+            ]
+            if let port = invocation.options["port"] {
+                guard let portValue = Int(port) else {
+                    throw CLIError.invalidArguments("--port must be an integer.")
+                }
+                arguments["port"] = portValue
+            }
+            if let remotePort = invocation.options["remote-port"] {
+                guard let remotePortValue = Int(remotePort) else {
+                    throw CLIError.invalidArguments("--remote-port must be an integer.")
+                }
+                arguments["remotePort"] = remotePortValue
+            }
+            if let remotePath = invocation.options["remote-path"], !remotePath.isEmpty {
+                arguments["remotePath"] = remotePath
+            }
+            if let queryPolicy = invocation.options["remote-query-policy"], !queryPolicy.isEmpty {
+                arguments["remoteQueryPolicy"] = queryPolicy
+            }
+            if let remoteQuery = invocation.options["remote-query"] {
+                arguments["remoteQuery"] = remoteQuery
+            }
+            if let label = invocation.options["label"], !label.isEmpty {
+                arguments["label"] = label
+            }
+            if let sourceClientAddress = invocation.options["source-client-address"] {
+                arguments["sourceClientAddress"] = sourceClientAddress
+            }
+            if let queryKey = invocation.options["match-query-key"] {
+                arguments["matchQueryKey"] = queryKey
+            }
+            if let queryValue = invocation.options["match-query-value"] {
+                arguments["matchQueryValue"] = queryValue
+            }
+            if let opName = invocation.options["graphql-operation-name"] {
+                arguments["graphqlOperationName"] = opName
+            }
+            if invocation.flags.contains("allow-loopback") {
+                arguments["allowLoopbackDestination"] = true
+            }
+            if invocation.flags.contains("preserve-host") {
+                arguments["preserveHostHeader"] = true
+            }
+            let proposal = try await runTool(
+                client,
+                name: "propose_create_map_remote",
+                arguments: arguments,
+                invocation: invocation,
+                retryOnStaleSession: false
+            )
+            return success(commandName, [
+                "proposal": payloadObject(proposal) ?? [:],
+                "nextCommand": "joesproxyctl response map-remote apply <proposal-token> --wait-for-approval"
+            ])
+        case _ where command.count == 4 && command[0] == "response" && command[1] == "map-remote" && command[2] == "apply":
+            let created = try await runTool(
+                client,
+                name: "apply_create_map_remote",
+                arguments: ["proposalToken": command[3]],
+                invocation: invocation,
+                retryOnStaleSession: false
+            )
+            var result = payloadObject(created) ?? [:]
+            if let targetID = result["targetID"] as? String {
+                result["nextCommand"] = "joesproxyctl response map-remote activate \(targetID) --wait-for-approval"
+            }
+            return success(commandName, result)
+        case _ where command.count == 4 && command[0] == "response" && command[1] == "map-remote" && command[2] == "activate":
+            return success(commandName, try await runTool(
+                client,
+                name: "activate_map_remote",
+                arguments: ["overrideID": command[3]],
+                invocation: invocation,
+                retryOnStaleSession: false
+            ))
         default:
             throw CLIError.invalidArguments("Unknown command. Run `joesproxyctl help` for available commands.")
         }
@@ -3661,6 +3753,13 @@ final class CLIApplication {
         [--graphql-operation-name <name>]) [--source-client-address <ip>]
         [--match-query-key <key> --match-query-value <value>] [--enable-after]
       joesproxyctl response map-local apply <proposal-token> [--enable-after] [--wait-for-approval]
+      joesproxyctl response map-remote prepare --method <verb> --host <host> --path <path> --remote-host <host> [--remote-port <n>] [--remote-scheme http|https]
+        [--scheme http|https] [--match-mode exactPath|pathPrefix|pathSuffix|ignoreQuery|filename] [--port <n>]
+        [--remote-path <path>] [--remote-query-policy preserve|replace|drop] [--remote-query <query>]
+        [--allow-loopback] [--preserve-host] [--label <label>] [--source-client-address <ip>]
+        [--match-query-key <key> --match-query-value <value>] [--graphql-operation-name <name>] [--idempotency-key <key>]
+      joesproxyctl response map-remote apply <proposal-token> [--wait-for-approval] [--idempotency-key <key>]
+      joesproxyctl response map-remote activate <override-id> [--wait-for-approval] [--idempotency-key <key>]
       joesproxyctl rule list [--limit <n>] [--cursor <token>] [--projection minimal|summary|full] [--source-kind <kind>]
       joesproxyctl rule get <override-id>
       joesproxyctl rule enable|disable|delete <override-id>

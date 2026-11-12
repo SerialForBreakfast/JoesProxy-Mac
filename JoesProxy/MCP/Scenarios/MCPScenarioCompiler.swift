@@ -126,7 +126,11 @@ enum MCPScenarioCompiler {
         )
     }
 
-    static func compile(draft: MCPScenarioDraftInput, now: Date = Date()) throws -> MCPScenarioDefinition {
+    static func compile(
+        draft: MCPScenarioDraftInput,
+        now: Date = Date(),
+        loopbackPolicy: LoopbackDestinationPolicy = .disabled
+    ) throws -> MCPScenarioDefinition {
         guard draft.schemaVersion == MCPScenarioSchemaVersion.current else {
             throw MCPScenarioCompilerError.unsupportedSchemaVersion(
                 found: draft.schemaVersion,
@@ -161,7 +165,7 @@ enum MCPScenarioCompiler {
         try validateCaptureScope(draft.captureScope, target: draft.target)
         try validatePreconditions(draft.preconditions)
         try validateAssertions(draft.assertions)
-        try validateFaults(draft.faults, target: draft.target)
+        try validateFaults(draft.faults, target: draft.target, loopbackPolicy: loopbackPolicy)
         try validateCleanupCoverage(faults: draft.faults, cleanupActions: draft.cleanupActions)
 
         return MCPScenarioDefinition(
@@ -202,14 +206,16 @@ enum MCPScenarioCompiler {
         let tier = riskTier(for: definition)
         let openWorldDisclosures: [MCPOpenWorldDisclosureDTO] = definition.faults.compactMap { fault in
             switch fault {
-            case .mapRemote(let matcher, let remoteHost, let remotePort, let remoteScheme, let remotePath, _, _):
+            case .mapRemote(let matcher, let remoteHost, let remotePort, let remoteScheme, let remotePath, _, _, let allowLoopbackDestination, let preserveHostHeader):
+                let hostNote = (preserveHostHeader ?? false) ? "; preserve original Host" : ""
+                let loopbackNote = (allowLoopbackDestination ?? false) ? " [local Mac loopback]" : ""
                 return MCPOpenWorldDisclosureDTO(
                     destinationHost: remoteHost,
                     destinationPort: remotePort,
                     destinationScheme: remoteScheme.rawValue,
                     method: matcher.method,
                     includesCredentials: false,
-                    expectedSideEffect: "Requests matching \(matcher.method) \(matcher.host)\(matcher.path) are remapped to \(remoteHost)\(remotePath.map { " at \($0)" } ?? ", same path").",
+                    expectedSideEffect: "Requests matching \(matcher.method) \(matcher.host)\(matcher.path) are remapped\(loopbackNote) to \(remoteHost)\(remotePath.map { " at \($0)" } ?? ", same path")\(hostNote).",
                     riskTier: MCPCapabilityRiskTier.openWorldTool.rawValue,
                     targetID: fault.targetLockKey
                 )
@@ -425,7 +431,11 @@ enum MCPScenarioCompiler {
         return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private static func validateFaults(_ faults: [MCPScenarioFault], target: MCPScenarioTarget) throws {
+    private static func validateFaults(
+        _ faults: [MCPScenarioFault],
+        target: MCPScenarioTarget,
+        loopbackPolicy: LoopbackDestinationPolicy = .disabled
+    ) throws {
         var seenLockKeys = Set<String>()
         for fault in faults {
             guard seenLockKeys.insert(fault.targetLockKey).inserted else {
@@ -436,7 +446,7 @@ enum MCPScenarioCompiler {
         }
 
         let mapRemoteMatchers: [MCPMutationMatcher] = faults.compactMap {
-            if case .mapRemote(let matcher, _, _, _, _, _, _) = $0 { return matcher }
+            if case .mapRemote(let matcher, _, _, _, _, _, _, _, _) = $0 { return matcher }
             return nil
         }
         for fault in faults {
@@ -457,9 +467,15 @@ enum MCPScenarioCompiler {
             case .mapLocal(let matcher, let inlineBodyText, _, _):
                 try requireHostInTarget(matcher.host, targetHosts: normalizedTargetHosts)
                 try MCPMutationValidator.validateInlineBody(inlineBodyText)
-            case .mapRemote(let matcher, let remoteHost, let remotePort, let remoteScheme, let remotePath, _, let remoteQuery):
+            case .mapRemote(let matcher, let remoteHost, let remotePort, let remoteScheme, let remotePath, _, let remoteQuery, let allowLoopbackDestination, _):
                 try requireHostInTarget(matcher.host, targetHosts: normalizedTargetHosts)
-                try validateMapRemoteDestination(host: remoteHost, port: remotePort, scheme: remoteScheme)
+                try validateMapRemoteDestination(
+                    host: remoteHost,
+                    port: remotePort,
+                    scheme: remoteScheme,
+                    allowLoopbackDestination: allowLoopbackDestination ?? false,
+                    loopbackPolicy: loopbackPolicy
+                )
                 if let remotePath {
                     try MCPMutationValidator.validateMapRemoteRequestTarget(remotePath)
                 }
@@ -491,9 +507,22 @@ enum MCPScenarioCompiler {
         }
     }
 
-    private static func validateMapRemoteDestination(host: String, port: Int?, scheme: SessionScheme) throws {
+    private static func validateMapRemoteDestination(
+        host: String,
+        port: Int?,
+        scheme: SessionScheme,
+        allowLoopbackDestination: Bool = false,
+        loopbackPolicy: LoopbackDestinationPolicy = .disabled
+    ) throws {
         do {
-            try MCPMutationValidator.validateMapRemoteDestination(host: host, port: port, scheme: scheme)
+            try MCPMutationValidator.validateMapRemoteDestination(
+                host: host,
+                port: port,
+                scheme: scheme,
+                allowLoopbackDestination: allowLoopbackDestination,
+                policy: loopbackPolicy,
+                reservedRegistry: .shared
+            )
         } catch let error as MCPMutationValidationError {
             switch error {
             case .policyDenied(let message):
