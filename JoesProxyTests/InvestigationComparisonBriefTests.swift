@@ -12,7 +12,7 @@ final class InvestigationComparisonBriefTests: XCTestCase {
             pointer: "", includeStructure: true)
         return .init(source: .init(sessionID: record.id.uuidString, captureSequence: 1,
             analysisStatus: brief.status, unavailableReason: text == nil ? "body_missing" : nil, sourceSHA256: brief.sourceSHA256),
-            record: record, brief: brief)
+            record: record, brief: brief, bodyText: text)
     }
 
     func testComparisonUsesObservedStructureWithoutLeakingValues() throws {
@@ -69,5 +69,50 @@ final class InvestigationComparisonBriefTests: XCTestCase {
         XCTAssertEqual(report.changes.count, 32)
         XCTAssertEqual(report.omittedChangeCount, 8)
         XCTAssertEqual(report.status, "incomplete")
+    }
+
+    func testIncludeValueDiffEmitsScalarDeltasFlagsVolatileFieldsAndHonorsIgnorePointers() throws {
+        let before = input(#"{"featureEnabled":false,"requestId":"11111111-1111-1111-1111-111111111111","authToken":"secret-before","ignored":{"counter":1}}"#)
+        let after = input(#"{"featureEnabled":true,"requestId":"22222222-2222-2222-2222-222222222222","authToken":"secret-after","ignored":{"counter":2}}"#)
+        let report = InvestigationComparisonBrief.compare(
+            baseline: [before],
+            candidate: [after],
+            includeValueDiff: true,
+            ignorePointers: ["/ignored"]
+        )
+        let valueChanges = try XCTUnwrap(report.valueChanges)
+        XCTAssertEqual(valueChanges.count, 3)
+        XCTAssertFalse(valueChanges.contains { $0.pointer.hasPrefix("/ignored") })
+        let featureChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/featureEnabled" })
+        XCTAssertEqual(featureChange.kind, "modified")
+        XCTAssertNil(featureChange.beforePreview)
+        XCTAssertNil(featureChange.afterPreview)
+        XCTAssertEqual(featureChange.beforeValue, false)
+        XCTAssertEqual(featureChange.afterValue, true)
+        XCTAssertFalse(featureChange.isLikelyVolatile)
+        let reqIDChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/requestId" })
+        XCTAssertTrue(reqIDChange.isLikelyVolatile)
+        XCTAssertEqual(report.volatileChangeCount, 1)
+        let tokenChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/authToken" })
+        XCTAssertEqual(tokenChange.beforePreview, "<redacted>")
+        XCTAssertEqual(tokenChange.afterPreview, "<redacted>")
+    }
+
+    func testBooleanValuesDoNotCoerceStringsNumbersOrExposeRedactedBooleans() throws {
+        let report = InvestigationComparisonBrief.compare(
+            baseline: [input(#"{"mixed":"false","number":0,"authToken":false}"#)],
+            candidate: [input(#"{"mixed":true,"number":1,"authToken":true}"#)], includeValueDiff: true)
+        let changes = try XCTUnwrap(report.valueChanges)
+        let mixed = try XCTUnwrap(changes.first { $0.pointer == "/mixed" })
+        XCTAssertEqual(mixed.beforePreview, "false")
+        XCTAssertNil(mixed.beforeValue)
+        XCTAssertEqual(mixed.afterValue, true)
+        let number = try XCTUnwrap(changes.first { $0.pointer == "/number" })
+        XCTAssertNil(number.beforeValue)
+        XCTAssertNil(number.afterValue)
+        let secret = try XCTUnwrap(changes.first { $0.pointer == "/authToken" })
+        XCTAssertNil(secret.beforeValue)
+        XCTAssertNil(secret.afterValue)
+        XCTAssertEqual(secret.afterPreview, "<redacted>")
     }
 }

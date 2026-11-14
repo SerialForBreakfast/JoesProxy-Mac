@@ -47,6 +47,12 @@ When searching, filtering, or extracting captured network traffic via the CLI, *
 - `--path <path>` — Filter by request path or path prefix (e.g. `--path /v1/auth` or `--path .m3u8`).
 - `--method <method>` — Filter by HTTP method (e.g. `--method POST`, `--method GET`).
 - `--host-category <category>` — Filter by classified category (`direct_origin`, `synthetic_asset`, `capture_marker`, `ad_telemetry`, etc.).
+- `--status-code <code>` / `--status-class 2xx|3xx|4xx|5xx|error|non200` — Filter by exact HTTP status or family.
+- `--min-duration-ms <ms>` — Filter by minimum session duration in milliseconds.
+- `--has-override-hit` / `--no-override-hit` — Filter by whether an active rule or effect matched.
+- `--body-available` / `--no-body-available` — Filter by retained response body availability.
+- `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside matched items.
+- `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report across matched sessions.
 - `--since <iso-timestamp>` / `--until <iso-timestamp>` — Filter by start timestamp range.
 - `--session-id-prefix <prefix>` — Filter by the starting hex/UUID characters of the session ID.
 - `--limit <n>` — Maximum number of sessions to return (default: 50).

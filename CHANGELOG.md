@@ -2,6 +2,27 @@
 
 JoesProxy development began on November 5, 2024, by Joseph McCraw. The 1.9.0 source preview follows two years of development.
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+## 1.9.1 private candidate — build 25
+
+See the [versioned benchmark report](docs/releases/benchmarks/1.9.1-edge-v7.md) for the optimized rehearsal and subscription-token measurements comparing 1.9.0 with build 25.
+
+
+Private candidate **1.9.1 (25)**. See the [candidate notes](docs/releases/1.9.1-build25.md) and [release workflow](RELEASE.md).
+
+- Filter and calculate retained capture metadata over a bounded time window from MCP or the CLI. Search by response characteristics, request endpoint groups, or inspect scoped credential continuity.
+- Use structured predicates and batch calculations for supported selected sources. Request bounded field projections, value differences, and rule near-miss diagnostics.
+- Comparison briefs preserve JSON Boolean and string types. Search and list discovery point agents to filtered status grouping. Loopback routing includes local approval and upstream self-connection diagnostics.
+- Capture details distinguish busy-traffic omissions, body retention, and session eviction. See the [build 24 record](docs/releases/1.9.1-build24.md) for the earlier candidate.
+
+
 ## 1.9.0 source release (build 23)
 
 - Live text-size changes scale the Compact HUD's text and layout, main-window health statistics and inherited controls. The main header selects a layout with room for larger reading text.

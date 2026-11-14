@@ -8,6 +8,8 @@ Revision: 2026-10-29 — portable source snapshot. CursorRules.md mirrors this f
 - Preserve unrelated edits. Complete the authorized task and independent work; one isolated failure does not cancel unrelated work.
 - No dependency installs, updates, lockfile changes or repair without specific approval.
 - Obtain explicit maintainer approval before Git writes. Approval applies only to the named operations and repository. Publication requires separate approval.
+- Ask the maintainer before opening any public issue. Keep benchmark results in versioned reports linked from the release notes.
+
 - Keep authored artifacts in the checkout. Compiler-managed caches may be used only within the owner's existing permissions.
 - Do not run arbitrary inline scripts or temporary programs through the shell. Use reviewed project helpers and dedicated tooling.
 - Scope authorization, exceptions to a rule and physical user interaction are distinct. Preserve approval for unchanged scope.

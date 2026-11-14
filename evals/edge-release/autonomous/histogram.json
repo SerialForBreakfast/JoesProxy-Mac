@@ -1,0 +1,7 @@
+{
+  "model":"gemini-3.8-flash-low",
+  "prompt":"Using the synthetic jphist400 MCP server, find the exact number of GET requests for /vod/ paths by HTTP status, including missing response status, from 1970-01-01T00:11:11Z through 1970-01-01T00:17:50Z inclusive. Choose your own tools. Return only a JSON object mapping each observed status or missing to an integer count. Report incomplete if you cannot establish the answer.",
+  "rounds":5,
+  "cases":[{"id":"window400"}],
+  "expected":{"200":260,"206":60,"304":20,"404":20,"503":20,"missing":20}
+}

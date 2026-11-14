@@ -55,7 +55,7 @@ final class MCPMediaDiscoveryTests: XCTestCase {
         print("ANALYSIS_DISCOVERY_METRIC " + String(decoding: try JSONSerialization.data(withJSONObject: metrics, options: [.sortedKeys]), as: UTF8.self))
     }
     func testCapabilitiesRevisionReflectsCurrentToolAndDTOContract() {
-        XCTAssertEqual(MCPCapabilitiesRevision.current, 29)
+        XCTAssertEqual(MCPCapabilitiesRevision.current, 31)
         XCTAssertEqual(MCPCapabilityRouter.capability(forTool: "https_rules_get"), .httpsRulesInspect)
         XCTAssertEqual(MCPCapabilityRouter.capability(forTool: "https_rules_set"), .httpsRulesManage)
         XCTAssertEqual(MCPCapabilityRouter.capability(forTool: "effect_bundle_advance"), .enableRule)

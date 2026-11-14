@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let admissionLogger = Logger(subsystem: "com.JoesProxyApp.Capture", category: "Admission")
 
 /// Synchronous pre-task admission shared by transport threads. Every field is protected by lock.
 /// Reservations cover capture bodies plus metadata; these are not whole-process memory metrics.
@@ -31,6 +34,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
         let observed: CaptureObservationInstant
         let gaps: [Gap]
         let evictedThrough: CaptureObservationInstant?
+        var firstRejectedAt: Date?
         var lastRejectedAt: Date?
         var lastBodySkippedAt: Date?
         var byteLimit: Int = 0
@@ -91,6 +95,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
     private var lastRejectionReason: RejectionReason?
     private var bytes = 0
     private var peak = 0
+    private var firstRejectedAt: Date?
     private var lastRejectedAt: Date?
     private var lastBodySkippedAt: Date?
     private var rejected = 0
@@ -155,6 +160,12 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
                     gapSequence += 1
                     gaps.append(.init(id: gapSequence, start: instant, rejectedCaptures: 0))
                     if gaps.count > 64 { evictedThrough = gaps.removeFirst().end }
+                    // Transition only, never per rejected request.
+                    admissionLogger.notice("""
+                        Capture admission paused gap=\(self.gapSequence, privacy: .public) \
+                        reason=\(oversized ? "requestTooLarge" : "capacityExhausted", privacy: .public) \
+                        reservedBytes=\(self.bytes, privacy: .public) reservations=\(self.reservations.count, privacy: .public)
+                        """)
                 }
                 paused = true
                 // A request that can never fit is a point-in-time evidence gap, not backlog.
@@ -167,6 +178,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
                     return CaptureReservation(id: insertReservation(bytes: metadataBytes), metadataOnly: true)
                 }
                 lastRejectedAt = now().date
+                if firstRejectedAt == nil { firstRejectedAt = lastRejectedAt }
                 rejected += 1
                 gaps[gaps.count - 1].rejectedCaptures += 1
                 return nil
@@ -231,6 +243,11 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
         gapEndedAt = instant.date
         gaps[gaps.count - 1].end = instant
         paused = false
+        admissionLogger.notice("""
+            Capture admission resumed gap=\(self.gapSequence, privacy: .public) \
+            rejectedCaptures=\(self.gaps[self.gaps.count - 1].rejectedCaptures, privacy: .public) \
+            reservedBytes=\(self.bytes, privacy: .public)
+            """)
     }
 
     var snapshot: Snapshot {
@@ -239,7 +256,7 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
                 rejectedCaptures: rejected, paused: paused, gapStartedAt: gapStartedAt,
                 lastGapEndedAt: gapEndedAt, historyStarted: historyStarted, observed: now(),
                 gaps: gaps, evictedThrough: evictedThrough,
-                lastRejectedAt: lastRejectedAt, lastBodySkippedAt: lastBodySkippedAt,
+                firstRejectedAt: firstRejectedAt, lastRejectedAt: lastRejectedAt, lastBodySkippedAt: lastBodySkippedAt,
                 byteLimit: byteLimit, countLimit: countLimit,
                 admittedCount: reservations.values.filter { $0.stage == .admitted }.count,
                 collectingCount: reservations.values.filter { $0.stage == .collecting }.count,

@@ -475,7 +475,7 @@ struct ContentView: View {
                         }
                         mapLocalSheetContext = nil
                     },
-                    onCreateMapRemoteRule: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath in
+                    onCreateMapRemoteRule: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath, allowLoopbackDestination, preserveHostHeader in
                         Task {
                             await viewModel.createMapRemoteRule(
                                 from: context.session,
@@ -485,7 +485,9 @@ struct ContentView: View {
                                 remoteHost: remoteHost,
                                 remotePort: remotePort,
                                 remoteScheme: remoteScheme,
-                                remotePath: remotePath
+                                remotePath: remotePath,
+                                allowLoopbackDestination: allowLoopbackDestination,
+                                preserveHostHeader: preserveHostHeader
                             )
                         }
                         mapLocalSheetContext = nil

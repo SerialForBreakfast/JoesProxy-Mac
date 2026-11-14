@@ -1,5 +1,8 @@
 import Foundation
+import os
 import UniformTypeIdentifiers
+
+private let overrideLogger = Logger(subsystem: "com.JoesProxyApp.Capture", category: "Overrides")
 
 /// Describes the origin of a captured response.
 enum CapturedResponseSource: String, Codable, Equatable, Sendable {
@@ -129,7 +132,18 @@ enum ProxyRuleDecision: Sendable {
     /// original request's path/query verbatim," the only behavior that existed before
     /// `mapRemotePath` did; a non-nil value is the fully resolved override, already combined with
     /// the query per the rule's `MapRemoteQueryPolicy`.
-    case mapRemote(ruleID: UUID, host: String, port: Int, scheme: SessionScheme, requestTarget: String?)
+    case mapRemote(
+        ruleID: UUID,
+        host: String,
+        port: Int,
+        scheme: SessionScheme,
+        requestTarget: String?,
+        allowLoopbackDestination: Bool,
+        preserveHostHeader: Bool
+    )
+    /// Matching Map Remote rule was denied by local-server or address policy (fail-closed: never
+    /// fall through to `.noMatch` / original upstream).
+    case deniedMapRemote(ruleID: UUID, reason: MapRemoteDenialReason, detail: String)
     /// Replace the upstream request with a saved bookmark request.
     case bookmarkRewrite(ruleID: UUID, request: CapturedRequest, sourceDescription: String)
     /// Forward the original request upstream and apply JSON mutations to the real response body.
@@ -437,6 +451,11 @@ private struct PersistedResponseOverrideRule: Equatable {
     let mapRemoteQueryPolicy: MapRemoteQueryPolicy
     /// Replacement query string for `mapRemoteQueryPolicy == .replace`. Ignored otherwise.
     let mapRemoteQuery: String?
+    /// Explicit per-rule intent allowing `.mapRemote` to target local Mac loopback endpoints.
+    let allowLoopbackDestination: Bool
+    /// When `true` on `.mapRemote`, forwards the validated original incoming `Host` authority
+    /// instead of synthesizing the destination `host[:port]`.
+    let preserveHostHeader: Bool
     // Present only for .bookmarkRewrite rules; nil for all other source kinds.
     let bookmarkRewriteRequest: CapturedRequest?
     /// JSON field overrides for `.liveResponseRewrite` rules; empty for all other source kinds.
@@ -493,6 +512,7 @@ extension PersistedResponseOverrideRule: Codable {
         case bodySource, createdAt, isEnabled, hitCount, lastMatchedAt
         case mapRemoteHost, mapRemotePort, mapRemoteScheme
         case mapRemotePath, mapRemoteQueryPolicy, mapRemoteQuery
+        case allowLoopbackDestination, preserveHostHeader
         case bookmarkRewriteRequest
         case liveResponseRewrites
         case expectedSchemaFingerprint
@@ -538,6 +558,8 @@ extension PersistedResponseOverrideRule: Codable {
         mapRemotePath = try c.decodeIfPresent(String.self, forKey: .mapRemotePath)
         mapRemoteQueryPolicy = try c.decodeIfPresent(MapRemoteQueryPolicy.self, forKey: .mapRemoteQueryPolicy) ?? .preserve
         mapRemoteQuery = try c.decodeIfPresent(String.self, forKey: .mapRemoteQuery)
+        allowLoopbackDestination = try c.decodeIfPresent(Bool.self, forKey: .allowLoopbackDestination) ?? false
+        preserveHostHeader = try c.decodeIfPresent(Bool.self, forKey: .preserveHostHeader) ?? false
         bookmarkRewriteRequest = try c.decodeIfPresent(CapturedRequest.self, forKey: .bookmarkRewriteRequest)
         liveResponseRewrites = try c.decodeIfPresent([BookmarkResponseFieldRewrite].self, forKey: .liveResponseRewrites) ?? []
         expectedSchemaFingerprint = try c.decodeIfPresent(JSONSchemaShapeFingerprint.self, forKey: .expectedSchemaFingerprint)
@@ -585,6 +607,8 @@ extension PersistedResponseOverrideRule: Codable {
         try c.encodeIfPresent(mapRemotePath, forKey: .mapRemotePath)
         try c.encode(mapRemoteQueryPolicy, forKey: .mapRemoteQueryPolicy)
         try c.encodeIfPresent(mapRemoteQuery, forKey: .mapRemoteQuery)
+        try c.encode(allowLoopbackDestination, forKey: .allowLoopbackDestination)
+        try c.encode(preserveHostHeader, forKey: .preserveHostHeader)
         try c.encodeIfPresent(bookmarkRewriteRequest, forKey: .bookmarkRewriteRequest)
         try c.encode(liveResponseRewrites, forKey: .liveResponseRewrites)
         try c.encodeIfPresent(expectedSchemaFingerprint, forKey: .expectedSchemaFingerprint)
@@ -642,6 +666,10 @@ struct ResponseOverrideRule: Identifiable, Equatable, Sendable {
     var mapRemoteQueryPolicy: MapRemoteQueryPolicy
     /// Replacement query string for `mapRemoteQueryPolicy == .replace`. Ignored otherwise.
     var mapRemoteQuery: String?
+    /// Explicit per-rule intent allowing `.mapRemote` to target local Mac loopback endpoints.
+    var allowLoopbackDestination: Bool
+    /// When `true` on `.mapRemote`, preserves the validated incoming `Host` authority.
+    var preserveHostHeader: Bool
     /// Full upstream replacement request for `.bookmarkRewrite` rules. `nil` for all other source kinds.
     var bookmarkRewriteRequest: CapturedRequest?
     /// JSON field overrides for `.liveResponseRewrite` rules.
@@ -715,6 +743,8 @@ struct ResponseOverrideRule: Identifiable, Equatable, Sendable {
         mapRemotePath: String? = nil,
         mapRemoteQueryPolicy: MapRemoteQueryPolicy = .preserve,
         mapRemoteQuery: String? = nil,
+        allowLoopbackDestination: Bool = false,
+        preserveHostHeader: Bool = false,
         bookmarkRewriteRequest: CapturedRequest? = nil,
         liveResponseRewrites: [BookmarkResponseFieldRewrite] = [],
         expectedSchemaFingerprint: JSONSchemaShapeFingerprint? = nil,
@@ -759,6 +789,8 @@ struct ResponseOverrideRule: Identifiable, Equatable, Sendable {
         self.mapRemotePath = mapRemotePath
         self.mapRemoteQueryPolicy = mapRemoteQueryPolicy
         self.mapRemoteQuery = mapRemoteQuery
+        self.allowLoopbackDestination = allowLoopbackDestination
+        self.preserveHostHeader = preserveHostHeader
         self.bookmarkRewriteRequest = bookmarkRewriteRequest
         self.liveResponseRewrites = liveResponseRewrites
         self.expectedSchemaFingerprint = expectedSchemaFingerprint
@@ -905,6 +937,15 @@ actor ResponseOverrideStore {
     private func store(_ rule: ResponseOverrideRule, skipExclusiveValidation: Bool = false) throws -> ResponseOverrideRule {
         if !skipExclusiveValidation {
             try assertNoExclusiveConflict(for: rule)
+        }
+        // Creation and enabled-state transitions only. Identifier and kind, never matcher or body.
+        let previousEnabled = rulesByID[rule.id]?.isEnabled
+        if previousEnabled != rule.isEnabled {
+            overrideLogger.notice("""
+                Rule \(previousEnabled == nil ? "created" : "changed", privacy: .public) \
+                id=\(rule.id.uuidString, privacy: .public) kind=\(String(describing: rule.sourceKind), privacy: .public) \
+                enabled=\(rule.isEnabled, privacy: .public)
+                """)
         }
         if rule.sourceKind == .collectionMock, rule.isEnabled, let plan = rule.collectionMockPlan {
             if let executor = liveCollectionTransformationExecutor {
@@ -1524,7 +1565,9 @@ actor ResponseOverrideStore {
         remoteScheme: SessionScheme,
         remotePath: String? = nil,
         remoteQueryPolicy: MapRemoteQueryPolicy = .preserve,
-        remoteQuery: String? = nil
+        remoteQuery: String? = nil,
+        allowLoopbackDestination: Bool? = nil,
+        preserveHostHeader: Bool? = nil
     ) throws {
         guard var rule = rulesByID[id], rule.sourceKind == .mapRemote else {
             return
@@ -1534,13 +1577,19 @@ actor ResponseOverrideStore {
         rule.label = normalizedLabel(label)
         rule.matchMode = matchMode
         rule.path = normalizePath(matchPath ?? rule.path)
-        rule.mapRemoteHost = remoteHost.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        rule.mapRemoteHost = LoopbackAddressInspector.stripBracketsAndTrailingDot(remoteHost).host
         rule.mapRemotePort = resolvedPort
         rule.mapRemoteScheme = remoteScheme
         rule.mapRemotePath = remotePath
         rule.mapRemoteQueryPolicy = remoteQueryPolicy
         rule.mapRemoteQuery = remoteQuery
-        rule.sourceDescription = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(remoteHost):\(resolvedPort)\(remotePath ?? "")"
+        if let allowLoopbackDestination {
+            rule.allowLoopbackDestination = allowLoopbackDestination
+        }
+        if let preserveHostHeader {
+            rule.preserveHostHeader = preserveHostHeader
+        }
+        rule.sourceDescription = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(rule.mapRemoteHost ?? remoteHost):\(resolvedPort)\(remotePath ?? "")"
         _ = try store(rule)
     }
 
@@ -1567,7 +1616,9 @@ actor ResponseOverrideStore {
             LiveTransformationActivationTracker.shared.clear(ruleID: id)
         }
         liveCollectionTransformationExecutor?.stop(effectID: id)
-        rulesByID.removeValue(forKey: id)
+        if rulesByID.removeValue(forKey: id) != nil {
+            overrideLogger.notice("Rule removed id=\(id.uuidString, privacy: .public)")
+        }
         notifyChanged()
     }
 
@@ -1606,7 +1657,7 @@ actor ResponseOverrideStore {
         return try JSONEncoder().encode(persistedRules)
     }
 
-    func loadPersistedData(_ data: Data?) throws {
+    func loadPersistedData(_ data: Data?, loopbackPolicy: LoopbackDestinationPolicy? = nil) throws {
         guard let data, !data.isEmpty else {
             rulesByID.removeAll()
             return
@@ -1614,14 +1665,70 @@ actor ResponseOverrideStore {
 
         let persistedRules = try JSONDecoder().decode([PersistedResponseOverrideRule].self, from: data)
         var restoredRulesByID: [ResponseOverrideRule.ID: ResponseOverrideRule] = [:]
+        var disabledUnauthorizedLoopback = false
         for persistedRule in persistedRules {
             // Recompute rather than trust whatever was on disk — a file written before this fix
             // (or by any future code path that forgets to call `store(_:)`) could carry a stale or
             // missing revision.
-            let runtimeRule = MCPTargetRevisionFingerprint.ruleByApplyingRevision(try makeRuntimeRule(from: persistedRule))
+            var runtimeRule = MCPTargetRevisionFingerprint.ruleByApplyingRevision(try makeRuntimeRule(from: persistedRule))
+            if let loopbackPolicy, runtimeRule.sourceKind == .mapRemote, runtimeRule.isEnabled {
+                let remoteHost = runtimeRule.mapRemoteHost ?? runtimeRule.host
+                let remoteScheme = runtimeRule.mapRemoteScheme ?? runtimeRule.requestScheme
+                let remotePort = runtimeRule.mapRemotePort ?? canonicalPort(nil, scheme: remoteScheme)
+                if runtimeRule.allowLoopbackDestination || Self.targetsStaticLoopback(host: remoteHost) {
+                    if (try? LoopbackAddressInspector.validateStaticDestination(
+                        host: remoteHost,
+                        port: remotePort,
+                        scheme: remoteScheme,
+                        allowLoopbackDestination: runtimeRule.allowLoopbackDestination,
+                        policy: loopbackPolicy
+                    )) == nil {
+                        runtimeRule.isEnabled = false
+                        runtimeRule = MCPTargetRevisionFingerprint.ruleByApplyingRevision(runtimeRule)
+                        disabledUnauthorizedLoopback = true
+                    }
+                }
+            }
             restoredRulesByID[runtimeRule.id] = runtimeRule
         }
         rulesByID = restoredRulesByID
+        if disabledUnauthorizedLoopback {
+            notifyChanged()
+        }
+    }
+
+    /// Immediately disables all enabled loopback Map Remote rules (or only those targeting
+    /// `removedPorts` when non-nil) so revoking permission blocks subsequent traffic AND prevents
+    /// persisted rules from silently resuming when permission is later restored.
+    @discardableResult
+    func disableLoopbackMapRemoteRules(forRemovedPorts removedPorts: Set<Int>? = nil) -> Bool {
+        var didChange = false
+        for (id, var rule) in rulesByID {
+            guard rule.sourceKind == .mapRemote, rule.isEnabled else { continue }
+            let host = rule.mapRemoteHost ?? rule.host
+            let scheme = rule.mapRemoteScheme ?? rule.requestScheme
+            let port = rule.mapRemotePort ?? canonicalPort(nil, scheme: scheme)
+            guard rule.allowLoopbackDestination || Self.targetsStaticLoopback(host: host) else { continue }
+            if let removedPorts, !removedPorts.contains(port) {
+                continue
+            }
+            rule.isEnabled = false
+            rulesByID[id] = MCPTargetRevisionFingerprint.ruleByApplyingRevision(rule)
+            didChange = true
+        }
+        if didChange {
+            notifyChanged()
+        }
+        return didChange
+    }
+
+    private static func targetsStaticLoopback(host rawHost: String) -> Bool {
+        let stripped = LoopbackAddressInspector.stripBracketsAndTrailingDot(rawHost)
+        guard !stripped.malformed else { return false }
+        if let literal = LoopbackAddressInspector.parseLiteralIP(rawHost) {
+            return LoopbackAddressInspector.classify(literal) == .loopback
+        }
+        return LoopbackAddressInspector.isLocalhostName(stripped.host)
     }
 
     /// Evaluates all enabled rules against `request` in creation order (newest first) and returns
@@ -1629,6 +1736,8 @@ actor ResponseOverrideStore {
     ///
     /// - Concurrency: Must be called from an async context; the actor serialises access.
     func ruleDecision(for request: CapturedRequest,
+                      loopbackPolicy: LoopbackDestinationPolicy = .disabled,
+                      reservedRegistry: ReservedListenerRegistry = .shared,
                       observationSessionIDTask: Task<UUID?, Never>? = nil) throws -> ProxyRuleDecision {
         var failedObservations: [UUID] = []
         let candidateRules = rules()
@@ -1672,13 +1781,31 @@ actor ResponseOverrideStore {
             let remoteHost = updatedRule.mapRemoteHost ?? updatedRule.host
             let remoteScheme = updatedRule.mapRemoteScheme ?? updatedRule.requestScheme
             let remotePort = updatedRule.mapRemotePort ?? canonicalPort(nil, scheme: remoteScheme)
+            let normalizedHost: String
+            do {
+                let result = try LoopbackAddressInspector.validateStaticDestination(
+                    host: remoteHost,
+                    port: remotePort,
+                    scheme: remoteScheme,
+                    allowLoopbackDestination: updatedRule.allowLoopbackDestination,
+                    policy: loopbackPolicy,
+                    reservedRegistry: reservedRegistry
+                )
+                normalizedHost = result.normalizedHost
+            } catch MapRemoteValidationError.policyDenied(let reason, let detail) {
+                return .deniedMapRemote(ruleID: updatedRule.id, reason: reason, detail: detail)
+            } catch MapRemoteValidationError.malformedRequest(let detail) {
+                return .deniedMapRemote(ruleID: updatedRule.id, reason: .malformedDestination, detail: detail)
+            }
             let requestTarget = resolvedMapRemoteRequestTarget(rule: updatedRule, originalRequestTarget: request.path)
             return .mapRemote(
                 ruleID: updatedRule.id,
-                host: remoteHost,
+                host: normalizedHost,
                 port: remotePort,
                 scheme: remoteScheme,
-                requestTarget: requestTarget
+                requestTarget: requestTarget,
+                allowLoopbackDestination: updatedRule.allowLoopbackDestination,
+                preserveHostHeader: updatedRule.preserveHostHeader
             )
 
         case .bookmarkRewrite:
@@ -1826,10 +1953,16 @@ actor ResponseOverrideStore {
         remoteScheme: SessionScheme,
         remotePath: String? = nil,
         remoteQueryPolicy: MapRemoteQueryPolicy = .preserve,
-        remoteQuery: String? = nil
+        remoteQuery: String? = nil,
+        allowLoopbackDestination: Bool = false,
+        preserveHostHeader: Bool = false
     ) throws -> ResponseOverrideRule {
         let resolvedPort = remotePort ?? canonicalPort(nil, scheme: remoteScheme)
-        let description = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(remoteHost):\(resolvedPort)\(remotePath ?? "")"
+        let normalizedRemoteHost = LoopbackAddressInspector.stripBracketsAndTrailingDot(remoteHost).host
+        let effectiveRemoteHost = normalizedRemoteHost.isEmpty
+            ? remoteHost.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            : normalizedRemoteHost
+        let description = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(effectiveRemoteHost):\(resolvedPort)\(remotePath ?? "")"
         let rule = ResponseOverrideRule(
             label: normalizedLabel(label),
             requestMethod: request.method,
@@ -1843,12 +1976,14 @@ actor ResponseOverrideStore {
             statusCode: 200,
             headers: [],
             bodySource: .inline(nil),
-            mapRemoteHost: remoteHost.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+            mapRemoteHost: effectiveRemoteHost,
             mapRemotePort: resolvedPort,
             mapRemoteScheme: remoteScheme,
             mapRemotePath: remotePath,
             mapRemoteQueryPolicy: remoteQueryPolicy,
-            mapRemoteQuery: remoteQuery
+            mapRemoteQuery: remoteQuery,
+            allowLoopbackDestination: allowLoopbackDestination,
+            preserveHostHeader: preserveHostHeader
         )
         return try store(rule)
     }
@@ -2078,6 +2213,73 @@ actor ResponseOverrideStore {
         return true
     }
 
+    struct MatchDiagnostic: Sendable, Equatable {
+        let matched: Bool
+        let failedReasons: [String]
+        let isNearMiss: Bool
+    }
+
+    /// Evaluates why a captured request did or did not match a rule's configuration and enabled state.
+    nonisolated func diagnoseMatch(rule: ResponseOverrideRule, request: CapturedRequest) -> MatchDiagnostic {
+        var reasons: [String] = []
+        if !rule.isEnabled {
+            reasons.append("rule_disabled")
+        }
+        if let requiredClientAddress = rule.sourceClientAddress?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !requiredClientAddress.isEmpty {
+            let clientAddress = request.clientAddress?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if clientAddress != requiredClientAddress {
+                reasons.append("client_scope_mismatch")
+            }
+        }
+        let hostMatched = rule.host.caseInsensitiveCompare(normalizeHost(request.host)) == .orderedSame
+        if !hostMatched {
+            reasons.append("host_mismatch")
+        }
+        if rule.requestScheme != request.scheme {
+            reasons.append("scheme_mismatch")
+        }
+        if rule.requestMethod.caseInsensitiveCompare(request.method) != .orderedSame {
+            reasons.append("method_mismatch")
+        }
+        if canonicalPort(rule.port, scheme: rule.requestScheme) != canonicalPort(request.port, scheme: request.scheme) {
+            reasons.append("port_mismatch")
+        }
+        let normalizedRulePath = normalizedPathForMatch(rule.path, mode: rule.matchMode)
+        let normalizedRequestPath = normalizedPathForMatch(normalizePath(request.path), mode: rule.matchMode)
+        let basePathMatched = pathMatches(rulePath: normalizedRulePath, requestPath: normalizedRequestPath, mode: rule.matchMode)
+        if !basePathMatched {
+            reasons.append("path_mismatch")
+        } else if let names = rule.ignoredQueryNames {
+            let queryMatched = rule.matchMode == .ignoreQuery &&
+                rule.sourceClientAddress?.isEmpty == false &&
+                CapturedQueryMatcher.matches(request.path, baseline: rule.path, ignoring: names)
+            if !queryMatched {
+                reasons.append("query_predicate_mismatch")
+            }
+        }
+        if let requiredOperationName = rule.graphQLOperationName,
+           requestGraphQLOperationName(from: request) != requiredOperationName {
+            reasons.append("graphql_operation_mismatch")
+        }
+        if let requiredQueryKey = rule.matchQueryKey, let requiredQueryValue = rule.matchQueryValue,
+           requestQueryValue(for: requiredQueryKey, from: request) != requiredQueryValue {
+            if !reasons.contains("query_predicate_mismatch") {
+                reasons.append("query_predicate_mismatch")
+            }
+        }
+        if let requiredHeaderName = rule.matchHeaderName, let requiredHeaderValue = rule.matchHeaderValue,
+           requestHeaderValue(for: requiredHeaderName, from: request) != requiredHeaderValue {
+            reasons.append("header_predicate_mismatch")
+        }
+        let matched = reasons.isEmpty
+        let ruleLeaf = lastPathComponent(of: normalizedRulePath)
+        let reqLeaf = lastPathComponent(of: normalizedRequestPath)
+        let pathRelated = basePathMatched || (!ruleLeaf.isEmpty && ruleLeaf != "/" && ruleLeaf == reqLeaf)
+        let isNearMiss = !matched && (hostMatched || pathRelated)
+        return MatchDiagnostic(matched: matched, failedReasons: reasons, isNearMiss: isNearMiss)
+    }
+
     private func rulesShareMatcher(_ lhs: ResponseOverrideRule, _ rhs: ResponseOverrideRule) -> Bool {
         lhs.requestMethod.caseInsensitiveCompare(rhs.requestMethod) == .orderedSame &&
             lhs.requestScheme == rhs.requestScheme &&
@@ -2130,7 +2332,15 @@ actor ResponseOverrideStore {
     }
 
     nonisolated private func normalizeHost(_ host: String) -> String {
-        host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let unbracketed = (trimmed.hasPrefix("[") && trimmed.hasSuffix("]") && trimmed.count > 2)
+            ? String(trimmed.dropFirst().dropLast())
+            : trimmed
+        if LoopbackAddressInspector.isIPv6Literal(unbracketed),
+           let ip = LoopbackAddressInspector.parseLiteralIP(unbracketed) {
+            return ip.canonicalIPString
+        }
+        return trimmed
     }
 
     nonisolated private func normalizePath(_ path: String) -> String {
@@ -2309,6 +2519,8 @@ actor ResponseOverrideStore {
             mapRemotePath: rule.mapRemotePath,
             mapRemoteQueryPolicy: rule.mapRemoteQueryPolicy,
             mapRemoteQuery: rule.mapRemoteQuery,
+            allowLoopbackDestination: rule.allowLoopbackDestination,
+            preserveHostHeader: rule.preserveHostHeader,
             bookmarkRewriteRequest: rule.bookmarkRewriteRequest,
             liveResponseRewrites: rule.liveResponseRewrites,
             expectedSchemaFingerprint: rule.expectedSchemaFingerprint,
@@ -2389,6 +2601,8 @@ actor ResponseOverrideStore {
             mapRemotePath: persistedRule.mapRemotePath,
             mapRemoteQueryPolicy: persistedRule.mapRemoteQueryPolicy,
             mapRemoteQuery: persistedRule.mapRemoteQuery,
+            allowLoopbackDestination: persistedRule.allowLoopbackDestination,
+            preserveHostHeader: persistedRule.preserveHostHeader,
             bookmarkRewriteRequest: persistedRule.bookmarkRewriteRequest,
             liveResponseRewrites: persistedRule.liveResponseRewrites,
             expectedSchemaFingerprint: persistedRule.expectedSchemaFingerprint,

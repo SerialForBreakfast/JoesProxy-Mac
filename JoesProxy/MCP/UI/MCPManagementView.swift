@@ -3,6 +3,7 @@ import SwiftUI
 /// MCP management panel with Overview, Clients, Data Access, Activity, and Disclosure Preview.
 struct MCPManagementView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openSettings) private var openSettings
     @ObservedObject var controller: MCPServerController
     @ObservedObject var selfValidationCoordinator: MCPSelfValidationCoordinator
     let textScale: CGFloat
@@ -220,6 +221,15 @@ struct MCPManagementView: View {
             Text("Off by default. When enabled, a local process can launch JoesProxy and request that its loopback MCP server start. It cannot enroll clients or change policy.")
                 .foregroundStyle(.secondary)
                 .appFont(.caption, scale: textScale)
+            HStack(spacing: 8) {
+                Text("Local-server Map Remote (loopback destinations & authorized ports) applies across both GUI and MCP rules.")
+                    .foregroundStyle(.secondary)
+                    .appFont(.caption, scale: textScale)
+                Button("Open Proxy Settings…") {
+                    openSettings()
+                }
+                .controlSize(.small)
+            }
             unattendedCLIReadinessSection
             statusLine
             if compoundUIState == .offActive || compoundUIState == .offConflict {

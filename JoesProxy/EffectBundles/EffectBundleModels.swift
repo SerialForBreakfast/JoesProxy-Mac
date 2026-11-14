@@ -109,6 +109,10 @@ struct EffectBundleResponseEffect: Codable, Equatable, Identifiable, Sendable {
     var mapRemotePath: String?
     var mapRemoteQueryPolicy: MapRemoteQueryPolicy
     var mapRemoteQuery: String?
+    /// Schema/bundle opt-in allowing `.mapRemote` to target local Mac loopback endpoints (`nil` = `false`).
+    var allowLoopbackDestination: Bool? = nil
+    /// When `true` on `.mapRemote`, preserves the validated original `Host` authority (`nil` = `false`).
+    var preserveHostHeader: Bool? = nil
     var bookmarkRewriteRequest: CapturedRequest?
     var liveResponseRewrites: [BookmarkResponseFieldRewrite]
     var expectedSchemaFingerprint: JSONSchemaShapeFingerprint?
@@ -261,6 +265,7 @@ enum EffectBundleError: Error, Equatable, LocalizedError {
     case activationConflict
     case unsupportedPhaseFeature(String)
     case stalePhase
+    case loopbackMapRemoteDenied(UUID, String)
     case cleanupRequired(String)
 
     var errorDescription: String? {
@@ -298,6 +303,7 @@ enum EffectBundleError: Error, Equatable, LocalizedError {
         case .activationConflict: return "An enabled effect overlaps this bundle. Review conflicts or explicitly replace them."
         case .unsupportedPhaseFeature(let feature): return "This build cannot safely activate phased \(feature). Keep the bundle inactive until that lifecycle capability is available."
         case .stalePhase: return "The active phase changed or the run ended. Inspect the current activation and phase before advancing."
+        case .loopbackMapRemoteDenied(let id, let reason): return "Effect-bundle Map Remote rule \(id.uuidString) is blocked by local-server policy: \(reason)"
         case .cleanupRequired(let message): return "Effect-bundle cleanup requires attention: \(message)"
         }
     }

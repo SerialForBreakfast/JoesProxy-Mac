@@ -1,5 +1,9 @@
 # Source validation
 
+The 1.9.1 (25) private candidate passed its release Policy gate with 3,072 passes, 17 skips and zero failures. Gatekeeper accepted the final stapled image. Second-Mac acceptance is pending. See the [build 25 record](releases/1.9.1-build25.md) and [benchmark evidence](releases/benchmarks/1.9.1-edge-v7.md).
+
+## Historical 1.9.0 validation
+
 Revision 2026-11-09. This source targets candidate 1.9.0 (23), with unchanged pinned dependencies and MCP capabilities revision 29. It was published on November 9, 2026; the local results below predate publication and commit `6cec757`, which has no recorded build or test run here.
 
 The text-size correction scales Compact HUD fonts and dimensions, main-window health statistics and inherited controls. The header adapts its layout to larger reading text. Build 23 retains marketing version 1.9.0 and advances only the monotonic build number through the build-only version helper.
@@ -19,8 +23,8 @@ The text-size correction scales Compact HUD fonts and dimensions, main-window he
 | Build-only version and release-controller checks | 6 passed, 21 assertions; shell syntax passed |
 | Earlier synthetic HTTP UI walkthrough | 1 passed, zero failures/skips; one runtime warning |
 | Source secret scan | Eight synthetic/type-annotation exceptions are narrowly reviewed by whole-file hash; the final export scan and its content-free results accompany the source packet |
-| Hosted build and secret scan | Passed on initial commit `bd55cdb`; not run on `6cec757` |
-| Hosted Swift code analysis | Failed on `bd55cdb`: traced analysis is not supported on macOS 27 or Xcode 27; no analysis exists. The job now targets Xcode 26.6 on macos-26; that lane is unrun |
+| Hosted build and secret scan | Passed on `main` at `b6ab00f` (November 10, 2026); later branch commits are not covered by the secret scan |
+| Hosted Swift code analysis | Passed on `main` at `b6ab00f` using Xcode 26.6 on macos-26: zero alerts, 1,020 of 2,593 Swift files scanned, 90 SDK tests passed. Unit and UI test targets are not built by this job. It analyzes an Xcode 26.6 build, not the Xcode 27.0 build |
 | Repository security settings | Private vulnerability reporting is not enabled; other settings were not checked |
 
 The verified private image is JoesProxy-1.9.0.dmg, SHA-256 916a3eac4e14fb5adf9fa6b7d079dd6947a49c482e4b90fd4a2a7f67616865df after stapling. All 2,499 recorded release inputs remained byte-identical across packaging. The mounted app passed deep, strict signature verification and Gatekeeper assessment, and the image was ejected. It was not installed or published by this run.

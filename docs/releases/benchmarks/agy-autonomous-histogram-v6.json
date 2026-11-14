@@ -1,0 +1,828 @@
+{
+  "autonomous": {
+    "arms": [
+      {
+        "version": "1.9.0",
+        "correct": 0,
+        "n": 5,
+        "median": 27610,
+        "range": [
+          25950,
+          54540
+        ],
+        "total": 173728,
+        "calls": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "version": "1.9.1",
+        "correct": 5,
+        "n": 5,
+        "median": 75141,
+        "range": [
+          56287,
+          103204
+        ],
+        "total": 389008,
+        "calls": [
+          6,
+          5,
+          5,
+          6,
+          5
+        ]
+      }
+    ],
+    "eligiblePairs": 0,
+    "pairedReductionPercent": null
+  },
+  "guided": {
+    "arms": [
+      {
+        "version": "1.9.0",
+        "correct": 3,
+        "n": 3,
+        "median": 79647,
+        "range": [
+          79599,
+          82675
+        ],
+        "total": 241921,
+        "calls": [
+          4,
+          4,
+          4
+        ]
+      },
+      {
+        "version": "1.9.1",
+        "correct": 3,
+        "n": 3,
+        "median": 21659,
+        "range": [
+          21649,
+          21677
+        ],
+        "total": 64985,
+        "calls": [
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "eligiblePairs": 3,
+    "pairedReductionPercent": 72.80242214098168
+  },
+  "trials": [
+    {
+      "version": "1.9.0",
+      "rep": 0,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 25421,
+        "output_tokens": 817,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 45489,
+        "total_tokens": 26238
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 17636,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 5,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "62b0801474f6654981554ddf4223cb5f3eb6616555fcaa46efb98edb9c91b037",
+          "error": null
+        }
+      ],
+      "extra": [
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 0,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 80663,
+        "output_tokens": 2701,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 714967,
+        "total_tokens": 83364
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 85766,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "ade682e6a9166d712fcbb096f88916985f266fcfe66db84ce40b2e95a45e5506",
+          "error": null
+        },
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount"
+            },
+            "selectionPointer": "/"
+          },
+          "ok": true,
+          "answerSHA256": "8cc199d2059a0652323a993a5a59bf3d08ad2632e89722b88f914e4e6432c427",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "923C4511-6D67-440D-AF90-7096360885E1",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "minimal",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": false,
+          "answerSHA256": "37a6c6b44713e711ca145455ea6774716bee6cbd23ae3a8fba3414360aa393a4",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "923C4511-6D67-440D-AF90-7096360885E1",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "7ab64d2eb8f793bbcd77a170627440bc9e5a3dafc69558c552829252fc11ef8e",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "FB3FB079-20CA-4424-8E72-0907FE7F6A3D",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "f70fb977079e68ff408eef71f3ae8d127d362196e9e11d91caa1a5c6e6e20b34",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "245F058F-FEA1-4074-9A21-A828A290DF3B",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "9e96c29231d3dcdf563351df4cca3de44f8ca9734dfae37382593f802797de53",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "rep": 1,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 53312,
+        "output_tokens": 1228,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 197549,
+        "total_tokens": 54540
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 33600,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "81e493d13aaf6787a3420982ff8eb2843566d4d4cd873fe2a467590610880158",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 1,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 72319,
+        "output_tokens": 2822,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 575740,
+        "total_tokens": 75141
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 67208,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "fc077498b6d9504c15b67d36632e9b2bc828f68e774ec9b8f163854acd1c7af8",
+          "error": null
+        },
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount",
+              "limit": 20
+            },
+            "selectionPointer": "/items"
+          },
+          "ok": true,
+          "answerSHA256": "b7766b16f9ccd9b0bc91b207615854fe2280fc6c1e27e3ab5b647f971e66d79f",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "93648594-BA9A-45A0-99FE-9B86A58BD594",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "35b10c9dc5a7d41f519914d744487b3a9726b187e339d10b9a1fb99d73788839",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "9E733293-C3B7-4289-8602-57E00433AECA",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "d43688294d223bda977edc36bea17ebcdc2b59491f4a592bd9d75d18ebdafad5",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "46A11D71-4CB1-46E6-BE47-31F93CA2B820",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "d10d041a0e1d6359c592f9ae0042c34c238a168c7d12c6a38f0a2b24994a4d93",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "rep": 2,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 38503,
+        "output_tokens": 887,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 48317,
+        "total_tokens": 39390
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 17689,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "26578b5b585b7ac792a1cc133a2b3b863ae908c3c1bfc800006e9081c45b3bd7",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 2,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 68571,
+        "output_tokens": 2441,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 504580,
+        "total_tokens": 71012
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 54852,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "212b41252b64aa08c48e3e754eaa573fd8b3ccd26deaf98014a6acf9027fa542",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "5835DBF1-D2FA-4304-B6BA-C3A29BA68236",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "minimal",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": false,
+          "answerSHA256": "814607f8c00d1158c106c503e6d3b86eb05ad498a2192f16949df67ea91023be",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "5835DBF1-D2FA-4304-B6BA-C3A29BA68236",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "568c6701f57a91969fdbb366a3603f7e4074e6321e3f3abc539ffba477641d7b",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "7F0A5BE2-2DDB-4090-A8C3-FAEF84E32A7E",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "704e4523c29cf5bbff3fd78c83886523b79c37a92bcf003268255e8b71a724fc",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "49A67CD4-F60F-436C-A381-2FD7B18CF380",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "124b88a4483fc722b4ce8b0aa165e780f5380408d4f570ed86a34caba045d6a6",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "rep": 3,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 24989,
+        "output_tokens": 961,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 47706,
+        "total_tokens": 25950
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 18817,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 10,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "e73c2c40381671d39a08e292a2345fe8cc16a255b7655b2d5a7fcef0349efb8c",
+          "error": null
+        }
+      ],
+      "extra": [
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 3,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 100589,
+        "output_tokens": 2615,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 808624,
+        "total_tokens": 103204
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 59852,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 5,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "915d885b8ace60d1c5dd87296f2dd68053d25436c397701af49e1b3f3b9fd708",
+          "error": null
+        },
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount",
+              "limit": 20
+            },
+            "selectionPointer": "/"
+          },
+          "ok": true,
+          "answerSHA256": "425404280469a783a173972c9eee3feb5a5256ede119958ccbdbbbadf06f5d81",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "069faaa5a911560a9249983d79f03657bbcda2f060b13c1915be32ac2146aa72",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "BB14A5EC-1A0D-41B2-9011-908B4E61D71A",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "116bcaaee61d404e8fca0033ae353da70ff38d93c70a4a7f6a58f5f2e6324a1b",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "9C33AEDF-B4D5-47B8-A375-934A4C8F107A",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "4348bb4ec485dbe92b6835c8f364347502a4bdafeccba361d66e604ab6f84a1f",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "557B68A5-7598-4013-8479-D0339D2AFD1C",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "56c54e7234ebfa03a62a3d19b6c2f9280b97973fb95c32f34f5564c32a047834",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "rep": 4,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 26737,
+        "output_tokens": 873,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 61127,
+        "total_tokens": 27610
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 18715,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 5,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "d61b8ca9f1066c337178cca1b4ebee61cb3021ba043d6b209c11f5c16e181d41",
+          "error": null
+        }
+      ],
+      "extra": [
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 4,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 54387,
+        "output_tokens": 1900,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 326326,
+        "total_tokens": 56287
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 47290,
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 5,
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "0437fd28cf33cc0ec21c5ef84e60e9dfddb87bdf1ca23729580deb009292511f",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "65afbf605399fd306a5bd8bc8190d989c1da900dae0bae6dce8f534acdbf1d4f",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "158B4D6F-3293-4427-933C-7B5B3651A0C2",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "e9a7fb38280605660c1b35a5b7ec3d10132d98b683abcf4a8ec781da94b8508a",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "6507C834-8D4B-4377-B3F8-248CC697E2D8",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "a6fb0aba9fe03285456d5fd0cfb033ff0e97d6437716b9c8f8682d6df69a2e08",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "D106AF24-5AD3-4993-A4B1-C048C18B9B91",
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "summary",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "c335f0999ab8247a70e49a959a3a04fe857fa9999faab6da74f6d0ea88f38e29",
+          "error": null
+        }
+      ],
+      "extra": [
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    }
+  ]
+}

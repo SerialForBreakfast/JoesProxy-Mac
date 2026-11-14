@@ -33,6 +33,7 @@ actor PACHostingServer: PACHosting {
 
     private var listener: NWListener?
     private var proxyPort: UInt16 = 0
+    private var listenerReservation: ReservedListenerRegistry.ReservationToken?
     private let logger = Logger(subsystem: "com.JoesProxyApp.SystemProxy", category: "PAC")
 
     init() {}
@@ -68,6 +69,11 @@ actor PACHostingServer: PACHosting {
         listener = newListener
 
         let boundPort = try await waitForBoundPort(newListener)
+        listenerReservation = ReservedListenerRegistry.shared.reserve(
+            owner: "PACHostingServer",
+            port: boundPort,
+            boundHost: "127.0.0.1"
+        )
         let url = "http://127.0.0.1:\(boundPort)\(Self.path)"
         logger.info("PAC server started at \(url, privacy: .public) → PROXY 127.0.0.1:\(proxyPort, privacy: .public); DIRECT")
         return url
@@ -76,6 +82,8 @@ actor PACHostingServer: PACHosting {
     func stop() {
         listener?.cancel()
         listener = nil
+        ReservedListenerRegistry.shared.release(listenerReservation)
+        listenerReservation = nil
         logger.info("PAC server stopped")
     }
 
@@ -96,6 +104,8 @@ actor PACHostingServer: PACHosting {
             logger.error("PAC server listener failed: \(error.localizedDescription, privacy: .public)")
             listener?.cancel()
             listener = nil
+            ReservedListenerRegistry.shared.release(listenerReservation)
+            listenerReservation = nil
         }
     }
 

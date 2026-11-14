@@ -9,6 +9,14 @@ import XCTest
 @testable import JoesProxy
 
 final class ProxyServerTests: XCTestCase {
+    /// Set only by the capture soak so delivery assertions inside shared helpers reach its metrics.
+    private var soakIssues: SoakIssueCollector?
+
+    override func record(_ issue: XCTIssue) {
+        soakIssues?.collect(issue.compactDescription)
+        super.record(issue)
+    }
+
     func testSequentialHTTPSRequestsStayIsolatedOnOneConnection() async throws {
         try await exerciseSequentialHTTPS(delayedStage: nil)
     }
@@ -117,7 +125,8 @@ final class ProxyServerTests: XCTestCase {
             XCTAssertFalse(fixture.fails, "seed17 \(mode) \(fixture.name): malformed/truncated response succeeded")
             let split = try XCTUnwrap(response.range(of: Data("\r\n\r\n".utf8)))
             let head = String(decoding: response[..<split.lowerBound], as: UTF8.self)
-            XCTAssertTrue(head.hasPrefix("HTTP/1.1 \(fixture.status) "), "\(mode) \(fixture.name): status")
+            XCTAssertTrue(head.hasPrefix("HTTP/1.1 \(fixture.status) "),
+                          "\(mode) \(fixture.name): status, received \(head.prefix(while: { $0 != "\r" }).prefix(80)), \(response.count) bytes, body \(String(decoding: response[split.upperBound...].prefix(200), as: UTF8.self))")
             XCTAssertEqual(Data(response[split.upperBound...]), fixture.body, "seed17 \(mode) \(fixture.name): bytes")
             for (name, value) in fixture.headers where name != "Connection" {
                 XCTAssertTrue(head.lowercased().contains("\(name): \(value)".lowercased()), "\(mode) \(fixture.name): \(name)")
@@ -153,7 +162,8 @@ final class ProxyServerTests: XCTestCase {
         }
     }
 
-    private func drainScripted(_ recorder: ProxySessionRecorder, store: InMemorySessionStore) async throws {
+    private func drainScripted(_ recorder: ProxySessionRecorder, store: InMemorySessionStore,
+                               clearing: Bool = true) async throws {
         let drained = try await withTimeout(seconds: 5) {
             while true {
                 await recorder.waitForPendingStoreFlush()
@@ -169,7 +179,7 @@ final class ProxyServerTests: XCTestCase {
                 try await Task.sleep(for: .milliseconds(10))
             }
         }
-        await MainActor.run { store.clear() }
+        if clearing { await MainActor.run { store.clear() } }
         XCTAssertEqual(drained.0.reservedBytes, 0)
         XCTAssertEqual(drained.1.bytes, 0)
         XCTAssertFalse(drained.1.paused)
@@ -1989,6 +1999,415 @@ final class ProxyServerTests: XCTestCase {
 
         XCTAssertEqual(result.headers, originalHeaders)
     }
+
+    // MARK: - Opt-in capture soak
+
+    /// Opt-in only: `JOESPROXY_SOAK_PROFILE=pilot|rehearsal|overnight`. Hostless; no UI or device.
+    /// Each cycle sends byte-checked traffic through inspected capture, answers one question with
+    /// the paged and the filtered agent workflow, changes rules and capture state while recording,
+    /// and samples resources at a drained checkpoint. Expected answers come from the harness's own
+    /// record of what it sent, never from the capture under test.
+    @MainActor
+    func testCaptureSoakWithAgentWorkflows() async throws {
+        let durations: [String: Double] = ["pilot": 600, "rehearsal": 3_600, "overnight": 28_800]
+        let environment = ProcessInfo.processInfo.environment
+        guard let profile = environment["JOESPROXY_SOAK_PROFILE"], let duration = durations[profile] else {
+            throw XCTSkip("Requires an explicitly selected soak profile")
+        }
+        verifyScriptedRuntime()
+        continueAfterFailure = true
+        executionTimeAllowance = duration + 900
+        let sink = SoakMetricSink(outputOverride: environment["JOESPROXY_SOAK_OUTPUT"])
+        let issues = SoakIssueCollector()
+        soakIssues = issues
+        defer { soakIssues = nil }
+        // A deliberate wrong expectation proves the run reports failures; pilot use only.
+        let seededFault = environment["JOESPROXY_SOAK_SEEDED_FAULT"] == "1"
+
+        let mcp = MCPResponseDisclosureIntegrationTests()
+        let stack = try await mcp.makeStack()
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let store = stack.sessionStore
+        let recorder = ProxySessionRecorder(sessionStore: store)
+        let overrides = ResponseOverrideStore()
+        let authority = PersistentCertificateAuthorityProvider(configuration: TestProxyConfiguration(proxyPort: 0,
+            logLevel: .info, certificateLabel: "Soak-\(UUID().uuidString)"), certificateStore: UploadTLSCertificateStore())
+        let root = try authority.loadOrCreateRootCertificate()
+        let names = ["api", "binary", "gzip", "media", "redirect", "empty", "not-modified"]
+        let fixtures = ScriptedTransportFixture.cases().filter { names.contains($0.name) }
+        let api = try XCTUnwrap(fixtures.first { $0.name == "api" })
+        let origin = SimpleHTTPSTestServer(leafCertificate: try authority.issueLeafCertificate(for: "localhost"),
+            scripted: Dictionary(uniqueKeysWithValues: fixtures.map { ($0.name, $0.wire) }))
+        // Both listeners sit below the ephemeral range (49152–65535): over hours, outgoing source
+        // ports wrap around, and one equal to a listener's port connects the socket to itself.
+        try await origin.start(preferredPorts: Array(41_000..<41_100))
+        func makeProxy(port: UInt16) -> ProxyServer {
+            ProxyServer(port: port, bindHost: "127.0.0.1", httpsProxyMode: .intercepting,
+                certificateAuthority: authority, sessionRecorder: recorder, responseOverrideStore: overrides,
+                upstreamConnectorConfiguration: .init(trustedRootCertificates: [root.certificateData]))
+        }
+        var fixedPortProxy: ProxyServer?
+        // A failed start ends the recorder's capture run; the successful start begins it again.
+        for port: UInt16 in 41_100..<41_200 where fixedPortProxy == nil {
+            let candidate = makeProxy(port: port)
+            if (try? await candidate.start()) != nil { fixedPortProxy = candidate }
+        }
+        let proxy: ProxyServer
+        if let fixedPortProxy { proxy = fixedPortProxy } else {
+            proxy = makeProxy(port: 0)
+            do { try await proxy.start() } catch { await origin.stop(); throw error }
+        }
+        sink.record("listeners", ["originPort": Int(origin.port), "proxyPort": Int(proxy.port)])
+        let sampler = CurrentProcessMetricsSampler()
+        _ = sampler.sample()
+        let iso = ISO8601DateFormatter()
+        let base: [String: Any] = ["dataset": "sessionMetadata", "selectionPointer": "",
+                                   "operation": ["kind": "groupCount", "fieldPointer": "/statusCode"]]
+
+        /// Sleeps just past the next whole second so adjacent windows never share a session.
+        func boundary() async throws -> Date {
+            let now = Date().timeIntervalSince1970
+            let next = now.rounded(.down) + 1
+            try await Task.sleep(for: .milliseconds(Int((next - now) * 1_000) + 60))
+            return Date(timeIntervalSince1970: next)
+        }
+        var callTimes: [Double] = []
+        var rateWaitSeconds = 0.0
+        /// Delivery failures are recorded, not thrown, so one failed exchange cannot end an overnight run.
+        /// A window that lost a delivery has no exact expectation, so callers skip its count checks.
+        var disturbedWindow = false
+        var cycle = 0
+        func burst(count: Int, offset: Int) async throws -> (statuses: [String: Int], times: [Double]) {
+            var statuses: [String: Int] = [:]
+            var times: [Double] = []
+            await withTaskGroup(of: (ScriptedTransportFixture, Bool, Double?, String?).self) { group in
+                for index in 0..<count {
+                    let fixture = fixtures[(index + offset) % fixtures.count]
+                    let slow = index % 4 == 0
+                    group.addTask {
+                        do {
+                            let (time, _) = try await self.scriptedExchange(fixture, mode: "inspect_with_capture",
+                                port: proxy.port, originPort: origin.port, root: root.certificateData, slow: slow)
+                            return (fixture, slow, time, nil)
+                        } catch {
+                            return (fixture, slow, nil, "\(error)")
+                        }
+                    }
+                }
+                for await (fixture, slow, time, error) in group {
+                    if let time {
+                        statuses[String(fixture.status), default: 0] += 1
+                        times.append(time)
+                    } else {
+                        disturbedWindow = true
+                        sink.fail("delivery_failed", "fixture \(fixture.name) slowReceiver \(slow) error \(error ?? "unknown")",
+                                  cycle: cycle)
+                    }
+                }
+            }
+            return (statuses, times)
+        }
+        func tool(_ name: String, _ arguments: [String: Any]) async throws
+            -> (payload: [String: Any]?, bytes: Int, ms: Double, error: String?) {
+            // Stay inside the per-client request limit, as a well-behaved agent must.
+            let limit = MCPServerLimits.requestRatePerClientPerMinute - 5
+            var now = ProcessInfo.processInfo.systemUptime
+            callTimes.removeAll { now - $0 >= 61 }
+            if callTimes.count >= limit, let oldest = callTimes.first {
+                let wait = max(0, 61 - (now - oldest))
+                rateWaitSeconds += wait
+                try await Task.sleep(for: .milliseconds(Int(wait * 1_000)))
+                now = ProcessInfo.processInfo.systemUptime
+                callTimes.removeAll { now - $0 >= 61 }
+            }
+            callTimes.append(now)
+            let started = ContinuousClock.now
+            let response = try await mcp.callSessionSummary(stack: stack, toolName: name, toolArguments: arguments)
+            let elapsed = started.duration(to: .now)
+            let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1e15
+            let structured = response.result?["structuredContent"] as? [String: Any]
+            let payload = (structured?["payload"] as? [String: Any]) ?? structured
+            let failed = response.errorData != nil || response.result?["isError"] as? Bool == true
+            var reason: String?
+            if failed {
+                let source = response.errorData ?? payload ?? [:]
+                reason = (source["reason"] ?? source["code"] ?? source["message"]).map { "\($0)" } ?? "error"
+            }
+            return (failed ? nil : payload, response.requestBytes + response.wireBytes, ms, reason)
+        }
+        func groupCounts(_ payload: [String: Any]) -> [String: Int]? {
+            guard let groups = (payload["result"] as? [String: Any])?["groups"] as? [[String: Any]] else { return nil }
+            var values: [String: Int] = [:]
+            for group in groups {
+                guard let count = group["count"] as? Int else { return nil }
+                values[(group["key"] as? [String: String])?["value"] ?? "missing"] = count
+            }
+            return values
+        }
+        func blockedStatus() async throws -> Int {
+            let client = try await InterceptingHTTPSTestClient.connect(port: proxy.port,
+                trustedRootCertificates: [root.certificateData])
+            do {
+                let response = try await client.performBytes(targetHost: "localhost", targetPort: origin.port,
+                    request: "GET /seed17/api HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+                    expectedBodyBytes: 20)
+                try await client.close()
+                return Int(String(decoding: response.prefix(12), as: UTF8.self).suffix(3)) ?? -1
+            } catch {
+                try? await client.close()
+                throw error
+            }
+        }
+
+        let started = ProcessInfo.processInfo.systemUptime
+        do {
+            let listing = try await mcp.callRPC(stack: stack, method: "tools/list", params: [:])
+            sink.record("discovery", ["toolset": "default", "bytes": listing.wireBytes])
+            _ = try await tool("agent_toolset_select", ["toolset": "core"])
+            let core = try await mcp.callRPC(stack: stack, method: "tools/list", params: [:])
+            sink.record("discovery", ["toolset": "core", "bytes": core.wireBytes])
+            _ = try await tool("agent_toolset_select", ["toolset": "all"])
+
+            while ProcessInfo.processInfo.systemUptime - started < duration, sink.failures < 200 {
+                cycle += 1
+                disturbedWindow = false
+                // 1. Traffic, with any rule change made while this window is recording.
+                let windowStart = try await boundary()
+                var expected: [String: Int] = [:]
+                var times: [Double] = []
+                for part in 0..<2 {
+                    let result = try await burst(count: 8, offset: cycle * 3 + part * 8)
+                    expected.merge(result.statuses) { $0 + $1 }
+                    times += result.times
+                }
+                if cycle.isMultiple(of: 4),
+                   let sample = store.sessions.last(where: { $0.request.path == "/seed17/api" }) {
+                    let forwardedBefore = origin.scriptedCounter.requests
+                    let rule = try await overrides.addBlockRule(from: sample.request, statusCode: 503, label: "soak-\(cycle)")
+                    var blocked = 0
+                    for _ in 0..<4 {
+                        if try await blockedStatus() == 503 { blocked += 1 }
+                    }
+                    if blocked != 4 { sink.fail("rule_not_applied", "blocked \(blocked) of 4", cycle: cycle) }
+                    if origin.scriptedCounter.requests != forwardedBefore {
+                        sink.fail("blocked_request_forwarded", "origin saw \(origin.scriptedCounter.requests - forwardedBefore)", cycle: cycle)
+                    }
+                    try await overrides.setEnabled(false, for: rule.id)
+                    do {
+                        _ = try await scriptedExchange(api, mode: "inspect_with_capture", port: proxy.port,
+                            originPort: origin.port, root: root.certificateData, slow: false)
+                    } catch {
+                        disturbedWindow = true
+                        sink.fail("delivery_failed", "fixture api after disabled rule error \(error)", cycle: cycle)
+                    }
+                    let hits = await overrides.rule(id: rule.id)?.hitCount ?? -1
+                    // A disabled rule must not claim the request that followed it.
+                    if hits != 4 { sink.fail("rule_hit_attribution", "expected 4 hits, recorded \(hits)", cycle: cycle) }
+                    await overrides.removeRule(id: rule.id)
+                    expected["503", default: 0] += 4
+                    expected["200", default: 0] += 1
+                    sink.record("rule_change", ["cycle": cycle, "blocked": blocked, "hits": hits])
+                }
+                try await drainScripted(recorder, store: store, clearing: false)
+                let windowEnd = try await boundary()
+                let scope = ["method": "get", "path": "/seed17/", "startedAfter": iso.string(from: windowStart),
+                             "startedBefore": iso.string(from: windowEnd)]
+                let filtered = base.merging(["filter": scope]) { _, new in new }
+                if seededFault, cycle == 2 { expected["200", default: 0] += 1 }
+                // A failed delivery leaves this window without an exact expectation; skip its count checks.
+                let windowDisturbed = disturbedWindow
+                if windowDisturbed { sink.record("disturbed_window", ["cycle": cycle]) }
+
+                // 2. The same question through the new and the old agent workflow.
+                if !windowDisturbed {
+                    let candidate = try await tool("capture_calculate", filtered)
+                    let candidateCounts = candidate.payload.flatMap(groupCounts)
+                    if candidateCounts != expected {
+                        sink.fail("filtered_counts", "expected \(expected), got \(String(describing: candidateCounts)), error \(candidate.error ?? "none")", cycle: cycle)
+                    }
+                    var search: [String: Any] = scope
+                    search["limit"] = 50
+                    var ids: [String] = []
+                    var baselineCalls = 0, baselineBytes = 0, baselineMs = 0.0
+                    repeat {
+                        let page = try await tool("sessions_search", search)
+                        baselineCalls += 1
+                        baselineBytes += page.bytes
+                        baselineMs += page.ms
+                        ids += (page.payload?["items"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
+                        search["cursor"] = page.payload?["nextCursor"] as? String
+                    } while search["cursor"] != nil && baselineCalls < 20
+                    var pooled: [String: Int] = [:]
+                    for offset in stride(from: 0, to: ids.count, by: 192) {
+                        let part = try await tool("capture_calculate",
+                            base.merging(["sessionIDs": Array(ids.dropFirst(offset).prefix(192))]) { _, new in new })
+                        baselineCalls += 1
+                        baselineBytes += part.bytes
+                        baselineMs += part.ms
+                        pooled.merge(part.payload.flatMap(groupCounts) ?? [:]) { $0 + $1 }
+                    }
+                    if pooled != expected {
+                        sink.fail("paged_counts", "expected \(expected), got \(pooled) from \(ids.count) sessions", cycle: cycle)
+                    }
+                    sink.record("workflow", ["cycle": cycle, "question": "status_counts",
+                        "sessions": expected.values.reduce(0, +), "candidateCalls": 1, "candidateBytes": candidate.bytes,
+                        "candidateMs": candidate.ms, "candidateCorrect": candidateCounts == expected,
+                        "baselineCalls": baselineCalls, "baselineBytes": baselineBytes, "baselineMs": baselineMs,
+                        "baselineCorrect": pooled == expected])
+                }
+
+                // 3. The same filtered question while new traffic is arriving.
+                async let arriving = burst(count: 8, offset: cycle)
+                var liveOutcomes: [String: Int] = [:]
+                for _ in 0..<(windowDisturbed ? 0 : 4) {
+                    let attempt = try await tool("capture_calculate", filtered)
+                    let outcome = attempt.error ?? (attempt.payload.flatMap(groupCounts) == expected ? "ok" : "wrong")
+                    liveOutcomes[outcome, default: 0] += 1
+                    if outcome == "wrong" { sink.fail("live_filtered_counts", "closed window changed under traffic", cycle: cycle) }
+                }
+                _ = try await arriving
+                try await drainScripted(recorder, store: store, clearing: false)
+                sink.record("live_query", ["cycle": cycle, "outcomes": liveOutcomes])
+
+                // 4. User pauses capture: delivery must continue and the gap must be qualified.
+                if cycle.isMultiple(of: 6) {
+                    let pauseStart = try await boundary()
+                    recorder.admission.setAccepting(false)
+                    let delivered: (statuses: [String: Int], times: [Double])
+                    do { delivered = try await burst(count: 8, offset: cycle) } catch {
+                        recorder.admission.setAccepting(true)
+                        throw error
+                    }
+                    recorder.admission.setAccepting(true)
+                    try await drainScripted(recorder, store: store, clearing: false)
+                    let pauseEnd = try await boundary()
+                    var pausedScope = scope
+                    pausedScope["startedAfter"] = iso.string(from: pauseStart)
+                    pausedScope["startedBefore"] = iso.string(from: pauseEnd)
+                    let paused = try await tool("capture_calculate", base.merging(["filter": pausedScope]) { _, new in new })
+                    let rows = paused.payload?["rows"] as? Int ?? -1
+                    let qualified = paused.payload?["possibleCaptureGap"] != nil || paused.payload?["admissionCoverage"] != nil
+                    if rows < delivered.times.count, !qualified, paused.error == nil {
+                        sink.fail("paused_capture_unqualified", "\(rows) of \(delivered.times.count) recorded with no gap flag", cycle: cycle)
+                    }
+                    sink.record("capture_pause", ["cycle": cycle, "delivered": delivered.times.count,
+                        "recordedRows": rows, "qualified": qualified, "error": paused.error ?? ""])
+                }
+
+                // 5. User clears history: an earlier window must not read as a measured zero.
+                if cycle.isMultiple(of: 10) {
+                    store.clear()
+                    let cleared = try await tool("capture_calculate", filtered)
+                    let qualified = cleared.error != nil || cleared.payload?["historyChangedSinceWindowStart"] as? Bool == true
+                    if !qualified {
+                        sink.fail("clear_not_qualified", "rows \(cleared.payload?["rows"] ?? "nil") without a history flag", cycle: cycle)
+                    }
+                    sink.record("user_clear", ["cycle": cycle, "qualified": qualified, "error": cleared.error ?? ""])
+                }
+
+                // 6. Delivery assertions raised inside shared exchange helpers, then a drained checkpoint.
+                for detail in issues.drain() {
+                    sink.observe("delivery_mismatch", detail, cycle: cycle)
+                }
+                let metrics = sampler.sample()
+                let admission = recorder.admission.snapshot
+                sink.record("checkpoint", ["cycle": cycle, "elapsedSeconds": ProcessInfo.processInfo.systemUptime - started,
+                    "configuration": scriptedConfiguration, "physicalFootprint": metrics.physicalFootprintBytes,
+                    "cpuPercent": metrics.cpuPercent as Any? ?? NSNull(),
+                    "relayBytes": RelayBacklogBudget.shared.snapshot.bytes, "captureReserved": admission.reservedBytes,
+                    "capturePeak": admission.peakReservedBytes, "rejectedCaptures": admission.rejectedCaptures,
+                    "retainedSessions": store.sessions.count, "droppedSessions": store.droppedSessionCount,
+                    "rateWaitSeconds": rateWaitSeconds,
+                    "maxTransferSeconds": times.max() ?? 0, "originRequests": origin.scriptedCounter.requests])
+                guard metrics.physicalFootprintBytes < 1_610_612_736 else {
+                    sink.record("safety_stop", ["cycle": cycle, "reason": "footprint"])
+                    throw NSError(domain: "CaptureSoakFootprintSafetyStop", code: 1)
+                }
+                let free = (try? FileManager.default.attributesOfFileSystem(forPath: NSTemporaryDirectory())[.systemFreeSize] as? Int64) ?? nil
+                if let free, free < 10 * 1_073_741_824 {
+                    sink.record("safety_stop", ["cycle": cycle, "reason": "disk"])
+                    throw NSError(domain: "CaptureSoakDiskSafetyStop", code: 1)
+                }
+            }
+        } catch {
+            sink.record("aborted", ["cycle": cycle, "error": "\(error)"])
+            await proxy.stop()
+            await origin.stop()
+            throw error
+        }
+        sink.record("summary", ["profile": profile, "cycles": cycle, "invariantFailures": sink.failures,
+            "elapsedSeconds": ProcessInfo.processInfo.systemUptime - started])
+        await proxy.stop()
+        await origin.stop()
+        if let url = sink.url, let data = try? Data(contentsOf: url) {
+            let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.plain-text")
+            attachment.name = "capture-soak-\(profile).jsonl"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        if seededFault { XCTAssertGreaterThan(sink.failures, 0, "The seeded fault must be reported") }
+    }
+}
+
+/// Appends one JSON line per observation so an aborted run still leaves its measurements.
+private final class SoakMetricSink {
+    private let handle: FileHandle?
+    let url: URL?
+    private(set) var failures = 0
+
+    init(outputOverride: String?) {
+        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
+        let directory = outputOverride.map { URL(fileURLWithPath: $0) }
+            ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+                .appendingPathComponent("build/Soak/\(stamp)")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = directory.appendingPathComponent("metrics.jsonl")
+        FileManager.default.createFile(atPath: file.path, contents: nil)
+        handle = try? FileHandle(forWritingTo: file)
+        url = handle == nil ? nil : file
+    }
+
+    func record(_ kind: String, _ fields: [String: Any]) {
+        var record = fields
+        record["kind"] = kind
+        record["at"] = Date().timeIntervalSince1970
+        guard let data = try? JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]) else { return }
+        print("SOAK_METRIC " + String(decoding: data, as: UTF8.self))
+        handle?.write(data + Data("\n".utf8))
+    }
+
+    func fail(_ invariant: String, _ detail: String, cycle: Int) {
+        observe(invariant, detail, cycle: cycle)
+        XCTFail("soak \(invariant) cycle \(cycle): \(detail)")
+    }
+
+    /// Counts a failure XCTest has already recorded, without raising it a second time.
+    func observe(_ invariant: String, _ detail: String, cycle: Int) {
+        failures += 1
+        record("invariant_failure", ["invariant": invariant, "detail": detail, "cycle": cycle])
+    }
+}
+
+/// Collects delivery assertion messages from any thread; the soak drains them once per cycle.
+private final class SoakIssueCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var pending: [String] = []
+
+    func collect(_ description: String) {
+        // Only exchange-helper assertions; the soak's own failures are already in its metrics.
+        guard description.contains("inspect_with_capture") else { return }
+        lock.lock()
+        pending.append(description)
+        lock.unlock()
+    }
+
+    func drain() -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        let drained = pending
+        pending.removeAll()
+        return drained
+    }
 }
 
 private final class SimpleHTTPTestServer {
@@ -2217,7 +2636,7 @@ private final class SimpleHTTPSTestServer {
         return UInt16(port)
     }
 
-    func start() async throws {
+    func start(preferredPorts: [Int] = []) async throws {
         let certificate = try NIOSSLCertificate(bytes: Array(leafCertificate.certificateData), format: .der)
         let privateKey = try NIOSSLPrivateKey(bytes: Array(leafCertificate.privateKeyData), format: .pem)
         let tlsContext = try NIOSSLContext(
@@ -2247,6 +2666,14 @@ private final class SimpleHTTPSTestServer {
                 ]) }
             }
 
+        // Long soaks pass a fixed range below the ephemeral range (49152–65535) so a wrapped-around
+        // outgoing source port can never equal the origin's own port.
+        for port in preferredPorts {
+            if let bound = try? await bootstrap.bind(host: "127.0.0.1", port: port).get() {
+                channel = bound
+                return
+            }
+        }
         channel = try await bootstrap.bind(host: "127.0.0.1", port: 0).get()
     }
 

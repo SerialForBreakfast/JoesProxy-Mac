@@ -1,0 +1,16 @@
+{
+  "configurations": [{"id": "5E0A7C1B-93D4-4F6E-8B2A-6C1D0F4E7A90", "name": "Optimized Soak", "options": {}}],
+  "defaultOptions": {
+    "mainThreadCheckerEnabled": false,
+    "performanceAntipatternCheckerEnabled": false,
+    "mainThreadCheckerDetectionPolicy": {"enabled": false},
+    "threadPerformanceCheckerRuntimeIssueDetection": {"enabled": false},
+    "targetForVariableExpansion": {"containerPath": "container:JoesProxy.xcodeproj", "identifier": "4498EC182CDAED9900844D6D", "name": "JoesProxy"}
+  },
+  "testTargets": [{
+    "parallelizable": false,
+    "selectedTests": ["ProxyServerTests/testCaptureSoakWithAgentWorkflows()"],
+    "target": {"containerPath": "container:JoesProxy.xcodeproj", "identifier": "4498EC292CDAED9B00844D6D", "name": "JoesProxyTests"}
+  }],
+  "version": 1
+}

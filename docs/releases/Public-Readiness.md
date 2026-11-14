@@ -4,7 +4,7 @@ Revision November 9, 2026. Destination: **JoesProxy-Mac**, published November 9,
 public repository `SerialForBreakfast/JoesProxy-Mac` with release `1.9.0`. Private history remains
 separate. See [snapshot provenance](../PUBLIC-SNAPSHOT.md) for the checked publication status.
 
-## Current candidate
+## Original 1.9.0 snapshot
 
 The starting point is the reviewed 1.9.0 (23) source export: 2,722 original files, verified
 against its manifest before editing. Source archive SHA-256:
@@ -18,7 +18,7 @@ embedded links. It does not match the published source byte for byte, and it pre
 `6cec757`. Upload any replacement binary as a release asset, not a source commit.
 
 No installer was rebuilt for publication. Remaining manual acceptance is not implied by
-notarization. Hosted code analysis has not succeeded and the latest commit has no hosted run.
+notarization. See the November 14 entry below for subsequent hosted build and security results.
 
 ## Retained layout
 
@@ -43,3 +43,9 @@ Publication has since occurred. Items below that were not completed remain open 
 Private histories, captures, profiles, audit logs and old installers are not part of this source
 distribution. Source omission cannot revoke previously exposed credentials. See
 [validation scope](../VALIDATION.md) and [snapshot provenance](../PUBLIC-SNAPSHOT.md).
+
+## November 14, 2026 — build 25 readiness
+
+The latest public release is 1.9.0. Build 25 is a private candidate. On the release Mac the app inside the final DMG passed strict signature and Gatekeeper verification. The app and CLI both reported 1.9.1 (25) and contained Intel and Apple silicon executables. See the [candidate record](1.9.1-build25.md) and [installer checksum](../../Releases/SHA256SUMS).
+
+The latest inspected hosted [build](https://github.com/SerialForBreakfast/JoesProxy-Mac/actions/runs/43525252258), [Swift security analysis](https://github.com/SerialForBreakfast/JoesProxy-Mac/actions/runs/43525252349) and [secret scan](https://github.com/SerialForBreakfast/JoesProxy-Mac/actions/runs/43525252257) succeeded on public main at `8878f5f`. The unpublished candidate has separate local validation. Private vulnerability reporting was disabled at the time of this check. The repository owner can enable it in Settings before publication. Second-Mac acceptance remains open.

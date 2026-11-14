@@ -82,6 +82,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
     private weak var activeStreamingForwarder: StreamingUpstreamForwarder?
     private var activeUpstreamCancellation: (@Sendable () -> Void)?
     private var activeUpstreamRequestID: UUID?
+    private var activeMapRemoteSessionID: UUID?
+    nonisolated(unsafe) static var beforeLoopbackRegistrationPauseForTesting: (@Sendable () async -> Void)?
 
     init(
         requestParser: HTTPRequestParser,
@@ -174,6 +176,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         activeUpstreamCancellation = nil
         activeStreamingForwarder = nil
         activeUpstreamRequestID = nil
+        ActiveMapRemoteSessionRegistry.shared.unregister(activeMapRemoteSessionID)
+        activeMapRemoteSessionID = nil
         context.fireChannelInactive()
     }
 
@@ -870,8 +874,13 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                     return
                 }
 
-                let initialDecision = try await responseOverrideStore.ruleDecision(for: sessionRequest,
-                    observationSessionIDTask: sessionIDTask)
+                let currentLoopbackPolicy = self.configuration?.loopbackDestinationPolicy ?? .disabled
+                let initialDecision = try await responseOverrideStore.ruleDecision(
+                    for: sessionRequest,
+                    loopbackPolicy: currentLoopbackPolicy,
+                    reservedRegistry: .shared,
+                    observationSessionIDTask: sessionIDTask
+                )
                 let decision: ProxyRuleDecision
                 if case .noMatch = initialDecision,
                    let bookmarkResponseInterceptStore,
@@ -1143,34 +1152,155 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         }
                     }
 
-                case .mapRemote(let ruleID, let remoteHost, let remotePort, let remoteScheme, let requestTarget):
+                case .deniedMapRemote(let deniedRuleID, let reason, let detail):
+                    self.logger.notice("""
+                        Map Remote denied by rule validation reason=\(reason.rawValue, privacy: .public) \
+                        rule=\(deniedRuleID.uuidString, privacy: .public)
+                        """)
+                    if let sessionRecorder, let sessionID = await sessionIDTask.value {
+                        await sessionRecorder.failSession(
+                            id: sessionID,
+                            message: "Map Remote denied [\(reason.rawValue)]: \(detail)"
+                        )
+                    }
+                    eventLoop.execute {
+                        let handler = loopBoundSelf.value
+                        let context = loopBoundContext.value
+                        handler.logHTTPS("Map Remote denied [\(reason.rawValue)] for \(request.method) \(request.host):\(request.port)\(request.path): \(detail)")
+                        handler.sendMapRemoteErrorResponse(
+                            statusLine: "403 Forbidden",
+                            reasonCode: reason.rawValue,
+                            body: detail,
+                            context: context
+                        )
+                    }
+
+                case .mapRemote(
+                    let ruleID,
+                    let remoteHost,
+                    let remotePort,
+                    let remoteScheme,
+                    let requestTarget,
+                    let allowLoopbackDestination,
+                    let preserveHostHeader
+                ):
+                    let incomingHop = Self.highestMapRemoteHopCount(in: request.headers)
+                    if incomingHop >= 3 {
+                        let loopMessage = "Map Remote forwarding loop detected (hop count \(incomingHop) >= 3)."
+                        if let sessionRecorder, let sessionID = await sessionIDTask.value {
+                            await sessionRecorder.failSession(id: sessionID, message: loopMessage)
+                        }
+                        eventLoop.execute {
+                            let handler = loopBoundSelf.value
+                            let context = loopBoundContext.value
+                            handler.logHTTPS("Map Remote loop detected for \(request.method) \(request.host):\(request.port)\(request.path)")
+                            handler.sendMapRemoteErrorResponse(
+                                statusLine: "508 Loop Detected",
+                                reasonCode: "map_remote_loop_detected",
+                                body: loopMessage,
+                                context: context
+                            )
+                        }
+                        break
+                    }
+
+                    let livePolicy = self.configuration?.loopbackDestinationPolicy ?? .disabled
+                    let validatedEndpoint: ValidatedUpstreamEndpoint
+                    do {
+                        validatedEndpoint = try LoopbackAddressInspector.resolveAndValidate(
+                            destinationHost: remoteHost,
+                            port: remotePort,
+                            scheme: remoteScheme,
+                            incomingHeaders: request.headers,
+                            originalRequestHost: request.host,
+                            originalRequestPort: request.port,
+                            originalRequestScheme: upstreamScheme,
+                            isMapRemote: true,
+                            allowLoopbackDestination: allowLoopbackDestination,
+                            preserveHostHeader: preserveHostHeader,
+                            policy: livePolicy,
+                            reservedRegistry: .shared
+                        )
+                    } catch MapRemoteValidationError.policyDenied(let reason, let detail) {
+                        // Always recorded: a denial changes what the client receives. Reason code only.
+                        self.logger.notice("Map Remote denied at request time reason=\(reason.rawValue, privacy: .public)")
+                        let statusLine = (reason == .resolutionFailed) ? "502 Bad Gateway" : "403 Forbidden"
+                        if let sessionRecorder, let sessionID = await sessionIDTask.value {
+                            await sessionRecorder.failSession(
+                                id: sessionID,
+                                message: "Map Remote denied [\(reason.rawValue)]: \(detail)"
+                            )
+                        }
+                        eventLoop.execute {
+                            let handler = loopBoundSelf.value
+                            let context = loopBoundContext.value
+                            handler.logHTTPS("Map Remote failed [\(reason.rawValue)] for \(request.method) \(request.host):\(request.port)\(request.path): \(detail)")
+                            handler.sendMapRemoteErrorResponse(
+                                statusLine: statusLine,
+                                reasonCode: reason.rawValue,
+                                body: detail,
+                                context: context
+                            )
+                        }
+                        break
+                    } catch MapRemoteValidationError.malformedRequest(let detail) {
+                        if let sessionRecorder, let sessionID = await sessionIDTask.value {
+                            await sessionRecorder.failSession(
+                                id: sessionID,
+                                message: "Map Remote denied [malformed_destination]: \(detail)"
+                            )
+                        }
+                        eventLoop.execute {
+                            let handler = loopBoundSelf.value
+                            let context = loopBoundContext.value
+                            handler.sendMapRemoteErrorResponse(
+                                statusLine: "403 Forbidden",
+                                reasonCode: MapRemoteDenialReason.malformedDestination.rawValue,
+                                body: detail,
+                                context: context
+                            )
+                        }
+                        break
+                    }
+
+                    var remappedHeaders = request.headers.filter {
+                        $0.name.caseInsensitiveCompare("X-JoesProxy-MapRemote-Hop") != .orderedSame
+                    }
+                    remappedHeaders.append(HTTPHeaderField(name: "X-JoesProxy-MapRemote-Hop", value: String(incomingHop + 1)))
+
                     let remappedRequest = HTTPProxyRequest(
                         kind: request.kind,
                         method: request.method,
                         version: request.version,
-                        host: remoteHost,
-                        port: remotePort,
+                        host: validatedEndpoint.destinationHost,
+                        port: validatedEndpoint.port,
                         path: requestTarget ?? request.path,
-                        headers: request.headers,
+                        headers: remappedHeaders,
                         body: request.body,
                         bodySpool: request.bodySpool,
                         originalBodySize: request.originalBodySize
                     )
+                    if validatedEndpoint.isLoopback,
+                       let pauseHook = Self.beforeLoopbackRegistrationPauseForTesting {
+                        await pauseHook()
+                    }
+                    let hostAttributionSuffix = preserveHostHeader ? " (Host: original \(validatedEndpoint.httpHostHeaderValue))" : ""
                     eventLoop.execute {
                         let handler = loopBoundSelf.value
                         let context = loopBoundContext.value
-                        handler.logHTTPS("Remapping \(request.method) \(request.host):\(request.port)\(request.path) → \(remoteScheme.rawValue)://\(remoteHost):\(remotePort)\(request.path)")
+                        handler.logHTTPS("Remapping \(request.method) \(request.host):\(request.port)\(request.path) → \(remoteScheme.rawValue)://\(validatedEndpoint.destinationHost):\(validatedEndpoint.port)\(remappedRequest.path)\(hostAttributionSuffix)")
                         handler.executeUpstreamRequest(
                             remappedRequest,
                             captureBodyLimit: captureBodyLimit,
                             upstreamScheme: remoteScheme,
+                            validatedEndpoint: validatedEndpoint,
                             keepConnectionOpen: keepConnectionOpen,
                             nextState: nextState,
                             context: context,
                             sessionRecorder: sessionRecorder,
                             sessionIDTask: sessionIDTask,
                             responseSource: .mapRemote,
-                            responseSourceDescription: "Remapped to \(remoteScheme.rawValue)://\(remoteHost):\(remotePort)",
+                            responseSourceDescription: "Remapped to \(remoteScheme.rawValue)://\(validatedEndpoint.destinationHost):\(validatedEndpoint.port)\(hostAttributionSuffix)",
                             ruleID: ruleID
                         )
                     }
@@ -1260,6 +1390,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         _ request: HTTPProxyRequest,
         captureBodyLimit: Int,
         upstreamScheme: SessionScheme,
+        validatedEndpoint: ValidatedUpstreamEndpoint? = nil,
         keepConnectionOpen: Bool,
         nextState: ConnectionState,
         context: ChannelHandlerContext,
@@ -1276,11 +1407,72 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         let effectiveRuleID = ruleID ?? liveResponseRewriteContext?.ruleID ?? liveCollectionMockContext?.ruleID
         let requestID = UUID()
         activeUpstreamRequestID = requestID
+        if let activeMapRemoteSessionID {
+            ActiveMapRemoteSessionRegistry.shared.unregister(activeMapRemoteSessionID)
+            self.activeMapRemoteSessionID = nil
+        }
+        if let validatedEndpoint, validatedEndpoint.isLoopback {
+            let eventLoop = context.eventLoop
+            let registrationID = ActiveMapRemoteSessionRegistry.shared.register(
+                port: validatedEndpoint.port,
+                isLoopback: true
+            ) {
+                eventLoop.execute {
+                    let handler = loopBoundSelf.value
+                    let ctx = loopBoundContext.value
+                    guard handler.activeUpstreamRequestID == requestID else { return }
+                    handler.activeUpstreamRequestID = nil
+                    handler.activeUpstreamCancellation?()
+                    handler.activeUpstreamCancellation = nil
+                    handler.activeStreamingForwarder = nil
+                    ActiveMapRemoteSessionRegistry.shared.unregister(handler.activeMapRemoteSessionID)
+                    handler.activeMapRemoteSessionID = nil
+                    handler.state = .closed
+                    ctx.close(promise: nil)
+                }
+            }
+            self.activeMapRemoteSessionID = registrationID
+
+            // Revalidate under the lock-ordered barrier established by `register(...)` so a
+            // concurrent Settings revocation between preflight and connect fails closed before any
+            // upstream socket connects.
+            let currentPolicy = self.configuration?.loopbackDestinationPolicy ?? .disabled
+            let denialReason: MapRemoteDenialReason? = !currentPolicy.isEnabled
+                ? .permissionDisabled
+                : (!currentPolicy.authorizedPorts.contains(validatedEndpoint.port) ? .portNotAuthorized : nil)
+            if let denialReason {
+                ActiveMapRemoteSessionRegistry.shared.unregister(registrationID)
+                self.activeMapRemoteSessionID = nil
+                self.activeUpstreamRequestID = nil
+                self.releaseUploadSpool()
+                let detail = denialReason == .permissionDisabled
+                    ? "Local-server Map Remote access was revoked before upstream connect."
+                    : "Authorized local destination port \(validatedEndpoint.port) was revoked before upstream connect."
+                if let sessionRecorder {
+                    Task {
+                        if let sessionID = await sessionIDTask.value {
+                            await sessionRecorder.failSession(
+                                id: sessionID,
+                                message: "Map Remote denied [\(denialReason.rawValue)]: \(detail)"
+                            )
+                        }
+                    }
+                }
+                self.sendMapRemoteErrorResponse(
+                    statusLine: "403 Forbidden",
+                    reasonCode: denialReason.rawValue,
+                    body: detail,
+                    context: context
+                )
+                return
+            }
+        }
 
         transportDiagnostics?.recordProgress(.upstreamStarted)
         self.upstreamConnector.executeStreaming(
             request,
             scheme: upstreamScheme,
+            validatedEndpoint: validatedEndpoint,
             downstreamChannel: context.channel,
             downstreamThrottleWriter: self.downstreamThrottleWriter,
             keepConnectionOpen: keepConnectionOpen,
@@ -1346,6 +1538,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                     handler.activeUpstreamRequestID = nil
                     handler.activeUpstreamCancellation = nil
                     handler.activeStreamingForwarder = nil
+                    ActiveMapRemoteSessionRegistry.shared.unregister(handler.activeMapRemoteSessionID)
+                    handler.activeMapRemoteSessionID = nil
                     handler.releaseUploadSpool()
                     if shouldKeepOpen {
                         handler.state = nextState
@@ -1597,6 +1791,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         let presentation = NetworkFailureClassifier.presentation(for: error)
         logHTTPS("Sending failure response [\(presentation.bucket.rawValue)]: \(presentation.message)")
         let statusLine = responseStatusLine(for: error)
+        // Always logged: a synthesized failure status is otherwise indistinguishable from an origin response.
+        logger.notice("Proxy failure response status=\(statusLine, privacy: .public) bucket=\(presentation.bucket.rawValue, privacy: .public) errorType=\(String(describing: type(of: error)), privacy: .public) detail=\(String(describing: error), privacy: .private)")
         let body = (error as? UploadBodySpoolError)?.errorDescription ?? presentation.userFacingMessage
         let response = """
         HTTP/1.1 \(statusLine)\r
@@ -1609,6 +1805,32 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
 
         state = .closed
         write(Data(response.utf8), keepConnectionOpen: false, nextState: .closed, context: context)
+    }
+
+    private func sendMapRemoteErrorResponse(
+        statusLine: String,
+        reasonCode: String,
+        body: String,
+        context: ChannelHandlerContext
+    ) {
+        let response = """
+        HTTP/1.1 \(statusLine)\r
+        Content-Type: text/plain; charset=utf-8\r
+        X-JoesProxy-Denial-Reason: \(reasonCode)\r
+        Connection: close\r
+        Content-Length: \(body.utf8.count)\r
+        \r
+        \(body)
+        """
+        state = .closed
+        write(Data(response.utf8), keepConnectionOpen: false, nextState: .closed, context: context)
+    }
+
+    private static func highestMapRemoteHopCount(in headers: [HTTPHeaderField]) -> Int {
+        headers
+            .filter { $0.name.caseInsensitiveCompare("X-JoesProxy-MapRemote-Hop") == .orderedSame }
+            .compactMap { Int($0.value.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .max() ?? 0
     }
 
     private func responseStatusLine(for error: Error) -> String {

@@ -49,6 +49,36 @@ case "${1:-}" in
       '.success and .result.version == $version and .result.build == $build' "$EVIDENCE/cli-version.json"
     jq -e '.success and .result.incomplete == false' "$EVIDENCE/cli-help.json"
     ;;
+  filtered-calculations)
+    # The disposable hosted checkout signs the XCTest host ad hoc.
+    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+      app_entitlements=JoesProxy/JoesProxy.entitlements
+      cp "$app_entitlements" "$BUILD_ROOT/fixture-original.entitlements"
+      trap 'cp "$BUILD_ROOT/fixture-original.entitlements" "$app_entitlements"; verify_locks' EXIT
+      /usr/libexec/PlistBuddy -c "Delete :keychain-access-groups" "$app_entitlements"
+    fi
+    xcodebuild test "${COMMON[@]}" -disableAutomaticPackageResolution -configuration Debug \
+      -resultBundlePath "$EVIDENCE/filtered-calculations.xcresult" \
+      -destination "platform=macOS" -testPlan JoesProxy-Policy -parallel-testing-enabled NO \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationChecksAuthorityAndQualifiesEmptyWindows \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredWindowDetectsLateCompletion \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredGroupsReconcileTiesHistoryLossAndWorkLimit \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationAgainstPagedSearchAndExplicitBatches \
+      -only-testing:JoesProxyTests/CLIArtifactArgumentsTests/testFilteredMetadataArgumentsRequireExactlyOneSelection \
+      -only-testing:JoesProxyTests/JoesProxyCLITests \
+      -only-testing:JoesProxyTests/ArtifactCalculationTests \
+      -only-testing:JoesProxyTests/ResponseEvidenceBriefTests \
+      -only-testing:JoesProxyTests/InvestigationComparisonBriefTests \
+      -only-testing:JoesProxyTests/AuthChainBriefTests \
+      -only-testing:JoesProxyTests/MCPCaptureActivitySinceMarkerTests \
+      -only-testing:JoesProxyTests/MCPMediaDiscoveryTests \
+      -only-testing:JoesProxyTests/MCPAgentExportTests \
+      -only-testing:JoesProxyTests/MCPRuntimeIdentityTests \
+      -only-testing:JoesProxyTests/MCPDiagnosticRunServiceTests \
+      -only-testing:JoesProxyTests/DocumentationCatalogTests \
+      -jobs 2 CODE_SIGN_IDENTITY=- 2>&1 | tee "$EVIDENCE/filtered-calculations.log"
+    grep -F "filtered-capture-300 baselineCalls=" "$EVIDENCE/filtered-calculations.log"
+    ;;
   sdk)
     swift test --package-path Companion/JoesProxySDK --scratch-path "$BUILD_ROOT/SDKTests" \
       --disable-automatic-resolution --skip-update 2>&1 | tee "$EVIDENCE/sdk-tests.log"

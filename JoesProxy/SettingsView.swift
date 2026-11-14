@@ -207,6 +207,67 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Local-Server Routing") {
+                Toggle("Allow Map Remote to target local Mac servers", isOn: $viewModel.isLoopbackMapRemoteEnabled)
+                    .accessibilityLabel("Allow Map Remote to target local Mac servers")
+                    .accessibilityHint("Enables Map Remote rules that explicitly opt in to forward traffic to authorized ports on this Mac.")
+                    .accessibilityIdentifier("settingsLoopbackMapRemoteToggle")
+
+                Text("Off by default. Loopback means the Mac running JoesProxy, not the test device. Turning this off or removing a port immediately blocks new requests, closes active remapped streams, and disables matching rules so they never resume silently.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                LabeledContent("Authorized Ports") {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        TextField("e.g. 3000, 8080", text: $viewModel.authorizedLoopbackPortsDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 180)
+                            .onSubmit {
+                                viewModel.commitAuthorizedLoopbackPortsDraft()
+                            }
+                            .accessibilityLabel("Authorized local destination ports")
+                            .accessibilityIdentifier("settingsLoopbackAuthorizedPortsField")
+
+                        Button("Save Ports") {
+                            viewModel.commitAuthorizedLoopbackPortsDraft()
+                        }
+                        .accessibilityIdentifier("settingsSaveLoopbackPortsButton")
+                    }
+                }
+
+                if !viewModel.authorizedLoopbackPorts.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(viewModel.authorizedLoopbackPorts, id: \.self) { port in
+                                HStack(spacing: 4) {
+                                    Text(verbatim: ":\(port)")
+                                        .font(.system(.caption, design: .monospaced))
+                                    Button {
+                                        viewModel.removeAuthorizedLoopbackPort(port)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.caption2)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Remove authorized port \(port)")
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.secondary.opacity(0.15), in: Capsule())
+                            }
+                        }
+                    }
+                }
+
+                if let loopbackPortsValidationMessage = viewModel.loopbackPortsValidationMessage {
+                    Text(loopbackPortsValidationMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .accessibilityLabel(loopbackPortsValidationMessage)
+                        .accessibilityIdentifier("settingsLoopbackPortsValidationMessage")
+                }
+            }
+
             Section("SDK Connections") {
                 Toggle("Allow SDK clients to connect to JoesProxy", isOn: $viewModel.sdkEventServerEnabled)
                     .accessibilityLabel("Allow SDK clients to connect to JoesProxy")

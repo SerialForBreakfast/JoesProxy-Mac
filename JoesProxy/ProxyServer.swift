@@ -33,6 +33,7 @@ public final class ProxyServer {
     private var eventLoopGroup: MultiThreadedEventLoopGroup?
     private var serverChannel: Channel?
     private var uploadForwardingLifecycle: UploadForwardingLifecycle?
+    private var listenerReservation: ReservedListenerRegistry.ReservationToken?
 
     public var port: UInt16
     public let bindHost: String
@@ -107,6 +108,8 @@ public final class ProxyServer {
         }
 
         serverChannel = nil
+        ReservedListenerRegistry.shared.release(listenerReservation)
+        listenerReservation = nil
 
         await uploadForwardingLifecycle?.stopAndDrain()
         uploadForwardingLifecycle = nil
@@ -193,6 +196,14 @@ public final class ProxyServer {
                 )
             }
 
+        if port > 0 {
+            self.listenerReservation = ReservedListenerRegistry.shared.reserve(
+                owner: "ProxyServer",
+                port: port,
+                boundHost: bindHost == "0.0.0.0" || bindHost == "::" ? nil : bindHost
+            )
+        }
+
         do {
             logger.info("Binding proxy server to \(self.bindHost, privacy: .public):\(self.port)")
             let channel = try await bootstrap.bind(host: self.bindHost, port: Int(port)).get()
@@ -204,8 +215,17 @@ public final class ProxyServer {
             if let localAddress = channel.localAddress,
                let boundPort = localAddress.port.flatMap(UInt16.init(exactly:)) {
                 self.port = boundPort
+                if self.listenerReservation == nil {
+                    self.listenerReservation = ReservedListenerRegistry.shared.reserve(
+                        owner: "ProxyServer",
+                        port: boundPort,
+                        boundHost: bindHost == "0.0.0.0" || bindHost == "::" ? nil : bindHost
+                    )
+                }
             }
         } catch {
+            ReservedListenerRegistry.shared.release(self.listenerReservation)
+            self.listenerReservation = nil
             try? await group.shutdownGracefully()
             throw error
         }

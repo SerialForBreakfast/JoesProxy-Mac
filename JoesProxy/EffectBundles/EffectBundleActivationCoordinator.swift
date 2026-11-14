@@ -21,6 +21,7 @@ final class EffectBundleActivationCoordinator: ObservableObject {
     private let hlsCoordinator: HLSSubstitutionCoordinator
     private let activationGate: EffectBundleActivationGate
     private let materializer: EffectBundleRuntimeMaterializer
+    private let loopbackPolicyProvider: @Sendable () async -> LoopbackDestinationPolicy
     private let clock: () -> Date
     private let uptime: () -> TimeInterval
     private let schedulesTimers: Bool
@@ -62,6 +63,7 @@ final class EffectBundleActivationCoordinator: ObservableObject {
         activationGate: EffectBundleActivationGate = .shared,
         runtimeRootURL: URL? = nil,
         fileManager: FileManager = .default,
+        loopbackPolicyProvider: @escaping @Sendable () async -> LoopbackDestinationPolicy = { .disabled },
         clock: @escaping () -> Date = Date.init,
         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
         schedulesTimers: Bool = true
@@ -74,6 +76,7 @@ final class EffectBundleActivationCoordinator: ObservableObject {
             rootURL: runtimeRootURL,
             fileManager: fileManager
         )
+        self.loopbackPolicyProvider = loopbackPolicyProvider
         self.clock = clock
         self.uptime = uptime
         self.schedulesTimers = schedulesTimers
@@ -157,6 +160,24 @@ final class EffectBundleActivationCoordinator: ObservableObject {
         let rules: [ResponseOverrideRule]
         do {
             try Task.checkCancellation()
+            let loopbackPolicy = await loopbackPolicyProvider()
+            for effect in retained.manifest.responseEffects where effect.sourceKind == .mapRemote {
+                let remoteHost = effect.mapRemoteHost ?? effect.host
+                let remoteScheme = effect.mapRemoteScheme ?? effect.requestScheme
+                let remotePort = effect.mapRemotePort ?? (remoteScheme == .https ? 443 : 80)
+                do {
+                    _ = try LoopbackAddressInspector.validateStaticDestination(
+                        host: remoteHost,
+                        port: remotePort,
+                        scheme: remoteScheme,
+                        allowLoopbackDestination: effect.allowLoopbackDestination ?? false,
+                        policy: loopbackPolicy,
+                        reservedRegistry: .shared
+                    )
+                } catch {
+                    throw EffectBundleError.loopbackMapRemoteDenied(effect.id, error.localizedDescription)
+                }
+            }
             rules = try retained.manifest.responseEffects.map {
                 try makeResponseRule(effect: $0, bundleID: id, layout: layout)
             }
@@ -551,6 +572,8 @@ final class EffectBundleActivationCoordinator: ObservableObject {
             mapRemotePath: effect.mapRemotePath,
             mapRemoteQueryPolicy: effect.mapRemoteQueryPolicy,
             mapRemoteQuery: effect.mapRemoteQuery,
+            allowLoopbackDestination: effect.allowLoopbackDestination ?? false,
+            preserveHostHeader: effect.preserveHostHeader ?? false,
             bookmarkRewriteRequest: effect.bookmarkRewriteRequest,
             liveResponseRewrites: effect.liveResponseRewrites,
             expectedSchemaFingerprint: effect.expectedSchemaFingerprint,

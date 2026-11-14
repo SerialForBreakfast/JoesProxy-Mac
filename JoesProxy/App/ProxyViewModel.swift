@@ -623,7 +623,10 @@ final class ProxyViewModel: ObservableObject {
                 runStore: HLSFixtureRunStore(),
                 routeStore: HLSSubstitutionRouteStore(),
                 responseOverrideStore: responseOverrideStore
-            )
+            ),
+            loopbackPolicyProvider: { @MainActor [configuration] in
+                configuration.loopbackDestinationPolicy
+            }
         )
         self.openAPISchemaStore = openAPISchemaStore
         self.certificateAuthority = certificateAuthority
@@ -2532,6 +2535,29 @@ final class ProxyViewModel: ObservableObject {
     }
 
     func setResponseOverrideEnabled(_ isEnabled: Bool, id: ResponseOverrideRule.ID) async {
+        if isEnabled, let rule = await responseOverrideStore.rule(id: id), rule.sourceKind == .mapRemote {
+            let host = rule.mapRemoteHost ?? rule.host
+            let scheme = rule.mapRemoteScheme ?? rule.requestScheme
+            let port = rule.mapRemotePort
+            do {
+                try MCPMutationValidator.validateMapRemoteDestination(
+                    host: host,
+                    port: port,
+                    scheme: scheme,
+                    allowLoopbackDestination: rule.allowLoopbackDestination,
+                    policy: configuration.loopbackDestinationPolicy,
+                    reservedRegistry: .shared
+                )
+            } catch let error as MCPMutationValidationError {
+                lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
+                await refreshResponseOverrides()
+                return
+            } catch {
+                lastErrorMessage = error.localizedDescription
+                await refreshResponseOverrides()
+                return
+            }
+        }
         do {
             try await responseOverrideStore.setEnabled(isEnabled, for: id)
             try await persistResponseOverrides()
@@ -2679,18 +2705,30 @@ final class ProxyViewModel: ObservableObject {
         remoteHost: String,
         remotePort: Int?,
         remoteScheme: SessionScheme,
-        remotePath: String? = nil
+        remotePath: String? = nil,
+        allowLoopbackDestination: Bool? = nil,
+        preserveHostHeader: Bool? = nil
     ) async {
-        if let remotePath {
-            do {
+        let existingRule = await responseOverrideStore.rule(id: id)
+        let effectiveAllowLoopback = allowLoopbackDestination ?? existingRule?.allowLoopbackDestination ?? false
+        do {
+            try MCPMutationValidator.validateMapRemoteDestination(
+                host: remoteHost,
+                port: remotePort,
+                scheme: remoteScheme,
+                allowLoopbackDestination: effectiveAllowLoopback,
+                policy: configuration.loopbackDestinationPolicy,
+                reservedRegistry: .shared
+            )
+            if let remotePath {
                 try MCPMutationValidator.validateMapRemoteRequestTarget(remotePath)
-            } catch let error as MCPMutationValidationError {
-                lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
-                return
-            } catch {
-                lastErrorMessage = error.localizedDescription
-                return
             }
+        } catch let error as MCPMutationValidationError {
+            lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
+            return
+        } catch {
+            lastErrorMessage = error.localizedDescription
+            return
         }
         do {
             try await responseOverrideStore.updateMapRemoteRule(
@@ -2701,7 +2739,9 @@ final class ProxyViewModel: ObservableObject {
                 remoteHost: remoteHost,
                 remotePort: remotePort,
                 remoteScheme: remoteScheme,
-                remotePath: remotePath
+                remotePath: remotePath,
+                allowLoopbackDestination: allowLoopbackDestination,
+                preserveHostHeader: preserveHostHeader
             )
             try await persistResponseOverrides()
             await refreshResponseOverrides()
@@ -2775,18 +2815,28 @@ final class ProxyViewModel: ObservableObject {
         remoteHost: String,
         remotePort: Int?,
         remoteScheme: SessionScheme,
-        remotePath: String? = nil
+        remotePath: String? = nil,
+        allowLoopbackDestination: Bool = false,
+        preserveHostHeader: Bool = false
     ) async {
-        if let remotePath {
-            do {
+        do {
+            try MCPMutationValidator.validateMapRemoteDestination(
+                host: remoteHost,
+                port: remotePort,
+                scheme: remoteScheme,
+                allowLoopbackDestination: allowLoopbackDestination,
+                policy: configuration.loopbackDestinationPolicy,
+                reservedRegistry: .shared
+            )
+            if let remotePath {
                 try MCPMutationValidator.validateMapRemoteRequestTarget(remotePath)
-            } catch let error as MCPMutationValidationError {
-                lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
-                return
-            } catch {
-                lastErrorMessage = error.localizedDescription
-                return
             }
+        } catch let error as MCPMutationValidationError {
+            lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
+            return
+        } catch {
+            lastErrorMessage = error.localizedDescription
+            return
         }
         do {
             try await responseOverrideStore.addMapRemoteRule(
@@ -2797,7 +2847,9 @@ final class ProxyViewModel: ObservableObject {
                 remoteHost: remoteHost,
                 remotePort: remotePort,
                 remoteScheme: remoteScheme,
-                remotePath: remotePath
+                remotePath: remotePath,
+                allowLoopbackDestination: allowLoopbackDestination,
+                preserveHostHeader: preserveHostHeader
             )
             try await persistResponseOverrides()
             await refreshResponseOverrides()
@@ -5243,7 +5295,10 @@ final class ProxyViewModel: ObservableObject {
 
     private func loadPersistedResponseOverrides() async {
         do {
-            try await responseOverrideStore.loadPersistedData(configuration.responseOverridesData)
+            try await responseOverrideStore.loadPersistedData(
+                configuration.responseOverridesData,
+                loopbackPolicy: configuration.loopbackDestinationPolicy
+            )
         } catch {
             lastErrorMessage = error.localizedDescription
         }

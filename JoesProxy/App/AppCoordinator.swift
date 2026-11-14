@@ -132,7 +132,10 @@ final class AppCoordinator {
             let responseOverrideStore = self.responseOverrideStore
             let configuration = self.configuration
             responseOverrideLoadingTask = Task {
-                try? await responseOverrideStore.loadPersistedData(configuration.responseOverridesData)
+                try? await responseOverrideStore.loadPersistedData(
+                    configuration.responseOverridesData,
+                    loopbackPolicy: configuration.loopbackDestinationPolicy
+                )
             }
         }
         await responseOverrideLoadingTask?.value
@@ -293,7 +296,10 @@ final class AppCoordinator {
         let resolvedEffectBundleActivationCoordinator = EffectBundleActivationCoordinator(
             repository: resolvedEffectBundleRepository,
             responseOverrideStore: resolvedResponseOverrideStore,
-            hlsCoordinator: resolvedHLSSubstitutionCoordinator
+            hlsCoordinator: resolvedHLSSubstitutionCoordinator,
+            loopbackPolicyProvider: { @MainActor [resolvedConfiguration] in
+                resolvedConfiguration.loopbackDestinationPolicy
+            }
         )
         self.effectBundleSleepObserver = EffectBundleSleepObserver(coordinator: resolvedEffectBundleActivationCoordinator)
         let resolvedOpenAPISchemaStore = OpenAPISchemaStore()

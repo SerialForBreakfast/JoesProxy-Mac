@@ -5,18 +5,162 @@ struct ArtifactCalculation: Sendable {
         case rowCount, fieldStats, distinctCount, numericSummary, groupCount, topRows
     }
 
+    struct Predicate: Sendable, Equatable {
+        enum Operator: String, Sendable, CaseIterable, Codable {
+            case eq, neq, gt, gte, lt, lte, isNull, isMissing, contains
+        }
+
+        let fieldPointer: String
+        let parsedPointer: [String]
+        let op: Operator
+        let expectedScalar: Scalar?
+        let expectedDecimal: Int64?
+
+        init(_ raw: Any) throws {
+            guard let dict = raw as? [String: Any],
+                  let fieldPointer = dict["fieldPointer"] as? String else {
+                throw ArtifactAnalysisFailure.malformedRequest
+            }
+            let opKey: String
+            if dict["op"] != nil && dict["operator"] == nil {
+                opKey = "op"
+            } else if dict["operator"] != nil && dict["op"] == nil {
+                opKey = "operator"
+            } else {
+                throw ArtifactAnalysisFailure.malformedRequest
+            }
+            guard let opName = dict[opKey] as? String,
+                  let op = Operator(rawValue: opName) else {
+                throw ArtifactAnalysisFailure.malformedRequest
+            }
+            let parsed = try ArtifactJSONValue.pointer(fieldPointer)
+            self.fieldPointer = fieldPointer
+            self.parsedPointer = parsed
+            self.op = op
+
+            switch op {
+            case .isNull, .isMissing:
+                guard Set(dict.keys) == ["fieldPointer", opKey] else {
+                    throw ArtifactAnalysisFailure.malformedRequest
+                }
+                self.expectedScalar = nil
+                self.expectedDecimal = nil
+            case .contains:
+                guard Set(dict.keys) == ["fieldPointer", opKey, "value"],
+                      let text = dict["value"] as? String,
+                      !text.isEmpty, text.utf8.count <= 256 else {
+                    throw ArtifactAnalysisFailure.malformedRequest
+                }
+                self.expectedScalar = Scalar(type: "string", value: text)
+                self.expectedDecimal = nil
+            case .gt, .gte, .lt, .lte:
+                guard Set(dict.keys) == ["fieldPointer", opKey, "value"],
+                      let rawValue = dict["value"] else {
+                    throw ArtifactAnalysisFailure.malformedRequest
+                }
+                let lexeme: String
+                if let text = rawValue as? String {
+                    lexeme = text
+                } else if let num = rawValue as? NSNumber, CFGetTypeID(num) != CFBooleanGetTypeID() {
+                    lexeme = num.stringValue
+                } else {
+                    throw ArtifactAnalysisFailure.malformedRequest
+                }
+                let dec = try ArtifactDecimal(lexeme: lexeme)
+                self.expectedScalar = Scalar(type: "number", value: dec.text)
+                self.expectedDecimal = dec.coefficient
+            case .eq, .neq:
+                guard Set(dict.keys) == ["fieldPointer", opKey, "value"],
+                      let rawValue = dict["value"] else {
+                    throw ArtifactAnalysisFailure.malformedRequest
+                }
+                if let text = rawValue as? String {
+                    guard text.utf8.count <= 256 else { throw ArtifactAnalysisFailure.inputLimit }
+                    self.expectedScalar = Scalar(type: "string", value: text)
+                    self.expectedDecimal = (try? ArtifactDecimal(lexeme: text))?.coefficient
+                } else if let num = rawValue as? NSNumber {
+                    if CFGetTypeID(num) == CFBooleanGetTypeID() {
+                        self.expectedScalar = Scalar(type: "boolean", value: num.boolValue ? "true" : "false")
+                        self.expectedDecimal = nil
+                    } else {
+                        let dec = try ArtifactDecimal(lexeme: num.stringValue)
+                        self.expectedScalar = Scalar(type: "number", value: dec.text)
+                        self.expectedDecimal = dec.coefficient
+                    }
+                } else {
+                    throw ArtifactAnalysisFailure.malformedRequest
+                }
+            }
+        }
+
+        func matches(_ row: ArtifactJSONValue) throws -> Bool {
+            let value = row.selected(by: parsedPointer)
+            switch op {
+            case .isMissing:
+                return value == nil
+            case .isNull:
+                if case .null? = value { return true }
+                return false
+            case .contains:
+                guard case .string(let text)? = value, let needle = expectedScalar?.value else {
+                    return false
+                }
+                return text.contains(needle)
+            case .gt, .gte, .lt, .lte:
+                guard let target = expectedDecimal else { return false }
+                guard let value else { return false }
+                if case .null = value { return false }
+                guard case .number(let lexeme) = value else {
+                    throw ArtifactAnalysisFailure.invalidOperand
+                }
+                let actual = try ArtifactDecimal(lexeme: lexeme).coefficient
+                switch op {
+                case .gt: return actual > target
+                case .gte: return actual >= target
+                case .lt: return actual < target
+                case .lte: return actual <= target
+                default: return false
+                }
+            case .eq, .neq:
+                guard let expected = expectedScalar else { return false }
+                let isEqual: Bool
+                switch value {
+                case nil, .null?:
+                    isEqual = false
+                case .boolean(let flag)?:
+                    isEqual = expected.type == "boolean" && expected.value == (flag ? "true" : "false")
+                case .number(let lexeme)?:
+                    let actualDec = try ArtifactDecimal(lexeme: lexeme)
+                    if expected.type == "number" {
+                        isEqual = actualDec.text == expected.value
+                    } else if let expCoeff = expectedDecimal {
+                        isEqual = actualDec.coefficient == expCoeff
+                    } else {
+                        isEqual = false
+                    }
+                case .string(let text)?:
+                    isEqual = expected.type == "string" && expected.value == text
+                case .array?, .object?:
+                    isEqual = false
+                }
+                return op == .eq ? isEqual : !isEqual
+            }
+        }
+    }
+
     struct Query: Sendable {
         let kind: Kind
         let selectionPointer: String
         let fieldPointer: String
         let limit: Int
         let descending: Bool
+        let predicate: Predicate?
 
         init(selectionPointer: String, operation: [String: Any]) throws {
             guard let name = operation["kind"] as? String, let kind = Kind(rawValue: name) else {
                 throw ArtifactAnalysisFailure.malformedRequest
             }
-            var allowed: Set<String> = ["kind"]
+            var allowed: Set<String> = ["kind", "where"]
             if kind != .rowCount { allowed.insert("fieldPointer") }
             if kind == .groupCount || kind == .topRows { allowed.insert("limit") }
             if kind == .topRows { allowed.insert("order") }
@@ -40,6 +184,11 @@ struct ArtifactCalculation: Sendable {
             let order = operation["order"] as? String ?? "desc"
             guard operation["order"] == nil || operation["order"] is String,
                   order == "asc" || order == "desc" else { throw ArtifactAnalysisFailure.malformedRequest }
+            if let rawWhere = operation["where"] {
+                self.predicate = try Predicate(rawWhere)
+            } else {
+                self.predicate = nil
+            }
             self.kind = kind
             self.selectionPointer = selectionPointer
             self.fieldPointer = field
@@ -48,7 +197,7 @@ struct ArtifactCalculation: Sendable {
         }
     }
 
-    struct Scalar: Codable, Sendable {
+    struct Scalar: Codable, Equatable, Sendable {
         var type: String
         var value: String?
     }
@@ -112,7 +261,18 @@ struct ArtifactCalculation: Sendable {
         var selectionPointer: String
         var fieldPointer: String?
         var rows: Int
+        var filteredRows: Int? = nil
         var result: Result
+        var analysisReused = false
+    }
+
+    struct BatchReport: Codable, Sendable {
+        var analyzerVersion = "artifact-calculation-v1"
+        var status = "complete"
+        var selectionCoverage = "complete"
+        var selectionPointer: String
+        var rows: Int
+        var results: [Report]
         var analysisReused = false
     }
 
@@ -124,6 +284,33 @@ struct ArtifactCalculation: Sendable {
         return try analyze(rows: rows, query: query, deadline: deadline)
     }
 
+    static func analyzeBatch(data: Data, selectionPointer: String, queries: [Query], deadline: ContinuousClock.Instant) throws -> BatchReport {
+        guard (1...4).contains(queries.count) else { throw ArtifactAnalysisFailure.malformedRequest }
+        var reader = try ArtifactJSONReader(data: data, deadline: deadline)
+        let root = try reader.read()
+        guard let collection = root.selected(by: try ArtifactJSONValue.pointer(selectionPointer)),
+              case .array(let rows) = collection else { throw ArtifactAnalysisFailure.selectionUnavailable }
+        return try analyzeBatch(rows: rows, selectionPointer: selectionPointer, queries: queries, deadline: deadline)
+    }
+
+    static func analyzeBatch(rows: [ArtifactJSONValue], selectionPointer: String, queries: [Query], deadline: ContinuousClock.Instant) throws -> BatchReport {
+        guard (1...4).contains(queries.count) else { throw ArtifactAnalysisFailure.malformedRequest }
+        var reports: [Report] = []
+        reports.reserveCapacity(queries.count)
+        for query in queries {
+            reports.append(try analyze(rows: rows, query: query, deadline: deadline))
+        }
+        let overallStatus = reports.contains(where: { $0.status == "output_limited" }) ? "output_limited" : "complete"
+        let batch = BatchReport(
+            status: overallStatus,
+            selectionPointer: selectionPointer,
+            rows: rows.count,
+            results: reports
+        )
+        guard try JSONEncoder().encode(batch).count <= 16_384 else { throw ArtifactAnalysisFailure.outputLimit }
+        return batch
+    }
+
     static func analyze(rows: [ArtifactJSONValue], query: Query, deadline: ContinuousClock.Instant) throws -> Report {
         try ArtifactSnapshotReader.check(deadline)
         guard rows.count <= 10_000 else { throw ArtifactAnalysisFailure.inputLimit }
@@ -131,11 +318,12 @@ struct ArtifactCalculation: Sendable {
         var result = Result()
         var report = Report(operation: query.kind, selectionPointer: query.selectionPointer,
             fieldPointer: query.kind == .rowCount ? nil : query.fieldPointer, rows: rows.count, result: result)
-        if query.kind == .rowCount {
+        if query.kind == .rowCount, query.predicate == nil {
             result.count = rows.count
             report.result = result
             return report
         }
+        var matchedRowCount = 0
         var missing = 0
         var null = 0
         var types = Dictionary(uniqueKeysWithValues: ["missing", "null", "boolean", "number", "string", "array", "object"].map { ($0, 0) })
@@ -152,6 +340,11 @@ struct ArtifactCalculation: Sendable {
                 guard !Task.isCancelled else { throw ArtifactAnalysisFailure.cancelled }
                 guard ContinuousClock.now < deadline else { throw ArtifactAnalysisFailure.deadlineExceeded }
             }
+            if let predicate = query.predicate {
+                guard try predicate.matches(row) else { continue }
+            }
+            matchedRowCount += 1
+            if query.kind == .rowCount { continue }
             let value = row.selected(by: pointer)
             let type: String
             switch value {
@@ -200,6 +393,17 @@ struct ArtifactCalculation: Sendable {
                 }
                 if top.count > query.limit { top.removeLast() }
             }
+        }
+        if query.predicate != nil {
+            report.filteredRows = matchedRowCount
+        }
+        if query.kind == .rowCount {
+            result.count = matchedRowCount
+            report.result = result
+            guard !Task.isCancelled else { throw ArtifactAnalysisFailure.cancelled }
+            guard ContinuousClock.now < deadline else { throw ArtifactAnalysisFailure.deadlineExceeded }
+            guard try JSONEncoder().encode(report).count <= 16_384 else { throw ArtifactAnalysisFailure.outputLimit }
+            return report
         }
         result.missing = missing
         result.null = null

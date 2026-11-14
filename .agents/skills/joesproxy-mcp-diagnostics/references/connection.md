@@ -18,11 +18,10 @@ wastes turns rediscovering this sequence one error at a time.
    manifest digest, skill version, and an explicit compatibility result. Treat an incompatible
    result as a hard restaging signal: use the bounded recommended actions instead of inferring that
    a stored credential or a recently modified file belongs to the running app.
-3. **A previously-stored CLI credential can be silently rejected** (`authentication_required`,
-   "The CLI credential was rejected") with no diagnostic as to why. The CLI cannot self-serve a
-   fresh one — by design, a credential must never appear in a command argument or chat transcript.
-   A human must mint a new one-time credential in the app's MCP Management UI; then run
-   `joesproxyctl auth login` again.
+3. For a stored credential rejected by the server, check the endpoint first. When the current
+   Keychain verifier becomes available again, retry a read after 30 seconds. Check enrollment
+   in MCP Management if rejection persists. A revoked or permanently lost credential needs
+   human enrollment or rotation and `joesproxyctl auth login`.
 4. **The client's disclosure profile must be Shareable (not the default Metadata Only), with no
    Always-Deny runtime-control rule, before runtime-control tools even exist as callable tools at
    all** — this is a hard gate, not merely an approval step. On Metadata Only, calling

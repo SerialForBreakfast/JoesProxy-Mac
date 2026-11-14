@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Combined with the app marketing version to form ``MCPCapabilitiesManifest/bundleVersion``.
 enum MCPCapabilitiesRevision {
-    static let current = 29
+    static let current = 31
 
     /// Human-readable compatibility token, e.g. `1.2.1+1`.
     static func bundleVersion(appVersion: String = Bundle.main.marketingVersionOrDev) -> String {

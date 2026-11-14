@@ -62,6 +62,7 @@ actor SDKEventServer: SDKEventServing {
     private var listener: NWListener?
     private var pairingToken: String?
     private var runningPort: UInt16?
+    private var listenerReservation: ReservedListenerRegistry.ReservationToken?
     private var clients: [UUID: Client] = [:]
     private var sessionCancellable: AnyCancellable?
     /// Most recently parsed manifest-declared segment duration, keyed by request host.
@@ -120,6 +121,11 @@ actor SDKEventServer: SDKEventServing {
         listener = newListener
         pairingToken = token
         runningPort = port
+        listenerReservation = ReservedListenerRegistry.shared.reserve(
+            owner: "SDKEventServer",
+            port: port,
+            boundHost: nil
+        )
         subscribeToSessionChanges()
         newListener.start(queue: DispatchQueue(label: "com.JoesProxyApp.SDKEventServer"))
         logger.info("SDK event server started on port \(port, privacy: .public) with Bonjour type _joesproxy._tcp")
@@ -130,6 +136,8 @@ actor SDKEventServer: SDKEventServing {
         sessionCancellable = nil
         listener?.cancel()
         listener = nil
+        ReservedListenerRegistry.shared.release(listenerReservation)
+        listenerReservation = nil
         runningPort = nil
         pairingToken = nil
         clients.values.forEach { $0.connection.cancel() }

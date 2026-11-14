@@ -1,0 +1,1057 @@
+[
+  {
+    "question": "comparison",
+    "pair": 0,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 20008,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14528,
+      "total_tokens": 20224
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 7592,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "comparison",
+    "pair": 0,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19683,
+      "output_tokens": 193,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14539,
+      "total_tokens": 19876
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": "false",
+      "after": "true",
+      "noise": "/updatedAt",
+      "covered": "complete"
+    },
+    "matchedAll": true,
+    "correct": false,
+    "elapsedMs": 7086,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "comparison",
+    "pair": 1,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 22056,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29772,
+      "total_tokens": 22272
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 9344,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "comparison",
+    "pair": 1,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19678,
+      "output_tokens": 193,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14534,
+      "total_tokens": 19871
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": "false",
+      "after": "true",
+      "noise": "/updatedAt",
+      "covered": "complete"
+    },
+    "matchedAll": true,
+    "correct": false,
+    "elapsedMs": 8604,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "comparison",
+    "pair": 2,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 22052,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29764,
+      "total_tokens": 22268
+    },
+    "answer": {
+      "field": "featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 10623,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "comparison",
+    "pair": 2,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19687,
+      "output_tokens": 187,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14543,
+      "total_tokens": 19874
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "/updatedAt",
+      "covered": "complete"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 7210,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "comparison",
+    "pair": 3,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 22055,
+      "output_tokens": 220,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29770,
+      "total_tokens": 22275
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 9953,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "comparison",
+    "pair": 3,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19681,
+      "output_tokens": 185,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14537,
+      "total_tokens": 19866
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "/updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 7670,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "comparison",
+    "pair": 4,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 22056,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29772,
+      "total_tokens": 22272
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 8846,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "comparison",
+    "pair": 4,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19679,
+      "output_tokens": 191,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14535,
+      "total_tokens": 19870
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "/updatedAt",
+      "covered": "complete"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 7348,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "count",
+    "pair": 0,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 50066,
+      "output_tokens": 683,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 148854,
+      "total_tokens": 50749
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 18057,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "count",
+    "pair": 0,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19061,
+      "output_tokens": 166,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14536,
+      "total_tokens": 19227
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 8683,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "count",
+    "pair": 1,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 50133,
+      "output_tokens": 731,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 149028,
+      "total_tokens": 50864
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 20819,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "count",
+    "pair": 1,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19069,
+      "output_tokens": 166,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14544,
+      "total_tokens": 19235
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 7893,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "count",
+    "pair": 2,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 50114,
+      "output_tokens": 711,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 148968,
+      "total_tokens": 50825
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 22339,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "count",
+    "pair": 2,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19073,
+      "output_tokens": 166,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14548,
+      "total_tokens": 19239
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 11238,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "count",
+    "pair": 3,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 21116,
+      "output_tokens": 299,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29304,
+      "total_tokens": 21415
+    },
+    "answer": {
+      "status502": 0,
+      "missing": 1
+    },
+    "matchedAll": false,
+    "correct": false,
+    "elapsedMs": 10662,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": false
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "count",
+    "pair": 3,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19062,
+      "output_tokens": 162,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14537,
+      "total_tokens": 19224
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 7874,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "count",
+    "pair": 4,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 50102,
+      "output_tokens": 719,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 148926,
+      "total_tokens": 50821
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 24537,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "count",
+    "pair": 4,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 19069,
+      "output_tokens": 162,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14544,
+      "total_tokens": 19231
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 12043,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "example",
+    "pair": 0,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 54995,
+      "output_tokens": 932,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 206790,
+      "total_tokens": 55927
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 25583,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 3,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "example",
+    "pair": 0,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 24333,
+      "output_tokens": 420,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 45274,
+      "total_tokens": 24753
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 11978,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "example",
+    "pair": 1,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 52878,
+      "output_tokens": 874,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 191342,
+      "total_tokens": 53752
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 26637,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 3,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "example",
+    "pair": 1,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 24331,
+      "output_tokens": 420,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 45268,
+      "total_tokens": 24751
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 12005,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "example",
+    "pair": 2,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 52854,
+      "output_tokens": 865,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 191237,
+      "total_tokens": 53719
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 26148,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 3,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "example",
+    "pair": 2,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 24333,
+      "output_tokens": 420,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 45274,
+      "total_tokens": 24753
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 15463,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "example",
+    "pair": 3,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 23189,
+      "output_tokens": 289,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 44323,
+      "total_tokens": 23478
+    },
+    "answer": {
+      "status502": 1,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "sess_000000000003",
+      "path": "/app/catalog"
+    },
+    "matchedAll": false,
+    "correct": false,
+    "elapsedMs": 13565,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": false
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": false
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "example",
+    "pair": 3,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 26667,
+      "output_tokens": 484,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 69011,
+      "total_tokens": 27151
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 13390,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  },
+  {
+    "question": "example",
+    "pair": 4,
+    "version": "1.9.0",
+    "usage": {
+      "input_tokens": 23318,
+      "output_tokens": 399,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 44394,
+      "total_tokens": 23717
+    },
+    "answer": {
+      "status502": "incomplete",
+      "missing": "incomplete",
+      "exampleStatus": "incomplete",
+      "exampleID": "incomplete",
+      "path": "incomplete"
+    },
+    "matchedAll": false,
+    "correct": false,
+    "elapsedMs": 10752,
+    "calls": [
+      {
+        "index": 0,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": false
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": false
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0"
+  },
+  {
+    "question": "example",
+    "pair": 4,
+    "version": "1.9.1",
+    "usage": {
+      "input_tokens": 24333,
+      "output_tokens": 420,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 45274,
+      "total_tokens": 24753
+    },
+    "answer": {
+      "status502": 299,
+      "missing": 1,
+      "exampleStatus": 502,
+      "exampleID": "00000000-0000-4000-8000-000000000000",
+      "path": "/app/status.json"
+    },
+    "matchedAll": true,
+    "correct": true,
+    "elapsedMs": 14313,
+    "calls": [
+      {
+        "index": 0,
+        "name": "capture_calculate",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "sessions_search",
+        "matched": true
+      },
+      {
+        "index": 2,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "1d4cd04eb0f711620ed25e3acd0058952378f17ffa35cef4a11d0fec5f4429fc"
+  }
+]

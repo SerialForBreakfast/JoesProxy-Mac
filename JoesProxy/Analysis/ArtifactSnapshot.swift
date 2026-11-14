@@ -45,6 +45,31 @@ struct ArtifactSnapshot: Sendable {
             return try ArtifactCalculation.analyze(rows: rows, query: query, deadline: deadline)
         }
     }
+
+    func calculateBatch(dataset: ArtifactCalculationDataset, selectionPointer: String,
+                        queries: [ArtifactCalculation.Query],
+                        deadline: ContinuousClock.Instant) throws -> ArtifactCalculation.BatchReport {
+        switch dataset {
+        case .json:
+            guard kind == .json else { throw ArtifactAnalysisFailure.unsupportedKind }
+            return try ArtifactCalculation.analyzeBatch(data: originalBytes, selectionPointer: selectionPointer, queries: queries, deadline: deadline)
+        case .responseJSON(let index):
+            guard records.indices.contains(index), let record = records[index],
+                  let bytes = record.responseJSON else { throw ArtifactAnalysisFailure.incompleteSelection }
+            return try ArtifactCalculation.analyzeBatch(data: bytes, selectionPointer: selectionPointer, queries: queries, deadline: deadline)
+        case .sessionMetadata(let indices):
+            guard kind == .recording || kind == .har else { throw ArtifactAnalysisFailure.unsupportedKind }
+            for query in queries {
+                try ArtifactSessionProjection.validateMetadata(query)
+            }
+            let selection = indices ?? Array(records.indices)
+            let rows = try selection.map { index -> ArtifactJSONValue in
+                guard records.indices.contains(index), let record = records[index] else { throw ArtifactAnalysisFailure.incompleteSelection }
+                return record.metadata
+            }
+            return try ArtifactCalculation.analyzeBatch(rows: rows, selectionPointer: selectionPointer, queries: queries, deadline: deadline)
+        }
+    }
 }
 
 enum ArtifactCalculationDataset: Sendable {

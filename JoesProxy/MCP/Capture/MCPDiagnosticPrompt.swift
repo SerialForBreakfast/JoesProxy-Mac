@@ -448,11 +448,10 @@ enum MCPDiagnosticPrompt {
        manifest digest, skill version, and an explicit compatibility result. Treat an incompatible
        result as a hard restaging signal: use the bounded recommended actions instead of inferring that
        a stored credential or a recently modified file belongs to the running app.
-    3. **A previously-stored CLI credential can be silently rejected** (`authentication_required`,
-       "The CLI credential was rejected") with no diagnostic as to why. The CLI cannot self-serve a
-       fresh one — by design, a credential must never appear in a command argument or chat transcript.
-       A human must mint a new one-time credential in the app's MCP Management UI; then run
-       `joesproxyctl auth login` again.
+    3. For a stored credential rejected by the server, check the endpoint first. When the current
+       Keychain verifier becomes available again, retry a read after 30 seconds. Check enrollment
+       in MCP Management if rejection persists. A revoked or permanently lost credential needs
+       human enrollment or rotation and `joesproxyctl auth login`.
     4. **The client's disclosure profile must be Shareable (not the default Metadata Only), with no
        Always-Deny runtime-control rule, before runtime-control tools even exist as callable tools at
        all** — this is a hard gate, not merely an approval step. On Metadata Only, calling
@@ -772,6 +771,12 @@ enum MCPDiagnosticPrompt {
     - `--path <path>` — Filter by request path or path prefix (e.g. `--path /v1/auth` or `--path .m3u8`).
     - `--method <method>` — Filter by HTTP method (e.g. `--method POST`, `--method GET`).
     - `--host-category <category>` — Filter by classified category (`direct_origin`, `synthetic_asset`, `capture_marker`, `ad_telemetry`, etc.).
+    - `--status-code <code>` / `--status-class 2xx|3xx|4xx|5xx|error|non200` — Filter by exact HTTP status or family.
+    - `--min-duration-ms <ms>` — Filter by minimum session duration in milliseconds.
+    - `--has-override-hit` / `--no-override-hit` — Filter by whether an active rule or effect matched.
+    - `--body-available` / `--no-body-available` — Filter by retained response body availability.
+    - `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside matched items.
+    - `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report across matched sessions.
     - `--since <iso-timestamp>` / `--until <iso-timestamp>` — Filter by start timestamp range.
     - `--session-id-prefix <prefix>` — Filter by the starting hex/UUID characters of the session ID.
     - `--limit <n>` — Maximum number of sessions to return (default: 50).
@@ -809,10 +814,15 @@ enum MCPDiagnosticPrompt {
     - **Compact discovery:** start routine triage with `agent_toolset_select` set to `core`
       (CLI `toolset select core`), then select the task-specific catalog when needed. Preserve
       existing client preferences; use `all` for coverage audits. Discovery does not change authority.
+    - **Find examples:** use `sessions_search` for status, duration, body availability or override-hit filters. Endpoint groups summarize the returned page. Request auth-chain evidence only for credential continuity.
+    - **Review a rule after a marker:** use `capture_activity_since_marker` with the rule ID and marker or sequence. Near misses describe predicate mismatches. Verify delivery against recorded evidence.
+    - **Count across a time window:** use `capture_calculate` with `filter.startedAfter` and `filter.startedBefore`, dataset `sessionMetadata`, empty selectionPointer, and one rowCount or groupCount on /statusCode. CLI: `capture calculate --started-after <ISO8601> --started-before <ISO8601> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode`. Treat missing status as a group. Check omittedGroups and capture coverage before reporting an exact histogram. Request a matching session only when the caller needs an example.
     - **Local calculations:** use `capture_calculate` (CLI `capture calculate`) for explicit live
       session IDs: group allowed session metadata or calculate one complete JSON response at an
       explicit pointer. Six operations: rowCount, fieldStats, distinctCount, numericSummary,
-      groupCount, topRows. Existing sensitive-read authority is required, including for counts.
+      groupCount, topRows. Each operation accepts an optional structured `where` predicate (`eq`,
+      `neq`, `gt`, `gte`, `lt`, `lte`, `isNull`, `isMissing`, `contains`), and `operations` (CLI
+      `--operations-json`) batches 1–4 bounded operations against one `sourceSHA256`. Existing sensitive-read authority is required, including for counts.
       Limits: 1 MiB JSON, 10,000 rows, 256 identities and 16 KiB output; decimal operands support
       12 integer and six fractional digits. Overflow, incomplete input and selected-source changes
       return no numeric result. Inspect sourceRevisions/sourceSHA256, coverage and omittedGroups.
@@ -833,7 +843,8 @@ enum MCPDiagnosticPrompt {
       automatically retry analysis, or convert byte savings into token/cost claims.
     - **`response_evidence_brief`** (CLI `session brief <session-id> --selection-pointer /items`)
       computes deterministic counts/types and immediate field missing/null counts locally, without
-      returning scalar values. Discover support from the running build. Existing body-read approval
+      returning scalar values unless optional `fieldPointers` (CLI `--field-pointers`, 1–8 pointers,
+      `rowLimit` 1–50) is supplied for compact tabular projection with automatic sensitive-key redaction. Discover support from the running build. Existing body-read approval
       is required. Empty selectionPointer selects root; only complete JSON responses up to 256 KiB
       are analyzed. Check status, coverage and omittedFieldCount: at most 32 short field names are
       returned, and missing counts use object items only. Opt in to includeStructure (CLI
@@ -844,7 +855,9 @@ enum MCPDiagnosticPrompt {
       IDs are live locators, not immutable body handles. Small bodies may be cheaper to read directly.
     - **`investigation_compare_brief`** (CLI `investigate compare --baseline-sessions <id,id>
       --candidate-sessions <id,id>`) compares explicit selections of 1–16 IDs per side. Optional
-      selectionPointer scopes JSON analysis on both sides. Structural metadata disclosure and
+      selectionPointer scopes JSON analysis on both sides; opt in to `includeValueDiff` (CLI
+      `--include-value-diff`, optional `ignorePointers` / `--ignore-pointers`) for bounded RFC 6902-style
+      scalar diffs and `volatileChangeCount`. Structural metadata disclosure and
       body-read approval are required. Analysis is limited to 1 MiB decoded text across unique
       sources; outputs contain at most 32 changes. Missing sources and traversal/budget limits
       remain incomplete, never a pass. Alignment reuses chronological matching on method, origin
@@ -1377,9 +1390,11 @@ enum MCPDiagnosticPrompt {
       `responseEditPreviewDigest`/`hlsPreviewDigest`/`responseRevisionID` — those sub-paths inherit their
       matcher from an earlier preview/draft call and cannot pick up a fresh scope at create time.
     - **Map Remote** — `propose_create_map_remote` / `apply_create_map_remote`: same matcher, plus
-      `remoteHost`/`remotePort`/`remoteScheme` — the destination cannot be any loopback address (checked
-      against the full `127.0.0.0/8` range, not just `127.0.0.1`). Supports `graphqlOperationName` like
-      the others. No `joesproxyctl` CLI command exists for Map Remote — MCP tool only.
+      `remoteHost`/`remotePort`/`remoteScheme` (and optional `allowLoopbackDestination` /
+      `preserveHostHeader`). Loopback destinations (`127.0.0.0/8`, `::1`, `localhost` — meaning the
+      Mac running JoesProxy) are rejected by default unless **Settings → Proxy → Local-Server Routing**
+      is enabled, the destination port is explicitly authorized, and `allowLoopbackDestination: true`
+      is passed. Supports `graphqlOperationName` like the others. CLI: `joesproxyctl response map-remote prepare|apply|activate`.
     - **Rewrite** — `propose_create_rewrite` / `apply_create_rewrite`: `bookmarkID`, `jsonPath` (e.g.
       `$.data.id`), `overrideValue` (`{"type":"number","value":"2"}`-shaped) — patches one field of a
       bookmark's saved JSON response.
@@ -1744,9 +1759,12 @@ enum MCPDiagnosticPrompt {
       it discloses a real destination; the generic enable/disable tools reject it.
     - **Live response rewrite requires `activate_live_rewrite`, not `enable_rule`.** It's open-world
       because matching traffic reaches the real upstream and the response JSON may be patched.
-    - **Map Remote can never reach a local HLS fixture — this is by design, not a gap to work
-      around.** `validateMapRemoteDestination` unconditionally rejects any loopback destination
-      (`127.0.0.0/8`, `localhost`). To substitute fixture content for a real external host, use
+    - **Map Remote to local Mac servers is opt-in and port-scoped; HLS fixtures belong in Map Local.**
+      Loopback destinations (`127.0.0.0/8`, `::1`, `localhost` — always meaning the Mac running
+      JoesProxy, never the client device) are blocked by default unless **Settings → Proxy →
+      Local-Server Routing** is enabled, the exact destination port is authorized (JoesProxy's own
+      listener ports remain reserved), and the rule passes `allowLoopbackDestination: true`. To
+      substitute JoesProxy-managed HLS fixture content for a real external host, still use
       fixture-backed Map Local (`fixtureRunID` on `propose_create_map_local`), not Map Remote.
     - **A fixture-backed Map Local rule fails open, silently, if its fixture run stops.** Confirm the
       fixture run is still active (`hls_fixture_status`) before concluding a redirect "isn't working" —

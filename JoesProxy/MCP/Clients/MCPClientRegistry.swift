@@ -55,6 +55,7 @@ final class MCPClientRegistry {
     private let credentialStore: any MCPClientCredentialStoring
     private let fileManager: FileManager
     private var clientIDByVerifier: [Data: String] = [:]
+    private var nextVerifierRefresh = ContinuousClock.now
     private var lastSeenPersistenceTask: Task<Void, Never>?
 
     init(
@@ -192,6 +193,16 @@ final class MCPClientRegistry {
     /// requires is negligible.
     func authenticate(bearerToken: String) throws -> MCPClientRecord {
         let digest = Self.verifier(for: bearerToken)
+        if clients.contains(where: { $0.credentialState == .needsRotation }), ContinuousClock.now >= nextVerifierRefresh {
+            nextVerifierRefresh = .now.advanced(by: .seconds(30))
+            for index in clients.indices where clients[index].credentialState == .needsRotation {
+                let record = clients[index]
+                guard let verifier = try? credentialStore.loadVerifier(clientID: record.id, generation: record.credentialGeneration) else { continue }
+                clients[index].credentialState = .active
+                clientIDByVerifier[verifier] = record.id
+                scheduleLastSeenPersistence()
+            }
+        }
         guard let clientID = clientIDByVerifier.first(where: { MCPConstantTimeCompare.equal($0.key, digest) })?.value,
               let index = clients.firstIndex(where: { $0.id == clientID }),
               clients[index].credentialState == .active else {
@@ -218,6 +229,7 @@ final class MCPClientRegistry {
             if verifier == nil {
                 clients[index].credentialState = .needsRotation
             } else if let verifier {
+                clients[index].credentialState = .active
                 clientIDByVerifier[verifier] = record.id
             }
         }

@@ -99,7 +99,11 @@ final class MCPScenarioLifecycleCoordinator: ObservableObject {
     /// Runs `draft` → `validating` → `awaitingApproval` with compile/risk/disclosure bundling.
     /// On compiler failure the scenario lands in `.failed` with `lastError` populated.
     @discardableResult
-    func validate(scenarioID: MCPScenarioID, now: Date = Date()) throws -> MCPScenarioValidationResultDTO {
+    func validate(
+        scenarioID: MCPScenarioID,
+        now: Date = Date(),
+        loopbackPolicy: LoopbackDestinationPolicy = .disabled
+    ) throws -> MCPScenarioValidationResultDTO {
         guard var record = store.scenario(id: scenarioID) else {
             throw MCPScenarioLifecycleError.scenarioNotFound
         }
@@ -111,7 +115,11 @@ final class MCPScenarioLifecycleCoordinator: ObservableObject {
 
         do {
             let draft = MCPScenarioDraftInput.fromDefinition(record.definition)
-            var result = try MCPScenarioValidationService.validate(draft: draft, now: now)
+            var result = try MCPScenarioValidationService.validate(
+                draft: draft,
+                now: now,
+                loopbackPolicy: loopbackPolicy
+            )
             result.definition.createdAt = record.definition.createdAt
             record = store.scenario(id: scenarioID) ?? record
             record.definition = result.definition

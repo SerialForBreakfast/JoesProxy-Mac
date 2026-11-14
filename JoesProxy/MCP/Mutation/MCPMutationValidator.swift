@@ -9,26 +9,11 @@ enum MCPMutationValidationError: Error, Equatable, Sendable {
 /// Validates MCP mutation matchers and family-specific arguments at propose time.
 enum MCPMutationValidator {
     private static let blockStatusCodeRange = 400 ... 599
-    private static let loopbackHosts: Set<String> = ["localhost", "::1", "0:0:0:0:0:0:0:1", "0.0.0.0"]
     private static let maxInlineBodyBytes = MCPResourceBudget.maxDisclosedItemBytes
     /// Dedicated outbound request-target byte limit — deliberately NOT `MCPResourceBudget`'s
     /// disclosure-size constants, which bound what's shown *to* a client, an unrelated policy
     /// domain from what's sent *out* on the wire to an upstream server.
     private static let maxMapRemoteRequestTargetBytes = 2048
-
-    /// Whether `host` names any loopback destination — the full `127.0.0.0/8` range (not just the
-    /// conventional `127.0.0.1`), plus the IPv6/literal aliases in `loopbackHosts`. A bare set
-    /// membership check against `"127.0.0.1"` alone previously let `127.0.0.2` and every other
-    /// address in the same /8 block straight through Map Remote's destination check, even though
-    /// they route to the same local machine — the exact SSRF-style destination the check exists to
-    /// block (found while writing AI-6's self-validation feature-matrix tests: 127.0.0.1 alone is
-    /// correctly rejected, but the range check was never implemented).
-    private static func isLoopbackHost(_ normalized: String) -> Bool {
-        if loopbackHosts.contains(normalized) { return true }
-        let octets = normalized.split(separator: ".")
-        guard octets.count == 4, let firstOctet = UInt8(octets[0]) else { return false }
-        return firstOctet == 127
-    }
 
     /// Parses and validates a request matcher from tool arguments.
     static func parseMatcher(from arguments: [String: Any]) throws -> MCPMutationMatcher {
@@ -108,18 +93,37 @@ enum MCPMutationValidator {
         }
     }
 
-    static func validateMapRemoteDestination(host: String, port: Int?, scheme: SessionScheme) throws {
-        let normalized = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !normalized.isEmpty else {
+    static func validateMapRemoteDestination(
+        host: String,
+        port: Int?,
+        scheme: SessionScheme,
+        allowLoopbackDestination: Bool = false,
+        policy: LoopbackDestinationPolicy = .disabled,
+        reservedRegistry: ReservedListenerRegistry = .shared
+    ) throws {
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             throw MCPMutationValidationError.malformedRequest("remoteHost is required.")
         }
-        if isLoopbackHost(normalized) {
-            throw MCPMutationValidationError.policyDenied("Map Remote destination cannot target loopback.")
-        }
-        if let port, !(1 ... 65_535).contains(port) {
+        let defaultPort = (scheme == .https) ? 443 : 80
+        let resolvedPort = port ?? defaultPort
+        guard (1 ... 65_535).contains(resolvedPort) else {
             throw MCPMutationValidationError.malformedRequest("remotePort must be between 1 and 65535.")
         }
-        _ = scheme
+        do {
+            _ = try LoopbackAddressInspector.validateStaticDestination(
+                host: trimmed,
+                port: resolvedPort,
+                scheme: scheme,
+                allowLoopbackDestination: allowLoopbackDestination,
+                policy: policy,
+                reservedRegistry: reservedRegistry
+            )
+        } catch MapRemoteValidationError.malformedRequest(let message) {
+            throw MCPMutationValidationError.malformedRequest(message)
+        } catch MapRemoteValidationError.policyDenied(_, let message) {
+            throw MCPMutationValidationError.policyDenied(message)
+        }
     }
 
     /// Validates a Map Remote destination-path override as an HTTP origin-form request-target —

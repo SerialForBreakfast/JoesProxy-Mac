@@ -20,7 +20,7 @@ Revision 2026-11-06, capabilities revision 26. Discover running availability bef
 checkout documentation does not update an already installed app.
 
 - `capture_calculate`: explicit `sessionIDs`, `dataset` (`responseJSON` for one session or
-  `sessionMetadata`), `selectionPointer`, and typed `operation`. Requires existing sensitive-read
+  `sessionMetadata`), `selectionPointer`, and typed `operation` (or `operations` array of 1–4 operations, each with optional structured `where` predicate). Requires existing sensitive-read
   authority. For example, group selected session metadata by `/statusCode`, or count missing `/imageURL`
   fields in a complete JSON response array using `fieldStats`. No automatic current-window selection.
 - `artifact_source_register`: `requestKey` UUID, `kind`, explicit `scopes` including `metadata-v1`,
@@ -29,7 +29,7 @@ checkout documentation does not update an already installed app.
 - `artifact_source_status`: pending state by `requestKey`; no selected-file details before approval.
 - `artifact_source_inspect`: bounded descriptor by owner-bound `handle`. Metadata scope excludes hashes.
 - `artifact_source_release`: release an owned copy; never delete or change its original file.
-- `artifact_calculate`: `handle`, `snapshotRevision`, typed `dataset`, `selectionPointer`, `operation`.
+- `artifact_calculate`: `handle`, `snapshotRevision`, typed `dataset`, `selectionPointer`, `operation` (or `operations`).
   Requires source-specific `calculations-v1` consent and the current shareable profile. Saved JSON,
   one complete recording/HAR response, or allowlisted session metadata use the same live calculation engine.
 
@@ -70,7 +70,9 @@ of silently presenting a missing companion list as a complete search.
 
 ## capture_calculate {#capture-calculate}
 
-Count, group or summarize explicit captured session metadata or one complete JSON response using exact bounded decimal arithmetic. Requires sensitive-read approval. Source changes discard results; no refetch or raw body output.
+For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.
+
+Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. A scan above 50,000 retained sessions or 10,000 matches returns unavailable.
 
 Capability category: bodyRead.
 
@@ -173,13 +175,13 @@ Capability category: agentResource.
 
 ## sessions_list {#sessions-list}
 
-Projected, paginated capture sessions; minimal by default.
+List individual capture sessions in pages, minimal by default. For counts by status within a time window, use capture_calculate.
 
 Capability category: sessionList.
 
 ## sessions_search {#sessions-search}
 
-Projected capture search by method/host category; minimal by default.
+Find individual matching requests in pages. For totals or a status histogram over a time window, use capture_calculate.
 
 Capability category: sessionSearch.
 

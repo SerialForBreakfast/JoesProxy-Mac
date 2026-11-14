@@ -5,32 +5,85 @@ enum CLIArtifactArguments {
         "receipt-workflow", "receipt-version", "receipt-environment"]
 
     static func calculation(_ invocation: CLIInvocation, live: Bool) throws -> [String: Any] {
-        let operationName = try required("operation", invocation)
-        let kinds = ["rowCount", "fieldStats", "distinctCount", "numericSummary", "groupCount", "topRows"]
-        guard kinds.contains(operationName) else { throw CLIError.invalidArguments("Choose a documented calculation operation.") }
         let dataset = try required("dataset", invocation)
-        var allowed = common.union(["dataset", "operation", "selection-pointer"])
-        var operation: [String: Any] = ["kind": operationName]
-        if operationName != "rowCount" {
-            allowed.insert("field-pointer")
-            operation["fieldPointer"] = try required("field-pointer", invocation, allowsEmpty: true)
+        var allowed = common.union(["dataset", "operation", "operations-json", "selection-pointer", "where-pointer", "where-op", "where-value"])
+        let hasOperation = invocation.options["operation"] != nil
+        let hasBatchOperations = invocation.options["operations-json"] != nil
+        guard hasOperation != hasBatchOperations else {
+            throw CLIError.invalidArguments("Provide either --operation or --operations-json.")
         }
-        if operationName == "groupCount" || operationName == "topRows" {
-            allowed.insert("limit")
-            if let text = invocation.options["limit"] {
-                guard let limit = Int(text), (1...20).contains(limit) else { throw CLIError.invalidArguments("--limit must be 1...20.") }
-                operation["limit"] = limit
+        var result: [String: Any] = ["selectionPointer": invocation.options["selection-pointer"] ?? ""]
+        let operationName = invocation.options["operation"]
+        if let operationName {
+            let kinds = ["rowCount", "fieldStats", "distinctCount", "numericSummary", "groupCount", "topRows"]
+            guard kinds.contains(operationName) else { throw CLIError.invalidArguments("Choose a documented calculation operation.") }
+            var operation: [String: Any] = ["kind": operationName]
+            if operationName != "rowCount" {
+                allowed.insert("field-pointer")
+                operation["fieldPointer"] = try required("field-pointer", invocation, allowsEmpty: true)
             }
-        }
-        if operationName == "topRows" {
-            allowed.insert("order")
-            if let order = invocation.options["order"] {
-                guard ["asc", "desc"].contains(order) else { throw CLIError.invalidArguments("--order must be asc or desc.") }
-                operation["order"] = order
+            if operationName == "groupCount" || operationName == "topRows" {
+                allowed.insert("limit")
+                if let text = invocation.options["limit"] {
+                    guard let limit = Int(text), (1...20).contains(limit) else { throw CLIError.invalidArguments("--limit must be 1...20.") }
+                    operation["limit"] = limit
+                }
             }
+            if operationName == "topRows" {
+                allowed.insert("order")
+                if let order = invocation.options["order"] {
+                    guard ["asc", "desc"].contains(order) else { throw CLIError.invalidArguments("--order must be asc or desc.") }
+                    operation["order"] = order
+                }
+            }
+            if invocation.options["where-pointer"] != nil || invocation.options["where-op"] != nil || invocation.options["where-value"] != nil {
+                let wherePointer = try required("where-pointer", invocation)
+                let whereOp = try required("where-op", invocation)
+                let validOps = ["eq", "neq", "gt", "gte", "lt", "lte", "isNull", "isMissing", "contains"]
+                guard validOps.contains(whereOp) else {
+                    throw CLIError.invalidArguments("--where-op must be one of \(validOps.joined(separator: ", ")).")
+                }
+                var whereDict: [String: Any] = ["fieldPointer": wherePointer, "op": whereOp]
+                if whereOp != "isNull" && whereOp != "isMissing" {
+                    let rawVal = try required("where-value", invocation, allowsEmpty: true)
+                    if ["gt", "gte", "lt", "lte"].contains(whereOp), let num = Double(rawVal), num.isFinite {
+                        whereDict["value"] = num
+                    } else if rawVal == "true" {
+                        whereDict["value"] = true
+                    } else if rawVal == "false" {
+                        whereDict["value"] = false
+                    } else if let num = Double(rawVal), num.isFinite, String(Int(num)) == rawVal || rawVal.contains(".") {
+                        whereDict["value"] = num
+                    } else {
+                        whereDict["value"] = rawVal
+                    }
+                }
+                operation["where"] = whereDict
+            }
+            result["operation"] = operation
+        } else if let batchJSON = invocation.options["operations-json"] {
+            guard let data = batchJSON.data(using: .utf8),
+                  let array = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]],
+                  (1...4).contains(array.count) else {
+                throw CLIError.invalidArguments("--operations-json must be a JSON array of 1...4 operation objects.")
+            }
+            result["operations"] = array
         }
-        var result: [String: Any] = ["selectionPointer": invocation.options["selection-pointer"] ?? "", "operation": operation]
-        if live {
+        if live && invocation.options["session-ids"] == nil {
+            let names = ["started-after": "startedAfter", "started-before": "startedBefore",
+                         "path-contains": "path", "method": "method", "domain": "domain"]
+            allowed.formUnion(names.keys)
+            var filter: [String: String] = [:]
+            for (option, key) in names { filter[key] = invocation.options[option] }
+            guard dataset == "sessionMetadata", filter["startedAfter"] != nil, filter["startedBefore"] != nil,
+                  result["selectionPointer"] as? String == "",
+                  let operationName,
+                  operationName == "rowCount" || (operationName == "groupCount" && invocation.options["field-pointer"] == "/statusCode") else {
+                throw CLIError.invalidArguments("Filtered capture calculations require both time bounds and rowCount or groupCount on /statusCode.")
+            }
+            result["filter"] = filter
+            result["dataset"] = dataset
+        } else if live {
             allowed.insert("session-ids")
             guard ["responseJSON", "sessionMetadata"].contains(dataset) else { throw CLIError.invalidArguments("Live calculations require responseJSON or sessionMetadata.") }
             let ids = try required("session-ids", invocation).split(separator: ",", omittingEmptySubsequences: false).map(String.init)

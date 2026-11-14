@@ -31,3 +31,5 @@ Use the bundled executable’s path if it is not on your shell’s search path. 
 - [Diagnostic Skill and workflow guides](../.agents/skills/joesproxy-mcp-diagnostics/SKILL.md)
 - [Tested configurations and validation limits](VALIDATION.md)
 - [Report a security issue](../SECURITY.md)
+
+For 1.9.1, start with the [agent efficiency guide](../.agents/skills/joesproxy-mcp-diagnostics/references/efficient-reads.md) for filtered counts, search, projections, comparisons and bounded evidence. See the [second-Mac candidate notes](releases/1.9.1-build25.md) for the measured workflow.

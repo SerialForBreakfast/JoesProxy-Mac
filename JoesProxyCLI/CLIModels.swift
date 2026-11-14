@@ -2,7 +2,7 @@ import Foundation
 
 enum CLIRuntimeIdentity {
     /// Kept equal to `MCPCapabilitiesRevision.current`; an app-target test prevents drift.
-    static let capabilitiesRevision = 29
+    static let capabilitiesRevision = 31
 
     static func expectation(bundle: Bundle = .main) -> [String: Any] {
         let marketingVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -77,7 +77,7 @@ struct CLIInvocation {
             "client-address",
             "image-file", "image-pointer", "retain-image-url", "image-delivery-url", "image-reference", "images", "related-responses",
             "endpoint", "timeout", "projection", "limit", "cursor", "since-sequence", "if-state-token",
-            "method", "host-category", "session-id-prefix", "analysis",
+            "method", "host-category", "session-id-prefix", "analysis", "started-after", "started-before", "path-contains",
             "sample-time", "format", "output", "interval", "approval-timeout",
             "if-brief-digest", "selection-pointer", "body-source", "header-source", "scheme", "host", "port", "path", "match-mode", "json-path",
             "operation", "value", "value-type", "repeat-policy", "label",
@@ -106,7 +106,12 @@ struct CLIInvocation {
             "reference-session", "manifest-session", "license-sessions", "media-sessions",
             "query", "target-url", "collection-keypath", "bound-asset-kind", "custom-asset-url",
             "client-scope", "position", "plan-id",
-            "since-marker", "rule", "field"
+            "since-marker", "rule", "field",
+            "status-class", "min-duration-ms", "deduplicate-by",
+            "where-pointer", "where-op", "where-value", "operations-json",
+            "field-pointers", "row-limit", "ignore-pointers",
+            "remote-host", "remote-port", "remote-scheme", "remote-path",
+            "remote-query-policy", "remote-query", "source-client-address"
         ]
         let booleanFlags: Set<String> = [
             "literal-stdin",
@@ -115,7 +120,10 @@ struct CLIInvocation {
             "include-context", "enable-after", "drop-connection", "accept-confounder",
             "force-no-cache", "replace-conflicts",
             "evidence-matches", "error-detected", "client-crashed", "no-preserve-urls",
-            "no-preserve-ids", "integrations"
+            "no-preserve-ids", "integrations",
+            "has-override-hit", "no-override-hit", "body-available", "no-body-available",
+            "include-auth-chain", "include-value-diff", "auth-chain",
+            "allow-loopback", "preserve-host"
         ]
 
         while index < arguments.count {
