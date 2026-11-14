@@ -233,6 +233,7 @@ struct CertificateSetupSheet: View {
                 Button("Close") {
                     isPresented = false
                 }
+                .keyboardShortcut(.cancelAction)
             }
             .padding(20)
         }
