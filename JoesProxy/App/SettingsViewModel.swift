@@ -376,6 +376,9 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    /// Persisted listener value shared with setup, independent of unfinished edits in Settings.
+    var savedListeningPort: String { String(configuration.proxyPort) }
+
     var canResetDefaults: Bool {
         canEditProxyPort
     }
@@ -593,19 +596,50 @@ final class SettingsViewModel: ObservableObject {
         noCachingDomains.removeAll { $0 == domain }
     }
 
-    func commitAuthorizedLoopbackPortsDraft() {
-        let parsed = LoopbackDestinationPolicy.parsePortsList(authorizedLoopbackPortsDraft)
+    /// Applies the two port edits together after validating both. A nil draft preserves the
+    /// current setting, including a running listener that the user has not asked to change.
+    func applySetupPorts(listener: String?, destinations: String?) -> String? {
+        var port = configuration.proxyPort
+        if let listener {
+            guard canEditProxyPort else { return "Stop the proxy before changing the listening port." }
+            guard let value = UInt16(listener.trimmingCharacters(in: .whitespacesAndNewlines)), value > 0 else {
+                return "Enter a listening port from 1 to 65535."
+            }
+            port = value
+        }
+        let parsed = destinations.map(LoopbackDestinationPolicy.parsePortsList)
+        if let parsed, let message = destinationPortError(parsed) { return message }
+        if listener != nil || parsed != nil, (parsed?.ports ?? authorizedLoopbackPorts).contains(Int(port)) {
+            return "Use a destination port different from the proxy listening port."
+        }
+        if listener != nil {
+            configuration.proxyPort = port
+            proxyPortDraft = String(port)
+            proxyPortValidationMessage = nil
+        }
+        if let parsed { applyAuthorizedLoopbackPorts(parsed.ports) }
+        return nil
+    }
+
+    /// Checks the same local destination rules for onboarding and subsequent Settings edits.
+    private func destinationPortError(_ parsed: (ports: [Int], invalidTokens: [String])) -> String? {
         if !parsed.invalidTokens.isEmpty {
             let joined = parsed.invalidTokens.joined(separator: ", ")
-            loopbackPortsValidationMessage = "Enter comma-separated ports between 1 and 65535 (invalid: \(joined))."
-            return
+            return "Enter comma-separated ports between 1 and 65535 (invalid: \(joined))."
         }
         for port in parsed.ports {
             if let owner = ReservedListenerRegistry.shared.conflictsWithPort(port) {
-                loopbackPortsValidationMessage = "Port \(port) is currently reserved by JoesProxy (\(owner))."
-                return
+                return "Port \(port) is currently reserved by JoesProxy (\(owner))."
             }
         }
+        return nil
+    }
+
+    /// Saves the Settings port field only after the whole list passes validation.
+    func commitAuthorizedLoopbackPortsDraft() {
+        let parsed = LoopbackDestinationPolicy.parsePortsList(authorizedLoopbackPortsDraft)
+        loopbackPortsValidationMessage = destinationPortError(parsed)
+        guard loopbackPortsValidationMessage == nil else { return }
         applyAuthorizedLoopbackPorts(parsed.ports)
     }
 

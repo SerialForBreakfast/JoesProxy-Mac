@@ -213,6 +213,7 @@ struct ContentView: View {
                         }
                     ),
                     context: context,
+                    accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: selfValidationCoordinator),
                     setupChecklistItems: viewModel.guidedSetupChecklistItems,
                     nextSetupActionItem: viewModel.guidedSetupNextActionItem,
                     certificateSetupTitle: viewModel.certificateSetupEntryPointTitle,
@@ -4554,4 +4555,5 @@ struct ContentView: View {
         compactModeController: coordinator.compactModeController
     )
         .environmentObject(AppPresentationState())
+        .environmentObject(SettingsViewModel(configuration: coordinator.configuration, proxyRuntime: coordinator.proxyRuntime))
 }

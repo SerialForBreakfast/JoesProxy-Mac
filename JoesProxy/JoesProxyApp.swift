@@ -341,6 +341,7 @@ struct JoesProxyApp: App {
                         uploadSpoolService: coordinator.uploadSpoolService
                     )
                     .environmentObject(presentationState)
+                    .environmentObject(settingsViewModel)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -436,6 +437,8 @@ struct JoesProxyApp: App {
             }
             .sheet(isPresented: $presentationState.isFirstRunPathChoicePresented) {
                 FirstRunPathChoiceView(
+                    viewModel: viewModel,
+                    accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: coordinator.selfValidationCoordinator),
                     onStartFirstCapture: {
                         presentationState.chooseStartFirstCapture()
                         coordinator.sessionStartCoordinator.syncPersistedOnboardingState()
@@ -454,6 +457,8 @@ struct JoesProxyApp: App {
                     }
                 )
                 .interactiveDismissDisabled()
+                .environmentObject(settingsViewModel)
+                .environmentObject(presentationState)
             }
             .onAppear {
                 presentationState.installUtilityWindowOpener { [openWindow] kind in

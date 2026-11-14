@@ -7,6 +7,7 @@ struct GuidedSetupRepairView: View {
     @Environment(\.appTextScale) private var appTextScale
     @Binding var isPresented: Bool
     let context: GuidedSetupContext
+    let accessChecklist: SetupAccessChecklist
     let setupChecklistItems: [ProxyViewModel.GuidedSetupChecklistItem]
     let nextSetupActionItem: ProxyViewModel.GuidedSetupChecklistItem?
     let certificateSetupTitle: String
@@ -46,6 +47,7 @@ struct GuidedSetupRepairView: View {
     init(
         isPresented: Binding<Bool>,
         context: GuidedSetupContext,
+        accessChecklist: SetupAccessChecklist,
         setupChecklistItems: [ProxyViewModel.GuidedSetupChecklistItem],
         nextSetupActionItem: ProxyViewModel.GuidedSetupChecklistItem?,
         certificateSetupTitle: String,
@@ -81,6 +83,7 @@ struct GuidedSetupRepairView: View {
     ) {
         _isPresented = isPresented
         self.context = context
+        self.accessChecklist = accessChecklist
         self.setupChecklistItems = setupChecklistItems
         self.nextSetupActionItem = nextSetupActionItem
         self.certificateSetupTitle = certificateSetupTitle
@@ -219,6 +222,9 @@ struct GuidedSetupRepairView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             repairActions(for: blockingState)
+            if selectedSection != .welcome {
+                Button("Review setup checklist and saved permissions") { selectedSection = .welcome }
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -277,6 +283,7 @@ struct GuidedSetupRepairView: View {
         ) {
             nextRecommendedAction
             setupChecklist
+            accessChecklist
             profileMaintenanceCard
             Button("Export MCP Skill…") {
                 exportSkill()

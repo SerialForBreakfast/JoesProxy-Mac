@@ -300,7 +300,7 @@ struct MCPManagementView: View {
             return "Enable CLI startup, then grant Runtime Control to the enrolled JoesProxy CLI client."
         }
         if eligibleClients.isEmpty {
-            return "No active client has both Shareable access and a Runtime Control grant. Trigger a CLI runtime command, approve it, and choose Add To Client Policy."
+            return "Under Clients, open Standing approvals for the Shareable CLI client, select runtime control, and save."
         }
         if !cleanupReady {
             return "Runtime control is authorized, but active effects, approvals, scenarios, or operations currently block unattended MCP shutdown."
@@ -815,6 +815,11 @@ struct MCPManagementView: View {
                 .accessibilityIdentifier("mcpUnlockVerifier-" + client.id)
             }
             let runtimeReady = runtimeControlIsPreauthorized(client)
+            if client.credentialState == .active && !controller.requiresVerifierUnlock(client) {
+                SetupClientPermissions(controller: controller, client: client)
+                    .id(client.credentialGeneration)
+                    .toggleStyle(.checkbox)
+            }
             Label(runtimeReady ? "Unattended runtime control ready" : "Runtime control requires approval or policy setup",
                   systemImage: runtimeReady ? "checkmark.circle.fill" : "lock.fill")
                 .appFont(.caption, scale: textScale)

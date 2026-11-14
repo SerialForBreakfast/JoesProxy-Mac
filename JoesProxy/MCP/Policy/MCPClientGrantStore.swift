@@ -38,6 +38,8 @@ final class MCPClientGrantStore {
     }
 
     func load() {
+        // Starting MCP bootstraps again. Keep newer local decisions while their write is pending.
+        guard mutationGeneration == persistedGeneration else { return }
         do {
             if fileManager.fileExists(atPath: persistenceURL.path) {
                 let data = try Data(contentsOf: persistenceURL)
@@ -183,6 +185,18 @@ final class MCPClientGrantStore {
                 label: Self.summaryLabel(for: grant)
             )
         }
+    }
+
+    /// Waits for this main-actor edit to reach disk via the existing serial writer.
+    /// A later edit can share the write. A failed write is retried by the next explicit save.
+    func saveReviewedChanges() async -> Bool {
+        let reviewedGeneration = mutationGeneration
+        guard persistedGeneration < reviewedGeneration else { return true }
+        schedulePersistence()
+        while persistedGeneration < reviewedGeneration, let task = persistenceTask {
+            await task.value
+        }
+        return persistedGeneration >= reviewedGeneration
     }
 
     func flush() async {

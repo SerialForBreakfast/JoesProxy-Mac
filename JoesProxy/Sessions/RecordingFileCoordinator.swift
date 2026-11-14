@@ -32,8 +32,7 @@ final class RecordingFileCoordinator {
 
         let accessoryModel = RecordingSaveAccessoryViewModel()
         let accessoryView = NSHostingView(rootView: RecordingSaveAccessoryView(viewModel: accessoryModel))
-        accessoryView.translatesAutoresizingMaskIntoConstraints = false
-        accessoryView.frame = NSRect(x: 0, y: 0, width: 420, height: 170)
+        accessoryView.setFrameSize(accessoryView.fittingSize)
         panel.accessoryView = accessoryView
 
         guard panel.runModal() == .OK, let url = panel.url else {
@@ -106,10 +105,7 @@ private struct RecordingSaveAccessoryView: View {
     @ObservedObject var viewModel: RecordingSaveAccessoryViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Recording Fidelity")
-                .font(.headline)
-
+        VStack(alignment: .leading, spacing: 8) {
             Picker("Recording Fidelity", selection: $viewModel.selectedFidelity) {
                 ForEach(RecordingSaveFidelity.allCases) { fidelity in
                     Text(fidelity.title)
@@ -117,39 +113,23 @@ private struct RecordingSaveAccessoryView: View {
                 }
             }
             .pickerStyle(.menu)
-            .labelsHidden()
 
-            Text(viewModel.selectedFidelity.summary)
+            // Reserve the longest summary so switching modes keeps the panel buttons in place.
+            ZStack(alignment: .topLeading) {
+                ForEach(RecordingSaveFidelity.allCases) { fidelity in
+                    Text(fidelity.summary).hidden().accessibilityHidden(true)
+                }
+                Text(viewModel.selectedFidelity.summary)
+            }
                 .font(.subheadline)
-                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 8) {
-                RecordingSaveHintBadge(text: viewModel.selectedFidelity.sizeHint)
-                RecordingSaveHintBadge(text: viewModel.selectedFidelity.useCaseHint)
-            }
-
-            Text("Choose a lighter mode when you want smaller, more shareable recordings.")
+            Text("\(viewModel.selectedFidelity.sizeHint) · \(viewModel.selectedFidelity.useCaseHint)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
         .frame(width: 400, alignment: .leading)
-        .padding(.top, 6)
-    }
-}
-
-private struct RecordingSaveHintBadge: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.caption)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
     }
 }

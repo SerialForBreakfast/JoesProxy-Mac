@@ -32,6 +32,16 @@ struct CertificateSetupSheet: View {
             Text(viewModel.certificateSetupSheetMessage)
                 .foregroundStyle(.secondary)
 
+            if viewModel.certificateRenewalNeedsUnlock {
+                Text("Pending certificate renewal").font(.headline)
+                Text(viewModel.certificateUnlockWarning)
+            }
+            if viewModel.certificateAuthorityNeedsUnlock || viewModel.certificateRenewalNeedsUnlock {
+                Button("Unlock Certificate Authority", action: viewModel.unlockCertificateAuthority)
+                    .disabled(viewModel.isUnlockingCertificateAuthority)
+                if let message = viewModel.certificateUnlockMessage { Text(message) }
+            }
+
             CertificateIdentityCard(
                 metadata: viewModel.certificateIdentity,
                 identityStatus: viewModel.certificateIdentityStatus,
@@ -59,7 +69,7 @@ struct CertificateSetupSheet: View {
                     : nil
             )
 
-            if let actionTitle = viewModel.certificatePrimaryActionTitle {
+            if !viewModel.certificateAuthorityNeedsUnlock, let actionTitle = viewModel.certificatePrimaryActionTitle {
                 Button(actionTitle) {
                     viewModel.performPrimaryCertificateAction()
                 }

@@ -249,7 +249,7 @@ private final class FakeCertificateKeychain: CertificateKeychainAccessing {
 
     func saveData(_ data: Data, service: String, account: String) throws {}
 
-    func retrieveData(service: String, account: String) -> Data? { nil }
+    func retrieveData(service: String, account: String, interactive: Bool) throws -> Data? { nil }
 
     func deleteData(service: String, account: String) throws {}
 }

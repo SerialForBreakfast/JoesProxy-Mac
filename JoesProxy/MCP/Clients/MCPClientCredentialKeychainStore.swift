@@ -49,21 +49,7 @@ final class MCPClientCredentialKeychainStore: MCPClientCredentialStoring, @unche
         } else {
             // Existing enrollments use the file-based login keychain. Its ACL prompts predate
             // LAContext. Scope its legacy interaction setting to this synchronous read.
-            var wasAllowed: DarwinBoolean = false
-            let priorStatus = SecKeychainGetUserInteractionAllowed(&wasAllowed)
-            guard priorStatus == errSecSuccess else {
-                throw MCPClientCredentialKeychainError.operationFailed(priorStatus)
-            }
-            if wasAllowed.boolValue {
-                let change = SecKeychainSetUserInteractionAllowed(false)
-                guard change == errSecSuccess else {
-                    throw MCPClientCredentialKeychainError.operationFailed(change)
-                }
-            }
-            defer {
-                if wasAllowed.boolValue { SecKeychainSetUserInteractionAllowed(true) }
-            }
-            status = SecItemCopyMatching(query as CFDictionary, &item)
+            status = KeychainHelper.copyWithoutInteraction(query, result: &item)
         }
         if status == errSecItemNotFound {
             return nil

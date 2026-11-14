@@ -1077,6 +1077,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateWorkflowState: CertificateWorkflowState {
+        if certificateAuthorityNeedsUnlock { return .notSetUp }
         switch trustStatus {
         case .installed:
             return .ready
@@ -1090,10 +1091,11 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateSectionTitle: String {
-        certificateWorkflowState.rawValue
+        certificateAuthorityNeedsUnlock ? "Keychain access required" : certificateWorkflowState.rawValue
     }
 
     var certificateStatusText: String {
+        if certificateAuthorityNeedsUnlock { return "Keychain access required" }
         switch trustStatus {
         case .notInstalled:
             return "Not installed"
@@ -1159,6 +1161,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateSetupSheetTitle: String {
+        if certificateAuthorityNeedsUnlock { return "Unlock Certificate Authority" }
         switch certificateWorkflowState {
         case .notSetUp:
             return "Set Up HTTPS Inspection"
@@ -1172,6 +1175,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateSetupSheetMessage: String {
+        if certificateAuthorityNeedsUnlock { return certificateUnlockWarning }
         switch certificateWorkflowState {
         case .notSetUp:
             if rootCertificate == nil {
@@ -1188,6 +1192,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificatePrimaryActionTitle: String? {
+        if certificateAuthorityNeedsUnlock { return "Unlock Certificate Authority" }
         switch certificateWorkflowState {
         case .notSetUp:
             return rootCertificate == nil ? "Create JoesProxy Root CA" : "Install In Login Keychain"
@@ -1201,6 +1206,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificatePrimaryActionDetail: String {
+        if certificateAuthorityNeedsUnlock { return "You can leave HTTPS inspection locked and continue with plain HTTP." }
         switch certificateWorkflowState {
         case .notSetUp:
             if rootCertificate == nil {
@@ -1578,6 +1584,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     private var guidedSetupCertificateSummary: String {
+        if certificateAuthorityNeedsUnlock { return "Certificate Authority access is locked. Open HTTPS Setup to review the Keychain prompt." }
         switch certificateWorkflowState {
         case .ready:
             return "The JoesProxy Root CA is installed and trusted on this Mac."
@@ -3992,7 +3999,61 @@ final class ProxyViewModel: ObservableObject {
         noCachingDomains = []
     }
 
+    /// Reads cached access state only. A foreground or status refresh cannot show password UI.
+    var certificateAuthorityNeedsUnlock: Bool {
+        (certificateStore as? PersistentKeychainCertificateStore)?.requiresUnlock(label: configuration.certificateLabel) == true
+    }
+
+    /// Prefer the active CA when both it and a pending renewal need access.
+    private var certificateUnlockLabel: String? {
+        if certificateAuthorityNeedsUnlock { return configuration.certificateLabel }
+        return (certificateStore as? PersistentKeychainCertificateStore)?.blockedRenewalLabel(for: configuration.certificateLabel)
+    }
+
+    var certificateRenewalNeedsUnlock: Bool {
+        !certificateAuthorityNeedsUnlock && certificateUnlockLabel != nil
+    }
+
+    var certificateUnlockWarning: String {
+        let store = certificateStore as? PersistentKeychainCertificateStore
+        let item = certificateUnlockLabel.flatMap { store?.blockedItemDescription(label: $0) } ?? "the certificate authority"
+        return "Choosing Unlock Certificate Authority lets macOS ask for your login keychain password to read \(item) in “com.JoesProxy.CertificateAuthority”. JoesProxy uses it to sign certificates for HTTPS inspection. Enter your password only in the macOS dialog. Allow grants access this time. Always Allow remembers your choice for this item. Deny leaves it locked."
+    }
+
+    @Published private(set) var isUnlockingCertificateAuthority = false
+    @Published private(set) var certificateUnlockMessage: String?
+
+    /// A local setup button owns this operation. Keep the Keychain dialog off the main actor,
+    /// coalesce repeated clicks across windows, and refresh status silently after it closes.
+    func unlockCertificateAuthority() {
+        guard !isUnlockingCertificateAuthority,
+              let store = certificateStore as? PersistentKeychainCertificateStore,
+              let label = certificateUnlockLabel else { return }
+        isUnlockingCertificateAuthority = true
+        certificateUnlockMessage = nil
+        Task { @MainActor in
+            let unlocked = await Task.detached(priority: .userInitiated) {
+                do {
+                    try store.unlock(label: label)
+                    _ = try? store.readRootBeforeCreation(label: label)
+                    return true
+                } catch {
+                    return false
+                }
+            }.value
+            certificateStatusRefreshTask?.cancel()
+            refreshCertificateStatus()
+            isUnlockingCertificateAuthority = false
+            if certificateUnlockLabel != nil {
+                certificateUnlockMessage = unlocked
+                    ? "Another stored item needs permission. Choose Unlock Certificate Authority to review it."
+                    : "Access was not granted. You can leave setup or choose Unlock Certificate Authority to retry."
+            }
+        }
+    }
+
     func performPrimaryCertificateAction() {
+        if certificateAuthorityNeedsUnlock { unlockCertificateAuthority(); return }
         switch certificateWorkflowState {
         case .notSetUp:
             if rootCertificate == nil {

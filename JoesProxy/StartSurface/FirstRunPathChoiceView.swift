@@ -1,90 +1,63 @@
 import SwiftUI
 
-/// Non-wizard first-run path choice (BA-3).
-///
-/// Two primary actions plus a secondary expert escape. Does not claim the proxy is running and
-/// does not complete first-run on its own.
+/// First-run preferences, optional trust setup and capture paths. Completion still requires
+/// observed capture evidence for the selected target.
 struct FirstRunPathChoiceView: View {
     @Environment(\.appTextScale) private var appTextScale
+    @ObservedObject var viewModel: ProxyViewModel
+    let accessChecklist: SetupAccessChecklist
+    @State private var showCertificateSetup = false
 
     let onStartFirstCapture: () -> Void
     let onConnectAnAgent: () -> Void
     let onOpenInspector: () -> Void
 
     var body: some View {
+        ScrollView {
+            setupContent.padding(24)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            HStack {
+                Button("Open Inspector", action: onOpenInspector)
+                    .accessibilityIdentifier("openInspectorButton")
+                Spacer()
+                Button("Connect an Agent", action: onConnectAnAgent)
+                    .accessibilityIdentifier("connectAnAgentButton")
+                Button("Start First Capture", action: onStartFirstCapture)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("startFirstCaptureButton")
+            }
+            .padding()
+            .background(.regularMaterial)
+        }
+        .frame(minWidth: 560, idealWidth: 640, minHeight: 440, idealHeight: 640)
+        .sheet(isPresented: $showCertificateSetup) {
+            CertificateSetupSheet(viewModel: viewModel, isPresented: $showCertificateSetup)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("firstRunPathChoiceView")
+    }
+
+    /// Keeps network preferences, optional enrollment and trust review available before capture.
+    private var setupContent: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("How do you want to start?")
                     .appFont(.title2, scale: appTextScale, weight: .semibold)
 
-                Text("Choose how to send your first request. For plain HTTP, you can start capturing before setting up certificates or connecting an agent.")
+                Text("Review your capture preferences, then choose how to send your first request. Plain HTTP capture only needs a running proxy and a client pointed at its listening port.")
                     .appFont(.body, scale: appTextScale)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(alignment: .top, spacing: 12) {
-                pathCard(
-                    title: "Guided First Capture",
-                    detail: "Start the proxy, choose a device and send a request. Open HTTPS Setup when you want to inspect encrypted traffic.",
-                    systemImage: "list.bullet.rectangle",
-                    buttonTitle: "Start First Capture",
-                    identifier: "startFirstCaptureButton",
-                    action: onStartFirstCapture
-                )
-
-                pathCard(
-                    title: "Agent-Assisted Capture",
-                    detail: "Open MCP Management alongside Compact Monitor. Start MCP and add your client. For Terminal, choose JoesProxy CLI and run the login command.",
-                    systemImage: "antenna.radiowaves.left.and.right",
-                    buttonTitle: "Connect an Agent",
-                    identifier: "connectAnAgentButton",
-                    action: onConnectAnAgent
-                )
+            accessChecklist
+            Divider()
+            if let trust = viewModel.guidedSetupChecklistItems.first(where: { $0.id == "certificate" }) {
+                Label("HTTPS certificate trust", systemImage: trust.state == .complete ? "checkmark.circle.fill" : "circle")
+                Text(trust.detail)
+                Button(viewModel.certificateSetupEntryPointTitle) { showCertificateSetup = true }
             }
-
-            Button(action: onOpenInspector) {
-                Text("Open Inspector")
-                    .appFont(.body, scale: appTextScale, weight: .medium)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .accessibilityIdentifier("openInspectorButton")
-            .help("Skip teaching and open the Inspector. Setup stays in progress until a selected-target request is captured.")
         }
-        .padding(24)
-        .frame(minWidth: 560, idealWidth: 640)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("firstRunPathChoiceView")
-    }
-
-    private func pathCard(
-        title: String,
-        detail: String,
-        systemImage: String,
-        buttonTitle: String,
-        identifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label(title, systemImage: systemImage)
-                .appFont(.headline, scale: appTextScale, weight: .semibold)
-
-            Text(detail)
-                .appFont(.body, scale: appTextScale)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button(action: action) {
-                Text(buttonTitle)
-                    .appFont(.body, scale: appTextScale, weight: .semibold)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .accessibilityIdentifier(identifier)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

@@ -1141,6 +1141,38 @@ final class MCPServerController: ObservableObject {
         }
     }
 
+    /// Updates future calls for one enrolled client after a local checklist confirmation.
+    /// Validate the whole selection before writing so a revoked client or profile change cannot
+    /// partially apply the review. Pending requests and temporary grants outside the edit survive.
+    func applySetupGrants(_ changes: [MCPCapabilityID: Bool], for reviewedClient: MCPClientRecord) throws {
+        let clientID = reviewedClient.id
+        guard let client = clientRegistry.client(id: clientID), client.credentialState == .active,
+              client.credentialGeneration == reviewedClient.credentialGeneration,
+              client.assignedProfileID == reviewedClient.assignedProfileID,
+              !requiresVerifierUnlock(client),
+              changes.allSatisfy({ capability, enabled in
+                  capability.setupPermissionTitle != nil && (!enabled || policyEvaluator.effectiveAllows(capability: capability, client: client))
+              }) else {
+            throw MCPStructuredError(code: .policyDenied, message: "Client access changed. Review the credential and disclosure profile, then try again.")
+        }
+        let additions = changes.filter { capability, enabled in
+            enabled && grantStore.activeGrant(capability: capability, clientID: clientID) == nil
+        }
+        guard grantStore.grants.count + additions.count <= MCPClientGrantStore.maxActiveGrants else {
+            throw MCPStructuredError(code: .policyDenied, message: "The standing grant store is full. Remove unused approvals before adding more.")
+        }
+        objectWillChange.send()
+        for (capability, enabled) in changes {
+            let existing = grantStore.activeGrant(capability: capability, clientID: clientID)
+            if enabled, existing?.mode != .durablePolicy {
+                try grantStore.addGrant(clientID: clientID, capability: capability, mode: .durablePolicy)
+                auditStore.record(grantAudit(kind: .grantAdded, capability: capability, clientID: clientID, detail: "durable_policy"))
+            } else if !enabled, let existing, existing.mode == .durablePolicy {
+                try revokeGrant(id: existing.id)
+            }
+        }
+    }
+
     func revokeGrant(id: UUID) throws {
         let grant = grantStore.grants.first { $0.id == id }
         try grantStore.removeGrant(id: id)

@@ -43,6 +43,61 @@ final class PersistentTrustInstallerIsolatedIntegrationTests: XCTestCase {
         XCTAssertEqual(reloadedIdentity.subjectSummary, createdIdentity.subjectSummary)
     }
 
+    /// Lifecycle reads and creation attempts cannot prompt or replace an inaccessible CA.
+    /// One explicit unlock supplies the same identity to later trust and signing reads.
+    func testProtectedRootRequiresOneExplicitUnlock() throws {
+        let configuration = IsolatedTestAppConfiguration(certificateLabel: "ProtectedRoot")
+        let label = configuration.certificateLabel
+        let keychain = try FileBackedCertificateKeychain(rootURL: rootURL)
+        let initialStore = PersistentKeychainCertificateStore(keychainHelper: keychain)
+        let identity = try PersistentCertificateAuthorityProvider(configuration: configuration, certificateStore: initialStore)
+            .loadOrCreateRootCertificate()
+        let store = PersistentKeychainCertificateStore(keychainHelper: keychain)
+        let provider = PersistentCertificateAuthorityProvider(configuration: configuration, certificateStore: store)
+        keychain.protectedAccounts = ["\(label).root.identity-v1"]
+        XCTAssertEqual(initialStore.loadRootCertificate(label: label), identity)
+        XCTAssertNil(provider.currentRootCertificate())
+        XCTAssertThrowsError(try provider.loadOrCreateRootCertificate())
+        XCTAssertTrue(store.requiresUnlock(label: label))
+        XCTAssertEqual(keychain.interactiveReads, [])
+        keychain.denyUnlock = true
+        XCTAssertThrowsError(try store.unlock(label: label))
+        XCTAssertNil(provider.currentRootCertificate())
+        XCTAssertThrowsError(try provider.loadOrCreateRootCertificate())
+        XCTAssertEqual(keychain.interactiveReads.count, 1)
+        keychain.denyUnlock = false
+        try store.unlock(label: label)
+        try store.unlock(label: label)
+        XCTAssertEqual(try provider.loadOrCreateRootCertificate(), identity)
+        XCTAssertEqual(provider.currentRootCertificate(), identity)
+        _ = try provider.issueLeafCertificate(for: "capture.example")
+        XCTAssertEqual(keychain.interactiveReads.count, 2)
+    }
+
+    /// Each legacy account requires its own explicit gesture even when both ACLs require review.
+    func testLegacyCertificateAndKeyNeverChainTwoDialogsFromOneTap() throws {
+        let label = "LegacyRoot"
+        let identity = try SwiftCertificateFactory().generateRootIdentity(label: label, commonName: "Legacy Root")
+        let keychain = try FileBackedCertificateKeychain(rootURL: rootURL)
+        let service = "com.JoesProxy.CertificateAuthority"
+        let certificate = "\(label).root.certificate"
+        let key = "\(label).root.private-key"
+        try keychain.saveData(identity.certificateData, service: service, account: certificate)
+        try keychain.saveData(XCTUnwrap(identity.privateKeyData), service: service, account: key)
+        keychain.protectedAccounts = [certificate, key]
+        let store = PersistentKeychainCertificateStore(keychainHelper: keychain)
+        XCTAssertNil(store.loadRootCertificate(label: label))
+        try store.unlock(label: label)
+        XCTAssertThrowsError(try store.readRootBeforeCreation(label: label))
+        XCTAssertEqual(keychain.interactiveReads, [certificate])
+        try store.unlock(label: label)
+        XCTAssertEqual(store.loadRootCertificate(label: label), identity)
+        try store.removeRootCertificate(label: label)
+        keychain.protectedAccounts = []
+        XCTAssertNil(store.loadRootCertificate(label: label))
+        XCTAssertEqual(keychain.interactiveReads, [certificate, key])
+    }
+
     func testTrustInstallerRoundTripsInstallStatusAndRemovalAcrossFreshInstances() throws {
         let configuration = IsolatedTestAppConfiguration(certificateLabel: "IsolatedTrust-\(UUID().uuidString)")
         let keychain = try FileBackedCertificateKeychain(rootURL: rootURL)
@@ -106,6 +161,9 @@ final class PersistentTrustInstallerIsolatedIntegrationTests: XCTestCase {
 }
 
 private final class FileBackedCertificateKeychain: CertificateKeychainAccessing {
+    var protectedAccounts: Set<String> = []
+    var denyUnlock = false
+    private(set) var interactiveReads: [String] = []
     private let certificatesDirectoryURL: URL
     private let dataDirectoryURL: URL
     private let fileManager = FileManager.default
@@ -153,8 +211,12 @@ private final class FileBackedCertificateKeychain: CertificateKeychainAccessing 
         try data.write(to: dataURL(service: service, account: account), options: .atomic)
     }
 
-    func retrieveData(service: String, account: String) -> Data? {
-        try? Data(contentsOf: dataURL(service: service, account: account))
+    func retrieveData(service: String, account: String, interactive: Bool) throws -> Data? {
+        if interactive { interactiveReads.append(account) }
+        if protectedAccounts.contains(account), !interactive || denyUnlock {
+            throw CertificateAuthorityError.keychainAccessFailed("Synthetic protected item")
+        }
+        return try? Data(contentsOf: dataURL(service: service, account: account))
     }
 
     func deleteData(service: String, account: String) throws {

@@ -424,6 +424,22 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         }
     }
 
+    /// Port validation rejects the entire setup edit and restores saved values in a new editor.
+    @MainActor
+    func testSetupPortsValidateTogetherAndReopenFromConfiguration() throws {
+        let (configuration, cleanup) = try makeIsolatedConfig()
+        defer { cleanup() }
+        let editor = SettingsViewModel(configuration: configuration, proxyRuntime: StubProxyRuntime())
+        let original = configuration.proxyPort
+        XCTAssertNotNil(editor.applySetupPorts(listener: "9131", destinations: "3100, invalid"))
+        XCTAssertEqual(configuration.proxyPort, original)
+        XCTAssertNotNil(editor.applySetupPorts(listener: "9131", destinations: "9131"))
+        XCTAssertNil(editor.applySetupPorts(listener: "9131", destinations: "3101, 3100, 3101"))
+        let reopened = SettingsViewModel(configuration: configuration, proxyRuntime: StubProxyRuntime())
+        XCTAssertEqual(reopened.savedListeningPort, "9131")
+        XCTAssertEqual(reopened.authorizedLoopbackPorts, [3100, 3101])
+    }
+
     @MainActor
     func testSettingsViewModelRevocationDisablesPersistedLoopbackRuleImmediately() async throws {
         let (config, cleanup) = try makeIsolatedConfig()

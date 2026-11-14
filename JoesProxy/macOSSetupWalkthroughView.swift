@@ -180,6 +180,11 @@ struct macOSSetupWalkthroughView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             switch viewModel.certificateWorkflowState {
+            case .notSetUp where viewModel.certificateAuthorityNeedsUnlock:
+                Text(viewModel.certificateUnlockWarning)
+                Button("Unlock Certificate Authority", action: viewModel.unlockCertificateAuthority)
+                    .disabled(viewModel.isUnlockingCertificateAuthority)
+                if let message = viewModel.certificateUnlockMessage { Text(message) }
             case .notSetUp where viewModel.rootCertificate == nil:
                 Button("Create Root CA") {
                     viewModel.createOrLoadRootCertificate()

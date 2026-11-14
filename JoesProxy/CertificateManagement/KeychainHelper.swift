@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import LocalAuthentication
 import Security
 import os
 
@@ -124,7 +125,7 @@ final class KeychainHelper: CertificateKeychainAccessing {
         }
 
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        let status = Self.copyWithoutInteraction(query, result: &item)
 
         if status == errSecSuccess {
             if let certificates = item as? [SecCertificate] {
@@ -172,14 +173,6 @@ final class KeychainHelper: CertificateKeychainAccessing {
     }
 
     func saveData(_ data: Data, service: String, account: String) throws {
-        let deleteQuery = mergedQueryAttributes([
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ], operation: .delete)
-
-        let _ = SecItemDelete(deleteQuery as CFDictionary)
-
         let addQuery = mergedQueryAttributes([
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -188,15 +181,24 @@ final class KeychainHelper: CertificateKeychainAccessing {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ], operation: .add)
 
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        var status = SecItemAdd(addQuery as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            let query = mergedQueryAttributes([
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account
+            ], operation: .copyMatching)
+            status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        }
         guard status == errSecSuccess else {
             logger.error("Failed to save keychain data for service '\(service)' account '\(account)'. Status: \(status)")
             throw CertificateAuthorityError.storageFailed("Failed to persist certificate key material.")
         }
     }
 
-    func retrieveData(service: String, account: String) -> Data? {
-        let query = mergedQueryAttributes([
+    /// Passive callers must be prompt-free for both the data-protection and login keychains.
+    func retrieveData(service: String, account: String, interactive: Bool) throws -> Data? {
+        var query = mergedQueryAttributes([
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
@@ -205,13 +207,39 @@ final class KeychainHelper: CertificateKeychainAccessing {
         ], operation: .copyMatching)
 
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess else {
-            return nil
+        let status: OSStatus
+        if interactive {
+            status = SecItemCopyMatching(query as CFDictionary, &item)
+        } else {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+            status = Self.copyWithoutInteraction(query, result: &item)
         }
-
-        return item as? Data
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = item as? Data else {
+            throw CertificateAuthorityError.keychainAccessFailed("Certificate Authority access is unavailable. Open HTTPS Setup to unlock it.")
+        }
+        return data
     }
+
+    /// Suppresses legacy ACL UI during a synchronous read and restores the previous setting.
+    static func copyWithoutInteraction(_ query: [String: Any], result: inout CFTypeRef?) -> OSStatus {
+        passiveReadLock.lock()
+        defer { passiveReadLock.unlock() }
+        var allowed: DarwinBoolean = false
+        let prior = SecKeychainGetUserInteractionAllowed(&allowed)
+        guard prior == errSecSuccess else { return prior }
+        if allowed.boolValue {
+            let status = SecKeychainSetUserInteractionAllowed(false)
+            guard status == errSecSuccess else { return status }
+        }
+        defer { if allowed.boolValue { SecKeychainSetUserInteractionAllowed(true) } }
+        return SecItemCopyMatching(query as CFDictionary, &result)
+    }
+
+    /// Serialize temporary legacy interaction overrides across certificate and MCP reads.
+    private static let passiveReadLock = NSLock()
 
     func deleteData(service: String, account: String) throws {
         let query = mergedQueryAttributes([

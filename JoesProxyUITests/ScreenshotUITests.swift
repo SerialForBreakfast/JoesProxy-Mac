@@ -32,6 +32,45 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     private static let screenshotDemoLaunchArgument = "--screenshot-demo"
+
+    @MainActor
+    func testRecordingSavePanelInsetsAndFidelityChoices() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [Self.screenshotDemoLaunchArgument, "--screenshot-browser-mode=table"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons["proxyToggleButton"].waitForExistence(timeout: 8))
+        app.typeKey("s", modifierFlags: .command)
+        let panel = app.dialogs["save-panel"]
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        let picker = panel.popUpButtons["Recording Fidelity"]
+        XCTAssertTrue(picker.exists)
+        let save = panel.buttons["SaveButton"]
+        let initialSaveY = save.frame.midY
+        for (title, hint) in [
+            ("Full Recording", "Largest · Best for reopening"),
+            ("Metadata Only", "Smallest · Best for sharing"),
+            ("Text Bodies Only", "Smaller · Best for sharing"),
+            ("Media Focused", "Smaller · Best for streaming/media debugging")
+        ] {
+            if title != "Full Recording" {
+                picker.click()
+                app.menuItems[title].click()
+            }
+            let caption = panel.staticTexts[hint]
+            XCTAssertTrue(caption.waitForExistence(timeout: 3))
+            XCTAssertGreaterThanOrEqual(caption.frame.minX - panel.frame.minX, 16)
+            XCTAssertGreaterThan(save.frame.minY - caption.frame.maxY, 8)
+            XCTAssertEqual(save.frame.midY, initialSaveY, accuracy: 2)
+            if title == "Full Recording" {
+                let screenshot = XCTAttachment(screenshot: panel.screenshot())
+                screenshot.name = "Save Recording fidelity layout"
+                screenshot.lifetime = .keepAlways
+                add(screenshot)
+            }
+        }
+        panel.typeKey(.escape, modifierFlags: [])
+    }
     private static let screenshotBrowserModePrefix = "--screenshot-browser-mode="
     private static let screenshotTextSizePrefix = "--screenshot-text-size="
 
