@@ -342,15 +342,25 @@ final class HTTPUpstreamConnector {
         request: HTTPProxyRequest,
         validatedEndpoint: ValidatedUpstreamEndpoint?
     ) -> EventLoopFuture<Channel> {
-        guard let validatedEndpoint else {
-            return bootstrap.connect(host: request.host, port: request.port)
+        let connected: EventLoopFuture<Channel>
+        if let validatedEndpoint {
+            connected = connectValidatedAddresses(
+                validatedEndpoint.candidateAddresses,
+                index: 0,
+                port: validatedEndpoint.port,
+                bootstrap: bootstrap
+            )
+        } else {
+            connected = bootstrap.connect(host: request.host, port: request.port)
         }
-        return connectValidatedAddresses(
-            validatedEndpoint.candidateAddresses,
-            index: 0,
-            port: validatedEndpoint.port,
-            bootstrap: bootstrap
-        )
+        return connected.map { channel in
+            // An origin listening inside the ephemeral port range can receive a connection whose
+            // source port equals its own port; TCP then connects the socket to itself.
+            if let local = channel.localAddress, let remote = channel.remoteAddress, local == remote {
+                self.logger.notice("Upstream connection is connected to itself local=\(String(describing: local), privacy: .private) port=\(local.port ?? -1, privacy: .public)")
+            }
+            return channel
+        }
     }
 
     private func connectValidatedAddresses(

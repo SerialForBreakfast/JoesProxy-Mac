@@ -18,6 +18,8 @@ Explore the guides and documentation at [joesproxy.com](https://joesproxy.com/).
 
 **Keep agent reads small.** An MCP client can start with `capture_digest`, reuse a state token to check for changes, then ask `sessions_search` for matching requests after its last sequence number. Page limits, minimal projections, and response-byte budgets bound how much goes into the agent’s context. Request a detailed summary only for the session that matters. Reading a body requires separate approval.
 
+**Count failures in a time window.** Ask the agent to group matching requests by HTTP status. Build 25 can count them on the Mac and return one row per status, including missing status. In five autonomous trials on a synthetic 400-request window, the agent got all six counts right five times. The [benchmark report](docs/releases/benchmarks/1.9.1-edge-v7.md) includes the baseline, token receipts and limitations.
+
 ## Screenshot gallery
 
 These examples use synthetic traffic. The workspace above shows the structured JSON inspector with capture stopped.
@@ -44,7 +46,7 @@ Drill from a host into an endpoint to find the individual request you want to in
 
 ![Compact monitoring window showing capture stopped](docs/assets/screenshots/compact.png)
 
-See the [1.9.1 candidate notes](docs/releases/1.9.1-build24.md) for the optimized agent workflows and their measured scope.
+See the [1.9.1 candidate notes](docs/releases/1.9.1-build25.md) for the optimized agent workflows and their measured scope.
 
 
 ## Build from source

@@ -12,7 +12,7 @@
   existing client preferences; use `all` for coverage audits. Discovery does not change authority.
 - **Find examples:** use `sessions_search` for status, duration, body availability or override-hit filters. Endpoint groups summarize the returned page. Request auth-chain evidence only for credential continuity.
 - **Review a rule after a marker:** use `capture_activity_since_marker` with the rule ID and marker or sequence. Near misses describe predicate mismatches. Verify delivery against recorded evidence.
-- **Count across a time window:** use `capture_calculate` with `filter.startedAfter` and `filter.startedBefore`, dataset `sessionMetadata`, empty selectionPointer, and one rowCount or groupCount on /statusCode. CLI: `capture calculate --started-after <ISO8601> --started-before <ISO8601> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode`. Inspect retained coverage and possible gaps before interpreting a zero.
+- **Count across a time window:** use `capture_calculate` with `filter.startedAfter` and `filter.startedBefore`, dataset `sessionMetadata`, empty selectionPointer, and one rowCount or groupCount on /statusCode. CLI: `capture calculate --started-after <ISO8601> --started-before <ISO8601> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode`. Treat missing status as a group. Check omittedGroups and capture coverage before reporting an exact histogram. Request a matching session only when the caller needs an example.
 - **Local calculations:** use `capture_calculate` (CLI `capture calculate`) for explicit live
   session IDs: group allowed session metadata or calculate one complete JSON response at an
   explicit pointer. Six operations: rowCount, fieldStats, distinctCount, numericSummary,

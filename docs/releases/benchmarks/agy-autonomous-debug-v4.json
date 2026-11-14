@@ -1,0 +1,3224 @@
+{
+  "revision": "2026-11-13-autonomous-v1",
+  "rows": [
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "A",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 36718,
+        "output_tokens": 1245,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 138007,
+        "total_tokens": 37963
+      },
+      "actions": [
+        "read_file",
+        "run_command",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "5b1a9e28306b06af9df71cf004fa65af6aec4249571d3f240bb40bf2a3056136",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "fd10a37e0fa59267ad4262202c185ff701aad412489cb012c1beef8457464f07",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "9e60df41337c38deb2bfc55d419e41d64d54acaca9a9efc90e3b5e87f36f2282",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "b5f26b57669968e70c5e4e7725f0cc2eee52c4f4fbf57c9793b95e886713a52e",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "5d56251d6950a9de6ce8d0836c1f6080dc4bd6e53350c714e1fbde29b1ac4c01",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "234d4ced7408b035dfb7e2dd5415e539541cf160f56e0d5cb85c79a4eb7a7f0a",
+          "error": null
+        }
+      ],
+      "elapsedMs": 35875,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": [
+          "run_command"
+        ]
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": true,
+        "after": false,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "A",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 44546,
+        "output_tokens": 868,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 183086,
+        "total_tokens": 45414
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "48d12ac88c46514747afb9c805b1f4761c081418db699aa96f80f775a3fe6ea3",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e860b564c9745642a03716f96859c123e4e0cad2b8804a2bec6a95d1254bf65e",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "9f72900f280da4b2c36ae86dc53d9ba0881b3d8c96bfb14058f9f536fd57fd74",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "3056fafdc5c116de8ccd7c834e701ba8d5d4867f1262f6e18624f1ccf6098b0c",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "527eb8777a16c0a855cbe337ba58becf51bec07a16feef65be957d1449341132",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "974a691d574a569e8a6845e650f175be142cf7ed1b7868cb32af4d9f1c4d179d",
+          "error": null
+        }
+      ],
+      "elapsedMs": 28872,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": true,
+        "after": false,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "A",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 38470,
+        "output_tokens": 897,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 137785,
+        "total_tokens": 39367
+      },
+      "actions": [
+        "run_command",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "6c19c5f631e960377d438d96e1b29986cc7e21b75f855edc518e281f50da8f6f",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "fd10a37e0fa59267ad4262202c185ff701aad412489cb012c1beef8457464f07",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "38d8316430f0d4f42841a254a822e1588e63b220c80adac35aef8f342c5ef486",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "105625fd468f1c87000ce8fcfa4e039a8c6eb3bfcefb5d0ae64bd66f20aa9a77",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "b8034f8903d6ccb47a43316114bbd0535aab5c274afda29fa0f6a5089df4cf33",
+          "error": null
+        }
+      ],
+      "elapsedMs": 25365,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": [
+          "run_command"
+        ]
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": true,
+        "after": false,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "B",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 35904,
+        "output_tokens": 843,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 118135,
+        "total_tokens": 36747
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 20,
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "a36434118949d6a3afc65ab07f96f7a7487b9618b1deaa00cdd802fe85db2cfc",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "30f700e34652c3f8e65a89612928404a9c55d8ea4ddd45ebb194b6b7079d7b9c",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "661dd8c340231372ae3621657f4cb01efa036e979402284517b8cc6eee6126c9",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "f3554ecc706287556a435a7c026f7bd4c8d20a3b9ccda22bc281111458805fc3",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "35aa514a5bf629566650c741fda0fd9df9356f8cf414dda93bdc7d2f6fb1dcae",
+          "error": null
+        }
+      ],
+      "elapsedMs": 21937,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": "false",
+        "after": true,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "B",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 41270,
+        "output_tokens": 1008,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 157833,
+        "total_tokens": 42278
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "a36434118949d6a3afc65ab07f96f7a7487b9618b1deaa00cdd802fe85db2cfc",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "7a4b6b51d56c34ab2193671ff043e55eb704abe8e74cded4b3c884f896ce5ec8",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "b4f4a72fce42b138a06fe1f97b2fb245af7b8a832bdd66703277003342de65d3",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "f02d2e90e8787c81894e41f6252ffcfb6594dff70489dc0b72d6d6bf301ee658",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "81cffe80e95162087b75cff1e291f5334bf0ad42481d206725983f680ef75a17",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "9e39400d398147ff9dccafc3033c1b998777b748e7b594ecfa907e0eed34d305",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "7fd57f7b57ad733a026a70b8dc715b972d20243ca716a3c183a74185c254a093",
+          "error": null
+        }
+      ],
+      "elapsedMs": 30786,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": "false",
+        "after": true,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "B",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 41977,
+        "output_tokens": 831,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 163154,
+        "total_tokens": 42808
+      },
+      "actions": [
+        "run_command",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "b59a4393c3d499b68ff754fbb9d0f84bcd3beecd128574c0af30ec232a559b72",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "8da6b89dd3ff19ee7685f58de471e425e5b29842b8b7bb472296b151a607c899",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "522c7dc6a48d43dd432718a7218e37353c80493e6d371c5ccc3c393827e54bca",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "6f68ce9b804255e45f9b14d1bedfbf6b35ec1554a0a88f55b6c19f0a87f5f3d8",
+          "error": null
+        }
+      ],
+      "elapsedMs": 27352,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": [
+          "run_command"
+        ]
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": "false",
+        "after": true,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "C",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 41921,
+        "output_tokens": 1179,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 167243,
+        "total_tokens": 43100
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 20,
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "6c19c5f631e960377d438d96e1b29986cc7e21b75f855edc518e281f50da8f6f",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "30f700e34652c3f8e65a89612928404a9c55d8ea4ddd45ebb194b6b7079d7b9c",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "87f60b64237f34ab67e49ddfbd436b8e1060b2d476c8b81ab35bbbb995602abe",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "a544660bb1a8bc46c7e9caa3ac30a5872c6f2882d2a2e0f3c8fcc9f77abfb049",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "4949b8548d8eec416e7b042f85acb1dcccf682e2639e13dbfb0ef5ace4165c65",
+          "error": null
+        }
+      ],
+      "elapsedMs": 32723,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.retryLimit",
+        "before": 1,
+        "after": 0,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "C",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 36881,
+        "output_tokens": 785,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 132839,
+        "total_tokens": 37666
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 20,
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "e0bea1f3002985e353f323ee9eb9451a838259f88b790a245b4f29276cc7e54b",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "28dcf13af526956d91ac4d7d07e67d2def667816b73fe092636bca3766969935",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "8ee3a5c32ce51169367c64bcba96cc44ed6f66fe137eadec0b9c419b09cc7539",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "f606474ab0b579d516a372796f4a2a8c41e41a58fcf7b1c8a34f8744c622d271",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "24e1d8648679c8fdfdcc65a63007ce8b6fc43deab806346c96c5d109ecd87de2",
+          "error": null
+        }
+      ],
+      "elapsedMs": 33226,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.retryLimit",
+        "before": 1,
+        "after": 0,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "C",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 38957,
+        "output_tokens": 657,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 144307,
+        "total_tokens": 39614
+      },
+      "actions": [
+        "read_file",
+        "run_command",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 50,
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "b59a4393c3d499b68ff754fbb9d0f84bcd3beecd128574c0af30ec232a559b72",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "cc839ffadeabdcdf90a51e81b7f92fb81c2742b4dfac3528e09af27bde3b3ae7",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "bf45407f02b39436d0f54810be23ed8a092e1c2e9b30f0b0e65911d822ea9bbb",
+          "error": null
+        }
+      ],
+      "elapsedMs": 26294,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": [
+          "run_command"
+        ]
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.retryLimit",
+        "before": 1,
+        "after": 0,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "D",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 35588,
+        "output_tokens": 839,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 120965,
+        "total_tokens": 36427
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "method": "GET",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "6f45f4db4405ad01d852d61a645be547e89cb5d3e9c0391411d1d10fda5814bf",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "30f700e34652c3f8e65a89612928404a9c55d8ea4ddd45ebb194b6b7079d7b9c",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "ff65c96014538d5091f35d8a5ae0ddaf8edc4e1fecf1751c8011db0926231461",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "f3554ecc706287556a435a7c026f7bd4c8d20a3b9ccda22bc281111458805fc3",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "ecc98dec40f046435e92402bbd54c8865e3be8e09a0f7552a27ffa841ad767f5",
+          "error": null
+        }
+      ],
+      "elapsedMs": 23612,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "no_functional_change",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "D",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 33035,
+        "output_tokens": 701,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 99210,
+        "total_tokens": 33736
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "551ce3372d9f0636041f57280d11f7af60bdc300879d4ce513721eef1efde831",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "f992f0044f22eeb609464ddf1c3c250b5d9a9c446fc54383a29aa8540d5144a7",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "d66755309b941b89b7aa8bae1027a4e249c05f117e93e4124271bd4a91ffee26",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "60021661a1019975cb34b51b2b1a2924d89e9d355b2ad3182a7d47a6fb1126b4",
+          "error": null
+        }
+      ],
+      "elapsedMs": 20325,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "no_functional_change",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "D",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 47235,
+        "output_tokens": 1010,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 208207,
+        "total_tokens": 48245
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 20,
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "e427c9673d8a6f47de028b524a17bf427f21a5eee41d8f4f9423ea9783ecd60c",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "10c76b4eb8c0990357f8177a32cc2b9997632cdea06c17fb9d3ff3c26a9c6f1e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "b5dfbf6993a07faa7de306f0d8c3105803bffe3a4d8b75541b5c93d2e91b0dd6",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "0c2c452fd30528988c28cb3a1f691360a3641bb6ec5b797de48e7443814f1b32",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "02c45b8fe656388f5640984d5da3251871c20c99a2d0663910bedaa4bf168dec",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "b74f3d6a59a39212a44fa12f2fcd9448f434fc19071da841ec85add69cb28005",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "f40c341f90b6a86a3e2f78fa3ce44e1eec9e823fcc716f0b9de0eff74aff10f8",
+          "error": null
+        }
+      ],
+      "elapsedMs": 31357,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "no_functional_change",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "E",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 47195,
+        "output_tokens": 1136,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 203171,
+        "total_tokens": 48331
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "limit": 20,
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "e9e86bee2f66f2b4f7975076185d32bf98c21eb36177026c95a90667bc49af8d",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e236bf868c78a52455d6116e1e9e766a475c6b5767a2cbde0c29793298c18203",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "669af92f9721e65d81c8c8cd0c3d6c88dcdb0196bae0f123b13eacaff2191429",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "401e705373480849936f2e3a02171c6daa217bbee4f16123acd7d2e1449b6457",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e61df26b0497bea8c4388b2e84b5b9f69e6f2a1227752139acf0f83713bf235d",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "ebf11efd838194a8eb65d30503a87563b8e0dc161585d4175af51319f1b1a442",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "53cc9bf795875224c0ef4cb3303e034cb5b19f853dfee1dd90d1598d7d621a35",
+          "error": null
+        }
+      ],
+      "elapsedMs": 37226,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "insufficient_evidence",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "E",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 37655,
+        "output_tokens": 1338,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 145688,
+        "total_tokens": 38993
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "1204b9ded01b7eea6c46c81fd85f2a90f39020144337ab5e786dd7c0941ae981",
+          "error": null
+        },
+        {
+          "name": "sessions_list",
+          "arguments": {
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "39c2ac846508d8c877969493df03fbf33a359852ca2b0876024b04b4d8f0403f",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "635ff6e87c54be45c2028a98889fd61d379bd3bf6a47ff2af64c4f555c79a503",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "46bb3a99147f8ac2e5da4f7b2b9ee8b0caf9600d84274ec74391af400abfb280",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "9bbe259661edd50cf1c914854911ebbee1d6560008e5649b23596dd6a68b8923",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "12ba8cc3a1e65ce1b5f237316d6b854274ecf3bec8417b208a0872dfaa34f39e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "27faaccac694da52673c99c859f028100a2b1490aad2d8c9b6900743b257cd86",
+          "error": null
+        }
+      ],
+      "elapsedMs": 27499,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "insufficient_evidence",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.0",
+      "build": "23",
+      "case": "E",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 38162,
+        "output_tokens": 1048,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 140858,
+        "total_tokens": 39210
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "method": "GET",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "11c6c4f7635c9787b024f2345fdbf71369c8468c286f8f72f05b87baf0e84275",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "28dcf13af526956d91ac4d7d07e67d2def667816b73fe092636bca3766969935",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "5f82e6dc69c9a964a375e33637871ee0bf99ae996741b7fdad916a9d8401c4ca",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "89574f54f6747a9ae1f7a0dbf6a8a26a32abb078b7fb5039153a5e59cf3abecb",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "d3f9d185b7be365a1c3154dec5beeb099b727a718beefa141b62652edbd9c929",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "3e1f71c33b076a19c46b2359878115329bfe6d49eb96327d36068d79945a9243",
+          "error": null
+        }
+      ],
+      "elapsedMs": 30914,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "insufficient_evidence",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "A",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 37097,
+        "output_tokens": 705,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 136319,
+        "total_tokens": 37802
+      },
+      "actions": [
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "df18e62e8b9e8952011c62920ddd42d18e5289b46122f43d9739ef447a356194",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "4b3e0ccf5cc57ff9927cfb79b831ee1a0758cf64879bd3beb295e903e0401f07",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "f2d33f4122b4678cd52ee76a95a8ce09146751d01c836ffae55d8376d2834368",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "ac07fc62d34217422b8cb471655f393cc37cc4f5bdba5716b1f7208ce35fa9f7",
+          "error": null
+        }
+      ],
+      "elapsedMs": 24620,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": true,
+        "after": false,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "A",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 39944,
+        "output_tokens": 748,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 155049,
+        "total_tokens": 40692
+      },
+      "actions": [
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "52c687b98bb9760bc8c54e192a21febe18d52240ea5bb74a60ea1d54de922171",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "923b008696cef9041b895ce6454c86c6de6ee7722f68b83e2766d8c274af4691",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "9c8eec830261093a044cae7fa33c36be4105f522d65b79ab4f93efde53a2ed4b",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "8b025bd86913c378aedddbccbaa8555a215b41ff1f3dd637607d94858278b17e",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "7b83e5993ac42e23cf039e97808061aa4a3042b9d55db5f72cf86eba0a6c218d",
+          "error": null
+        }
+      ],
+      "elapsedMs": 32057,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": true,
+        "after": false,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "A",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 32078,
+        "output_tokens": 820,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 108823,
+        "total_tokens": 32898
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "method": "GET",
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "4f58bfe02ff327daf763f463cc98caa16f7a1dd0af294448911d3c2b611e5178",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "f537f0d109976badac858eb515b0f9d7d96c8933e553dd6f588f658db4a359d3",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "selectionPointer": "",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "23bda3a09a93f0db331f87060f0fd9abd69bc73ab19bf3eed15dc2abc1eac0d6",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "selectionPointer": "",
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "4ee948942d2045927ba8a7dedcb905e50d796209540c83bf0c16d526f5779174",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "036a10c77bf97a52d89ad5979d037c7ef816bcb3531e47a7d6a2c975a61f977d",
+          "error": null
+        }
+      ],
+      "elapsedMs": 28208,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "/settings/featureEnabled",
+        "before": true,
+        "after": false,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "B",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 40153,
+        "output_tokens": 1014,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 164649,
+        "total_tokens": 41167
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "c50f7fd734959ae1cd06432abad7435ac3df8a1c9b7a5e91772534403282b0b5",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "f0a3bb8ced3b99a8d4914b0f129aa2d94371ebb4d843f6a8c3bf4f1768479de8",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "2e4166d6242c539aea8ee0644ffcb537e27a5296d0df69ca1adb69b65b27c05e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "bfee174a63cf123a49b271e64d3a24281d0295c2d4945b6f4270dbf1f42ea790",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "7ab672ee154574087a290ef1756cda080397a13060ed5d91b74ed176f0037c22",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "429275793125a2909cabe80c3380f0d688c8ac54e872d07df3fc72773c832035",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e3d8d93974948fb95fb976f2018b9e5ba3b06f3d3f450b62c2d273af2ef61e90",
+          "error": null
+        }
+      ],
+      "elapsedMs": 26929,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": "false",
+        "after": true,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "B",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 42624,
+        "output_tokens": 934,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 177100,
+        "total_tokens": 43558
+      },
+      "actions": [
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "5ab3c276e1b33db7080b1590a924ac806092bd5ca79b63654c609560787308df",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "9b8d6b8b99017d44ac3863254638e8905c67198996fd21360d4931e562b7e432",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "d7f608306638834f538308bd924185b44d1db3d4bee6f5327cb7077696f4fed5",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "4180f6749fec066db0cf33dbf2a293dee323ec493311cb33fed518de930905cc",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "053d38dc27730fb8e279cbaeba13496f2ed134a66d32f18c3fb151f95abe7ebb",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "8c405c159ed641f17499bd037a9b88d0dad709ee4673f13be8dcc63b9f2e6423",
+          "error": null
+        }
+      ],
+      "elapsedMs": 30223,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": "false",
+        "after": true,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "B",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 26758,
+        "output_tokens": 753,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 69874,
+        "total_tokens": 27511
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "9e3de086242bc387f94fe7569659d827d28b22d439390f02bad82aa5372fbd2c",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "a24ab0311b0bfdf749645a758bf28e5e618c7828fa635fa7beb6e136694a5dd7",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "14ccbc593002bf6d077751f566e77127c3a2b8110a7b74e2cb5900adcc821cd1",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "a8acf1b973374131ddf1ead019021d2f98258403aaf206c554f93a450a9adb1f",
+          "error": null
+        }
+      ],
+      "elapsedMs": 17174,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "settings.featureEnabled",
+        "before": "false",
+        "after": true,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "C",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 35202,
+        "output_tokens": 801,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 123242,
+        "total_tokens": 36003
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "f8c0fcd23fb631f63c879ee110de6b1af4020b30c1c91cabfc18cd462e59babf",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "884ffa27c1f1e636b159e7ea818f5e157ee7d5465bce0da1b5611d4b7b72abb0",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/retryLimit",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "336dc3f182c666217d7321f9c81eef4e6abc75965992009c38445615390ca629",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/retryLimit",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "0137be5455467e2d60762849dfb0b52413b8d92465f643cb8ee833a150ddce8a",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "ea23e493fcc9e54ca6eacbe6f82c3c7d88e34f0393c2a8a14683d15b15d1bc32",
+          "error": null
+        }
+      ],
+      "elapsedMs": 24867,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "retryLimit",
+        "before": 1,
+        "after": 0,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "C",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 43023,
+        "output_tokens": 878,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 169606,
+        "total_tokens": 43901
+      },
+      "actions": [
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "2cff022633803a2a0b884b970293f7e13384b0cc4c255ff5ff573c839365f927",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e3d8d93974948fb95fb976f2018b9e5ba3b06f3d3f450b62c2d273af2ef61e90",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "cdaf7761911259a513fc120ed7655ab426bb0494048f84a0689d7ed9425fd18e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/retryLimit",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "6ed4178c2a73f4e96616465d09361a89d088829c7f10d915cee49cb1483cb991",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/retryLimit",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "e5e922aa571ce00b976dd61050304c802a386c47d3909d8f70ac9c593498df22",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "ac214d805ac845389b14292e34f601809d74489285f15a2ebaca1c725f2eb48c",
+          "error": null
+        }
+      ],
+      "elapsedMs": 34136,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "retryLimit",
+        "before": 1,
+        "after": 0,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "C",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 28942,
+        "output_tokens": 849,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 90836,
+        "total_tokens": 29791
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "8635c9c8b57a7ff7630f9d2f41c18a7a391c0b2991938650e6ff3e2e2522e0de",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "beeb83e47ff8aa4a33fbd7ec2fb9befa176f3deac9f59f40bf70c1780f1cb6fb",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/retryLimit",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "5e8e20b3d7bad92a20680795f70e1e03b7dafcdc18923df93a9971f2416987ab",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/retryLimit",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "62e5bfd69326dc6b5164450ff665e87018edfb8540b0830c6fbdbefc682d9d2e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "85394205edf20372e66fc0d8c2ef185b2605aa98dbb6e838b136f1b1c6341639",
+          "error": null
+        }
+      ],
+      "elapsedMs": 19413,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "changed",
+        "field": "retryLimit",
+        "before": 1,
+        "after": 0,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "D",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 35803,
+        "output_tokens": 1070,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 125865,
+        "total_tokens": 36873
+      },
+      "actions": [
+        "run_command",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "fdf80286f9f0643776ed75020236280371d93e9099d7eb3ef237d850097eb805",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "eb54495b246a36b26e933fa8345b78ad0f51936386acece45ba12149144710e4",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "6bad035b2e62f077e296d27f1a9fddce7a84217bef9c87f408c1a857d9435825",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "130d94c921b901a4746cea0f50333593e8713f88ce865e0626fcb0fe041cbb11",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "9d0cc0d34aa4398290af6f0203b30139f017c0ee19029bbb77316df55370cfd3",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e10497dc5c82bd73084fe3a24a298bb4347b5924a6febf5fc0fc7908eae9645e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "3d495c6640260d4c7f301e54fc7b96e29c2db7ebb3d97a46c0e92defc84ea749",
+          "error": null
+        }
+      ],
+      "elapsedMs": 25660,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": [
+          "run_command"
+        ]
+      },
+      "parsed": {
+        "verdict": "no_functional_change",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "D",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 34703,
+        "output_tokens": 840,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 126956,
+        "total_tokens": 35543
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "a7eb86d8c0e954974ac997df18bccdbbd826e83e8c348e3a68090af40cea9fb4",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "6a405020c460f2cf2db8384dca550e37dcc18f926dd41f966da87e72c1c646cc",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "feede054ad13768a10469927ab209db664c34343dffec0a060c93c1dc780773e",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "75235345717da237db9c925e5ab0b08f9ba4c9a4662b0e1430784cdb80283352",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/settings/featureEnabled",
+              "/settings/updatedAt"
+            ],
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "bc3d5896be0f6d3f14ad58fa5c69fe3c1a32ab2fd059f80f40bdda266cd09d4c",
+          "error": null
+        }
+      ],
+      "elapsedMs": 26515,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "no_functional_change",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "D",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 32194,
+        "output_tokens": 983,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 108972,
+        "total_tokens": 33177
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "66a6ad7a9e3802816e2bfefb56216e37a6ace96106528a539024735166d77e55",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "c68931c3402990c7014718126e3d2e035229aca0a928c7fbe179881e05192a3f",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "c10a9ed1f2e2f41040fe6cd92dddc1df9067c7bccf31ba273f12246659881a0a",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "fd70df1b413e43aa6052b895cde5a0d7ab3a195bf1f7b892079952bda099004c",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/featureEnabled",
+              "/updatedAt"
+            ],
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "a219e1a656f551c44100708aab6db04af38e99fea30b7f6ccdb259471ddad509",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "fieldPointers": [
+              "/featureEnabled",
+              "/updatedAt"
+            ],
+            "selectionPointer": "/settings",
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "2bbd50d5adab688aebf72d431cf44a8bbbd7eb50919473eaf797d8d6ce1fb1ae",
+          "error": null
+        }
+      ],
+      "elapsedMs": 23662,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "no_functional_change",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "E",
+      "rep": 0,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 61974,
+        "output_tokens": 1181,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 177825,
+        "total_tokens": 63155
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "7dfb1918860ba7f1060778861159da0d19cf5dabd3e0b868126e4d325ea87d75",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "95ec31c58bcad1927b406f0e9b629aad81f6fc6144c3a56ffab85ceb294dbf42",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "e4c0a2562366d1ae8dd0d97facfb614e8924a81084bf9ac07d72fb8b4a6568b7",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "c6ba10c8e274257b2f56e51198fa60881069d017e057437b256e7f3b32030ff9",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "approval": {},
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "00439b67ad5c5a91915b920506e1dc944a7ef3c434fcd6fb2e44e436cb3f749f",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "approval": {},
+            "includeBody": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "2b64e9e35dd5b82781a9e726682fac2432cc1adc11b97322d2ee371e20c45f63",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "approval": {},
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "cb6f101cb3ed630dda2763e060f878b45a619274b994e8b2967617efa2ea4325",
+          "error": null
+        }
+      ],
+      "elapsedMs": 60704,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "insufficient_evidence",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "E",
+      "rep": 1,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 27111,
+        "output_tokens": 867,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 70001,
+        "total_tokens": 27978
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "method": "GET",
+            "path": "/app/status.json",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "2e4ed9d35f29d7db9e5b762890e35f9f8c31b263627e15355f3cdefe45a65168",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "7980fc7d743f8a41f9ffae53745d7032d55a35c10972b4bcaecfa76be92c6772",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "e5f143b82a79831e08455fceb685d300ed22be2a8761dc0d8c707c9ddf5d6df2",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ]
+          },
+          "ok": true,
+          "answerSHA256": "ad095fb4c476389914a70bd8f099403f4bab30bcf27fde5ff38150999464f82f",
+          "error": null
+        }
+      ],
+      "elapsedMs": 17222,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "insufficient_evidence",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ]
+      }
+    },
+    {
+      "version": "1.9.1",
+      "build": "25",
+      "case": "E",
+      "rep": 2,
+      "model": "gemini-3.8-flash-low",
+      "code": 0,
+      "status": "SUCCESS",
+      "usage": {
+        "input_tokens": 37333,
+        "output_tokens": 1010,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 138768,
+        "total_tokens": 38343
+      },
+      "actions": [
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool",
+        "call_mcp_tool"
+      ],
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "path": "/app/status.json",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "4b843ae2c5c6d030e979e67d346748e06dfa00e2f15112521a860a09c0974ad2",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "e3d8d93974948fb95fb976f2018b9e5ba3b06f3d3f450b62c2d273af2ef61e90",
+          "error": null
+        },
+        {
+          "name": "session_summary",
+          "arguments": {
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "8b00a1d3e453cb7ad1fc3978bcfe0942e37fefb610d2ae36f2adb1bf84747d4e",
+          "error": null
+        },
+        {
+          "name": "investigation_compare_brief",
+          "arguments": {
+            "baselineSessionIDs": [
+              "10000000-0000-4000-8000-000000000001"
+            ],
+            "candidateSessionIDs": [
+              "10000000-0000-4000-8000-000000000002"
+            ],
+            "includeValueDiff": true
+          },
+          "ok": true,
+          "answerSHA256": "8bf3efeb1336d851d2aeadb7070a5cc2a44bb1faf0abc7b61e5b29ab34637c98",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000001"
+          },
+          "ok": true,
+          "answerSHA256": "59669ae0f0c3f84e675ab8e7082b2f0b2986ab5e9ba81ca83056a9f4919470bd",
+          "error": null
+        },
+        {
+          "name": "response_evidence_brief",
+          "arguments": {
+            "includeStructure": true,
+            "sessionID": "10000000-0000-4000-8000-000000000002"
+          },
+          "ok": true,
+          "answerSHA256": "2271cc0cbc77be072b7a5c3864f2356a8e1127d1a2c5ec6e5d209f1860df5243",
+          "error": null
+        }
+      ],
+      "elapsedMs": 24728,
+      "grade": {
+        "correct": true,
+        "cited": true,
+        "otherToolAttempts": []
+      },
+      "parsed": {
+        "verdict": "insufficient_evidence",
+        "field": null,
+        "before": null,
+        "after": null,
+        "requestIDs": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ],
+        "explanation": "The baseline request 10000000-0000-4000-8000-000000000001 retained its response body containing settings (`featureEnabled` and `updatedAt`), but the subsequent candidate request 10000000-0000-4000-8000-000000000002 has its response body missing (`bodyUnavailableReason: \"body_missing\"`). Without the second response body, functional changes cannot be evaluated."
+      }
+    }
+  ]
+}

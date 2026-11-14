@@ -16,6 +16,12 @@ class ValidationPreflightTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 PREFLIGHT.validate_selection(self.root, value, "transport")
 
+    def test_soak_accepts_only_the_opt_in_capture_soak(self):
+        for value in ("JoesProxyTests/ProxyServerTests", "JoesProxyTests/ExampleTests/testExample",
+                      "JoesProxyUITests/CaptureStabilityProfilingUITests"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                PREFLIGHT.validate_selection(self.root, value, "soak")
+
     def test_transport_requires_release_unit_products_without_injected_checkers(self):
         derived = self.root / "build/data"
         products = derived / "Build/Products"

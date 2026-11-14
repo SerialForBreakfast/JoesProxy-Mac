@@ -1152,7 +1152,11 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         }
                     }
 
-                case .deniedMapRemote(_, let reason, let detail):
+                case .deniedMapRemote(let deniedRuleID, let reason, let detail):
+                    self.logger.notice("""
+                        Map Remote denied by rule validation reason=\(reason.rawValue, privacy: .public) \
+                        rule=\(deniedRuleID.uuidString, privacy: .public)
+                        """)
                     if let sessionRecorder, let sessionID = await sessionIDTask.value {
                         await sessionRecorder.failSession(
                             id: sessionID,
@@ -1218,6 +1222,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                             reservedRegistry: .shared
                         )
                     } catch MapRemoteValidationError.policyDenied(let reason, let detail) {
+                        // Always recorded: a denial changes what the client receives. Reason code only.
+                        self.logger.notice("Map Remote denied at request time reason=\(reason.rawValue, privacy: .public)")
                         let statusLine = (reason == .resolutionFailed) ? "502 Bad Gateway" : "403 Forbidden"
                         if let sessionRecorder, let sessionID = await sessionIDTask.value {
                             await sessionRecorder.failSession(
@@ -1785,6 +1791,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         let presentation = NetworkFailureClassifier.presentation(for: error)
         logHTTPS("Sending failure response [\(presentation.bucket.rawValue)]: \(presentation.message)")
         let statusLine = responseStatusLine(for: error)
+        // Always logged: a synthesized failure status is otherwise indistinguishable from an origin response.
+        logger.notice("Proxy failure response status=\(statusLine, privacy: .public) bucket=\(presentation.bucket.rawValue, privacy: .public) errorType=\(String(describing: type(of: error)), privacy: .public) detail=\(String(describing: error), privacy: .private)")
         let body = (error as? UploadBodySpoolError)?.errorDescription ?? presentation.userFacingMessage
         let response = """
         HTTP/1.1 \(statusLine)\r

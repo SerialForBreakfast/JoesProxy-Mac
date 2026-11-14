@@ -62,7 +62,7 @@ enum MCPCapabilitiesManifestBuilder {
 
     /// Production MCP tools mirrored by ``MCPProtocolService/handleToolsList``.
     static let productionTools: [ProductionTool] = [
-        ProductionTool(name: "capture_calculate", description: "Calculate over explicit session IDs or filter retained metadata by an inclusive time window for rowCount or status-code groupCount. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.", capability: .bodyRead),
+        ProductionTool(name: "capture_calculate", description: "For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.", capability: .bodyRead),
         ProductionTool(name: "artifact_source_register", description: "Request local file selection and review of one immutable temporary source. No remote path input. The local user selects and shares; retry the same request key after approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_status", description: "Owner-only pending source state; no selected-file metadata before approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_inspect", description: "Inspect an owned unexpired source descriptor. No raw content or local filenames.", capability: .artifactSourceAccess),
@@ -77,8 +77,8 @@ enum MCPCapabilitiesManifestBuilder {
         ProductionTool(name: "documentation_read", description: "Read a documentation topic or section. Follow continuation before treating instructions as complete.", capability: .agentResource),
         ProductionTool(name: "agent_toolset_status", description: "Report the current discovery toolset and full policy-available tool count.", capability: .agentResource),
         ProductionTool(name: "agent_toolset_select", description: "Select a compact tools/list catalog. Discovery only; policy-permitted tools remain callable.", capability: .agentResource),
-        ProductionTool(name: "sessions_list", description: "Projected, paginated capture sessions; minimal by default.", capability: .sessionList),
-        ProductionTool(name: "sessions_search", description: "Projected capture search by method/host category; minimal by default.", capability: .sessionSearch),
+        ProductionTool(name: "sessions_list", description: "List individual capture sessions in pages, minimal by default. For counts by status within a time window, use capture_calculate.", capability: .sessionList),
+        ProductionTool(name: "sessions_search", description: "Find individual matching requests in pages. For totals or a status histogram over a time window, use capture_calculate.", capability: .sessionSearch),
         ProductionTool(name: "capture_digest", description: "Compact capture state for conditional follow-up reads.", capability: .captureResource),
         ProductionTool(name: "audit_cache_efficiency", description: "Audits captured sessions for caching inefficiencies, duplicate un-cached requests, conflicting headers, and bandwidth waste.", capability: .captureResource),
         ProductionTool(name: "investigation_snapshot", description: "Bounded recent traffic decision surface with client-scoped evidence references.", capability: .captureResource),

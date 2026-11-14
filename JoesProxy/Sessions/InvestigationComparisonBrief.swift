@@ -51,6 +51,8 @@ enum InvestigationComparisonBrief {
         var afterType: String?
         var beforePreview: String?
         var afterPreview: String?
+        var beforeValue: Bool?
+        var afterValue: Bool?
         var isLikelyVolatile: Bool
     }
 
@@ -194,6 +196,13 @@ enum InvestigationComparisonBrief {
                 omittedCount += 1
                 return
             }
+            func boolean(_ value: Any?) -> Bool? {
+                guard !sensitive, let number = value as? NSNumber,
+                      CFGetTypeID(number) == CFBooleanGetTypeID() else { return nil }
+                return number.boolValue
+            }
+            let beforeBoolean = boolean(beforeVal)
+            let afterBoolean = boolean(afterVal)
             valueChanges.append(
                 ValueChange(
                     baselineSessionID: baselineID,
@@ -202,8 +211,10 @@ enum InvestigationComparisonBrief {
                     kind: kind,
                     beforeType: beforeVal.map(ResponseEvidenceBrief.type),
                     afterType: afterVal.map(ResponseEvidenceBrief.type),
-                    beforePreview: beforeVal.flatMap { ResponseEvidenceBrief.formatProjectedScalar($0, sensitiveKey: sensitive) },
-                    afterPreview: afterVal.flatMap { ResponseEvidenceBrief.formatProjectedScalar($0, sensitiveKey: sensitive) },
+                    beforePreview: beforeBoolean == nil ? beforeVal.flatMap { ResponseEvidenceBrief.formatProjectedScalar($0, sensitiveKey: sensitive) } : nil,
+                    afterPreview: afterBoolean == nil ? afterVal.flatMap { ResponseEvidenceBrief.formatProjectedScalar($0, sensitiveKey: sensitive) } : nil,
+                    beforeValue: beforeBoolean,
+                    afterValue: afterBoolean,
                     isLikelyVolatile: volatile
                 )
             )

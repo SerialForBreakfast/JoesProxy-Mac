@@ -718,6 +718,7 @@ final class MCPProtocolService {
             await handleNotification(message, client: client, context: context)
             return MCPHTTPResponse.response(status: 202, headers: sessionHeaders(context: context), body: Data())
         }
+        let dispatchStarted = ContinuousClock.now
         var responseObject = await buildJSONRPCResponse(message: message, client: client, context: context)
         if message["method"] as? String == "tools/call",
            let sessionID = context.headers[MCPNetworkConstants.sessionIDHeader.lowercased()],
@@ -739,7 +740,35 @@ final class MCPProtocolService {
            let sessionID = result["_sessionID"] as? String {
             headers[MCPNetworkConstants.sessionIDHeader] = sessionID
         }
-        return MCPHTTPResponse.jsonResponse(status: 200, headers: headers, object: sanitizeResponse(responseObject))
+        let response = MCPHTTPResponse.jsonResponse(status: 200, headers: headers, object: sanitizeResponse(responseObject))
+        logCompletedRequest(message: message, responseObject: responseObject, requestBytes: body.count,
+                            responseBytes: response.body.count, started: dispatchStarted, client: client)
+        return response
+    }
+
+    /// One content-free line per answered request: the efficiency signal for a workflow.
+    /// Tool and method names, sizes, duration and outcome only; never arguments or results.
+    private func logCompletedRequest(message: [String: Any], responseObject: [String: Any], requestBytes: Int,
+                                     responseBytes: Int, started: ContinuousClock.Instant, client: MCPClientRecord) {
+        let method = message["method"] as? String ?? "unknown"
+        let tool = method == "tools/call" ? ((message["params"] as? [String: Any])?["name"] as? String ?? "") : ""
+        let outcome: String
+        if responseObject["error"] != nil {
+            outcome = "rpc_error"
+        } else if (responseObject["result"] as? [String: Any])?["isError"] as? Bool == true {
+            outcome = "tool_error"
+        } else {
+            outcome = "ok"
+        }
+        let elapsed = ContinuousClock.now - started
+        let milliseconds = Double(elapsed.components.seconds) * 1_000
+            + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000
+        MCPLog.protocolLog.info("""
+            Completed \(method, privacy: .public) tool=\(tool, privacy: .public) outcome=\(outcome, privacy: .public) \
+            durationMs=\(milliseconds, format: .fixed(precision: 1), privacy: .public) \
+            requestBytes=\(requestBytes, privacy: .public) responseBytes=\(responseBytes, privacy: .public) \
+            client=\(client.id, privacy: .public)
+            """)
     }
 
     private func buildJSONRPCResponse(
@@ -2463,6 +2492,10 @@ final class MCPProtocolService {
               policy == policyStore.policyRevision, policyEvaluator.effectiveAllows(capability: .bodyRead, client: current)
         else { throw ArtifactAnalysisFailure.sourceUnavailable }
         guard revision == snapshotService.stateRevision, epoch == snapshotService.captureEpoch else {
+            MCPLog.protocolLog.notice("""
+                Filtered calculation abandoned: capture changed during evaluation \
+                scannedRows=\(records.count, privacy: .public)
+                """)
             throw ArtifactAnalysisFailure.sourceChanged
         }
         var payload = try jsonObject(from: encoder.encode(report))
@@ -2486,6 +2519,12 @@ final class MCPProtocolService {
             payload["rowsInOmittedGroups"] = activeRows - groups.reduce(0) { $0 + $1.count }
         }
         guard try JSONSerialization.data(withJSONObject: payload).count <= 16_384 else { throw ArtifactAnalysisFailure.outputLimit }
+        MCPLog.protocolLog.info("""
+            Filtered calculation scannedRows=\(records.count, privacy: .public) \
+            matchedRows=\(report.filteredRows ?? report.rows, privacy: .public) \
+            possibleGap=\(payload["possibleCaptureGap"] != nil, privacy: .public) \
+            historyTrimmed=\(payload["historyTrimmed"] != nil, privacy: .public)
+            """)
         return toolStructuredResult(id: id, payload: payload)
     }
 

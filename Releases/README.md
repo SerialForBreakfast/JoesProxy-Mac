@@ -6,4 +6,8 @@ This directory contains the [checksum](SHA256SUMS) for the original build-23 dis
 
 ## 1.9.1 (24) local candidate
 
-Use JoesProxy-1.9.1-build24.dmg for second-Mac testing. Apple accepted the submission and the stapled disk image passed Gatekeeper assessment. Its SHA-256 is listed in SHA256SUMS. [Candidate notes](../docs/releases/1.9.1-build24.md)
+Build 24 was the earlier private candidate. Apple accepted the submission and the stapled disk image passed Gatekeeper assessment. Its SHA-256 is listed in SHA256SUMS. [Candidate notes](../docs/releases/1.9.1-build24.md)
+
+## 1.9.1 (25) private candidate
+
+Use `JoesProxy-1.9.1-build25.dmg` for second-Mac acceptance. Its final stapled checksum is in [SHA256SUMS](SHA256SUMS). The candidate includes the filtered status grouping used in the [autonomous benchmark](../docs/releases/benchmarks/1.9.1-edge-v7.md). See the [build 25 verification record](../docs/releases/1.9.1-build25.md).

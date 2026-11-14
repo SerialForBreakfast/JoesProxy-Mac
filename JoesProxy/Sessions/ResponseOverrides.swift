@@ -1,5 +1,8 @@
 import Foundation
+import os
 import UniformTypeIdentifiers
+
+private let overrideLogger = Logger(subsystem: "com.JoesProxyApp.Capture", category: "Overrides")
 
 /// Describes the origin of a captured response.
 enum CapturedResponseSource: String, Codable, Equatable, Sendable {
@@ -935,6 +938,15 @@ actor ResponseOverrideStore {
         if !skipExclusiveValidation {
             try assertNoExclusiveConflict(for: rule)
         }
+        // Creation and enabled-state transitions only. Identifier and kind, never matcher or body.
+        let previousEnabled = rulesByID[rule.id]?.isEnabled
+        if previousEnabled != rule.isEnabled {
+            overrideLogger.notice("""
+                Rule \(previousEnabled == nil ? "created" : "changed", privacy: .public) \
+                id=\(rule.id.uuidString, privacy: .public) kind=\(String(describing: rule.sourceKind), privacy: .public) \
+                enabled=\(rule.isEnabled, privacy: .public)
+                """)
+        }
         if rule.sourceKind == .collectionMock, rule.isEnabled, let plan = rule.collectionMockPlan {
             if let executor = liveCollectionTransformationExecutor {
                 guard executor.begin(effectID: rule.id, plan: plan, bundleGate: effectBundleGate) != nil else {
@@ -1604,7 +1616,9 @@ actor ResponseOverrideStore {
             LiveTransformationActivationTracker.shared.clear(ruleID: id)
         }
         liveCollectionTransformationExecutor?.stop(effectID: id)
-        rulesByID.removeValue(forKey: id)
+        if rulesByID.removeValue(forKey: id) != nil {
+            overrideLogger.notice("Rule removed id=\(id.uuidString, privacy: .public)")
+        }
         notifyChanged()
     }
 

@@ -14,9 +14,9 @@ metadata:
 
 # JoesProxy MCP Diagnostics
 
-Revision: 2026-11-05. Diagnose HTTP/HTTPS and streaming-media behavior using JoesProxy's
+Revision: 2026-11-14. Diagnose HTTP/HTTPS and streaming-media behavior using JoesProxy's
 capture, inspection and controlled mutations. Start here; load only the reference relevant
-to the current task. This folder is portable: install the entire `joesproxy-mcp-diagnostics`
+to the current task. For totals by HTTP status, start with capture_calculate. For individual examples, use sessions_search. This folder is portable: install the entire `joesproxy-mcp-diagnostics`
 directory, including `references/`, in your agent's skills directory. Do not copy SKILL.md alone.
 
 ## Connect and discover

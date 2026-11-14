@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let admissionLogger = Logger(subsystem: "com.JoesProxyApp.Capture", category: "Admission")
 
 /// Synchronous pre-task admission shared by transport threads. Every field is protected by lock.
 /// Reservations cover capture bodies plus metadata; these are not whole-process memory metrics.
@@ -157,6 +160,12 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
                     gapSequence += 1
                     gaps.append(.init(id: gapSequence, start: instant, rejectedCaptures: 0))
                     if gaps.count > 64 { evictedThrough = gaps.removeFirst().end }
+                    // Transition only, never per rejected request.
+                    admissionLogger.notice("""
+                        Capture admission paused gap=\(self.gapSequence, privacy: .public) \
+                        reason=\(oversized ? "requestTooLarge" : "capacityExhausted", privacy: .public) \
+                        reservedBytes=\(self.bytes, privacy: .public) reservations=\(self.reservations.count, privacy: .public)
+                        """)
                 }
                 paused = true
                 // A request that can never fit is a point-in-time evidence gap, not backlog.
@@ -234,6 +243,11 @@ final class CaptureAdmissionBudget: @unchecked Sendable {
         gapEndedAt = instant.date
         gaps[gaps.count - 1].end = instant
         paused = false
+        admissionLogger.notice("""
+            Capture admission resumed gap=\(self.gapSequence, privacy: .public) \
+            rejectedCaptures=\(self.gaps[self.gaps.count - 1].rejectedCaptures, privacy: .public) \
+            reservedBytes=\(self.bytes, privacy: .public)
+            """)
     }
 
     var snapshot: Snapshot {

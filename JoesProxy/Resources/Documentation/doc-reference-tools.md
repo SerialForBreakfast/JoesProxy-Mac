@@ -70,7 +70,7 @@ of silently presenting a missing companion list as a complete search.
 
 ## capture_calculate {#capture-calculate}
 
-Calculate over explicit session IDs or filter retained metadata by an inclusive time window for rowCount or status-code groupCount. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.
+For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.
 
 Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. A scan above 50,000 retained sessions or 10,000 matches returns unavailable.
 
@@ -175,13 +175,13 @@ Capability category: agentResource.
 
 ## sessions_list {#sessions-list}
 
-Projected, paginated capture sessions; minimal by default.
+List individual capture sessions in pages, minimal by default. For counts by status within a time window, use capture_calculate.
 
 Capability category: sessionList.
 
 ## sessions_search {#sessions-search}
 
-Projected capture search by method/host category; minimal by default.
+Find individual matching requests in pages. For totals or a status histogram over a time window, use capture_calculate.
 
 Capability category: sessionSearch.
 

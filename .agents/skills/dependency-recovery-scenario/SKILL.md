@@ -34,6 +34,8 @@ Define a bounded fault window and stop condition. If apply times out, inspect st
 before retrying; do not assume failure or create a duplicate effect. Missing tools do not authorize
 installation. Host/device automation, if needed, requires its own permission.
 
+For a bounded recovery run, compare status counts for the affected path and the sibling control over the same inclusive window. Keep pending requests separate. Use a matching request and the client log to establish whether a retry actually recovered.
+
 ## Why this needs two real capabilities most app-testing setups don't have
 
 1. **Path-suffix matching.** Two endpoints often share a prefix through an unpredictable id

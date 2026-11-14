@@ -85,8 +85,10 @@ final class InvestigationComparisonBriefTests: XCTestCase {
         XCTAssertFalse(valueChanges.contains { $0.pointer.hasPrefix("/ignored") })
         let featureChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/featureEnabled" })
         XCTAssertEqual(featureChange.kind, "modified")
-        XCTAssertEqual(featureChange.beforePreview, "false")
-        XCTAssertEqual(featureChange.afterPreview, "true")
+        XCTAssertNil(featureChange.beforePreview)
+        XCTAssertNil(featureChange.afterPreview)
+        XCTAssertEqual(featureChange.beforeValue, false)
+        XCTAssertEqual(featureChange.afterValue, true)
         XCTAssertFalse(featureChange.isLikelyVolatile)
         let reqIDChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/requestId" })
         XCTAssertTrue(reqIDChange.isLikelyVolatile)
@@ -94,5 +96,23 @@ final class InvestigationComparisonBriefTests: XCTestCase {
         let tokenChange = try XCTUnwrap(valueChanges.first { $0.pointer == "/authToken" })
         XCTAssertEqual(tokenChange.beforePreview, "<redacted>")
         XCTAssertEqual(tokenChange.afterPreview, "<redacted>")
+    }
+
+    func testBooleanValuesDoNotCoerceStringsNumbersOrExposeRedactedBooleans() throws {
+        let report = InvestigationComparisonBrief.compare(
+            baseline: [input(#"{"mixed":"false","number":0,"authToken":false}"#)],
+            candidate: [input(#"{"mixed":true,"number":1,"authToken":true}"#)], includeValueDiff: true)
+        let changes = try XCTUnwrap(report.valueChanges)
+        let mixed = try XCTUnwrap(changes.first { $0.pointer == "/mixed" })
+        XCTAssertEqual(mixed.beforePreview, "false")
+        XCTAssertNil(mixed.beforeValue)
+        XCTAssertEqual(mixed.afterValue, true)
+        let number = try XCTUnwrap(changes.first { $0.pointer == "/number" })
+        XCTAssertNil(number.beforeValue)
+        XCTAssertNil(number.afterValue)
+        let secret = try XCTUnwrap(changes.first { $0.pointer == "/authToken" })
+        XCTAssertNil(secret.beforeValue)
+        XCTAssertNil(secret.afterValue)
+        XCTAssertEqual(secret.afterPreview, "<redacted>")
     }
 }

@@ -1,5 +1,9 @@
 # Source validation
 
+The 1.9.1 (25) private candidate passed its release Policy gate with 3,072 passes, 17 skips and zero failures. Gatekeeper accepted the final stapled image. Second-Mac acceptance is pending. See the [build 25 record](releases/1.9.1-build25.md) and [benchmark evidence](releases/benchmarks/1.9.1-edge-v7.md).
+
+## Historical 1.9.0 validation
+
 Revision 2026-11-09. This source targets candidate 1.9.0 (23), with unchanged pinned dependencies and MCP capabilities revision 29. It was published on November 9, 2026; the local results below predate publication and commit `6cec757`, which has no recorded build or test run here.
 
 The text-size correction scales Compact HUD fonts and dimensions, main-window health statistics and inherited controls. The header adapts its layout to larger reading text. Build 23 retains marketing version 1.9.0 and advances only the monotonic build number through the build-only version helper.

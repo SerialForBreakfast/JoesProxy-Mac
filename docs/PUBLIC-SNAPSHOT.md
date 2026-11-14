@@ -1,5 +1,9 @@
 # Public source snapshot
 
+November 14, 2026. The current release branch contains the 1.9.1 build 25 private candidate. Public main and the downloadable 1.9.0 release have separate validation histories. See [candidate readiness](releases/Public-Readiness.md) for both.
+
+## Original source snapshot
+
 Revision 2026-11-09. Prepared from 1.9.0 (23) source, MCP capabilities revision 29.
 
 ## Publication status, checked November 11, 2026

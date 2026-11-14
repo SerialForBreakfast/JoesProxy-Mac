@@ -1,11 +1,6 @@
 # Release workflow
 
-Revision 2026-11-08 for the 1.9.0 (23) source snapshot. Publishing is held.
-
-November 9 preparation: the public repository name is `JoesProxy-Mac`. The unchanged installer,
-checksum and [candidate record](docs/releases/1.9.0-build23.md) are staged locally. Source project
-URLs changed; no installer was rebuilt. Validate the derivative and choose the binary/source pairing
-explicitly before publication. Upload DMGs as release assets, not source commits. All holds remain.
+Current as of November 14, 2026. The public release is 1.9.0 (23). The signed and notarized 1.9.1 (25) installer is in private acceptance. Use the [candidate record](docs/releases/1.9.1-build25.md) and [checksum manifest](Releases/SHA256SUMS) for this build.
 
 Config/Version.xcconfig defines the marketing version and monotonically increasing build number. The version helper updates configuration, changelog and checked-in diagnostic skill metadata together. Review its changes before validation.
 
@@ -21,6 +16,7 @@ Keep compiler outputs and test results under build/. Release artifacts belong in
 
 Publishing, installation and host UI acceptance are separate operator actions. The prepared snapshot has no public publication approval. Fresh-install and manual-upgrade testing remain required for a distributable installer. Automated updates require a configured and verified signing key and feed.
 
-## 1.9.1 build 24
+## 1.9.1 build 25
 
-The private test candidate uses the normal Developer ID release lane and its production entitlements. Keep its archive and notarization evidence in build/PrivateCandidate191Build24 and its user-facing DMG under Releases/. Verify the final checksum after stapling. After second-Mac approval, review the candidate changes in a PR to main, tag the approved source and attach that exact DMG and checksum to the release. Use the [candidate notes](docs/releases/1.9.1-build24.md) as the release description.
+
+The current private installer is `Releases/JoesProxy-1.9.1-build25.dmg`. Verify it against `Releases/SHA256SUMS` before transfer. The [candidate record](docs/releases/1.9.1-build25.md) identifies the accepted image and manual checks. Second-Mac acceptance and maintainer authorization for publication are pending.

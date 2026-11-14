@@ -6,13 +6,15 @@ enum ArtifactToolSchema {
         let pointer: [String: Any] = ["type": "string", "maxLength": 512]
         switch name {
         case "capture_calculate":
+            var livePointer = pointer
+            livePointer["description"] = "For a filtered window use the empty string (root)."
             let filter = object(["startedAfter": ["type": "string", "format": "date-time"],
                 "startedBefore": ["type": "string", "format": "date-time"], "method": ["type": "string"],
                 "domain": ["type": "string"], "path": ["type": "string"]], required: ["startedAfter", "startedBefore"])
             var schema = object(["filter": filter, "sessionIDs": ["type": "array", "minItems": 1, "maxItems": 256,
                 "uniqueItems": true, "items": ["type": "string", "format": "uuid"]],
                 "dataset": ["type": "string", "enum": ["responseJSON", "sessionMetadata"]],
-                "selectionPointer": pointer, "operation": operation,
+                "selectionPointer": livePointer, "operation": operation,
                 "operations": ["type": "array", "minItems": 1, "maxItems": 4, "items": operation],
                 "approval": ["type": "object"]],
                 required: ["dataset", "selectionPointer"])

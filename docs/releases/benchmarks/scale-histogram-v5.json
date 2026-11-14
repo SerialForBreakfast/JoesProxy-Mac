@@ -1,0 +1,140 @@
+{
+  "encoding": "o200k_base",
+  "version": "1.0.20",
+  "scope": "one copy of each canonical tool call and structured answer; warm transcript",
+  "results": [
+    {
+      "rows": 1,
+      "offset": 0,
+      "oracle": {
+        "200": 1
+      },
+      "arms": [
+        {
+          "calls": 1,
+          "tokens": 231
+        },
+        {
+          "calls": 1,
+          "tokens": 265
+        }
+      ],
+      "reduction": -0.1471861471861471
+    },
+    {
+      "rows": 20,
+      "offset": 10,
+      "oracle": {
+        "200": 13,
+        "206": 3,
+        "304": 1,
+        "404": 1,
+        "503": 1,
+        "missing": 1
+      },
+      "arms": [
+        {
+          "calls": 1,
+          "tokens": 1746
+        },
+        {
+          "calls": 1,
+          "tokens": 336
+        }
+      ],
+      "reduction": 0.8075601374570447
+    },
+    {
+      "rows": 100,
+      "offset": 100,
+      "oracle": {
+        "200": 65,
+        "206": 15,
+        "304": 5,
+        "404": 5,
+        "503": 5,
+        "missing": 5
+      },
+      "arms": [
+        {
+          "calls": 1,
+          "tokens": 8130
+        },
+        {
+          "calls": 1,
+          "tokens": 336
+        }
+      ],
+      "reduction": 0.9586715867158672
+    },
+    {
+      "rows": 400,
+      "offset": 200,
+      "oracle": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "arms": [
+        {
+          "calls": 4,
+          "tokens": 32685
+        },
+        {
+          "calls": 1,
+          "tokens": 336
+        }
+      ],
+      "reduction": 0.9897200550711336
+    },
+    {
+      "rows": 1200,
+      "offset": 0,
+      "oracle": {
+        "200": 780,
+        "206": 180,
+        "304": 60,
+        "404": 60,
+        "503": 60,
+        "missing": 60
+      },
+      "arms": [
+        {
+          "calls": 12,
+          "tokens": 98344
+        },
+        {
+          "calls": 1,
+          "tokens": 337
+        }
+      ],
+      "reduction": 0.9965732530708533
+    },
+    {
+      "rows": 400,
+      "offset": 671,
+      "oracle": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "arms": [
+        {
+          "calls": 4,
+          "tokens": 32751
+        },
+        {
+          "calls": 1,
+          "tokens": 336
+        }
+      ],
+      "reduction": 0.9897407712741596
+    }
+  ]
+}
