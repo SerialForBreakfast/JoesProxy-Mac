@@ -1264,7 +1264,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateRefreshHelpText: String {
-        "Keep this sheet open after trusting the certificate. JoesProxy checks automatically while the sheet is open. If the state still does not update, confirm the trust change was saved in the login keychain, then choose Check Again."
+        "After saving the trust change in Keychain Access, return to JoesProxy. If the status has not updated, choose Check Again."
     }
 
     func runSetupVerification() {

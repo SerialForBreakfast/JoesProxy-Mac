@@ -294,10 +294,7 @@ struct ContentView: View {
                     }
                 )
             }
-            .sheet(isPresented: $presentationState.isCertificateSetupPresented, onDismiss: {
-                log("Certificate setup sheet dismissed")
-                viewModel.refreshCertificateStatus()
-            }) {
+            .sheet(isPresented: $presentationState.isCertificateSetupPresented) {
                 CertificateSetupSheet(
                     viewModel: viewModel,
                     isPresented: $presentationState.isCertificateSetupPresented

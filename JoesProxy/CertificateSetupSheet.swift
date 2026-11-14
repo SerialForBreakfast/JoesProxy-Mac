@@ -12,7 +12,6 @@ import SwiftUI
 
 struct CertificateSetupSheet: View {
     @EnvironmentObject private var presentationState: AppPresentationState
-    private let trustRefreshTimer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
 
     @ObservedObject var viewModel: ProxyViewModel
     @Binding var isPresented: Bool
@@ -240,14 +239,6 @@ struct CertificateSetupSheet: View {
         .frame(minWidth: 520, maxWidth: .infinity, minHeight: 420, maxHeight: .infinity)
         .joesProxyResizableWorkspaceSheet(minWidth: 520, minHeight: 420)
         .accessibilityIdentifier("certificateSetupSheet")
-        .onAppear {
-            viewModel.refreshCertificateStatus()
-        }
-        .onReceive(trustRefreshTimer) { _ in
-            if viewModel.certificateWorkflowState == .installedTrustRequired {
-                viewModel.refreshCertificateStatus()
-            }
-        }
     }
 
     private func setupVerificationCard(for state: ProxyViewModel.SetupVerificationState) -> some View {
