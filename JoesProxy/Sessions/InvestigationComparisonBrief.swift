@@ -145,8 +145,9 @@ enum InvestigationComparisonBrief {
             steps.append(step)
         }
         let unavailable = (baseline + candidate).contains { $0.source.analysisStatus != "complete" }
+        let noValuePair = includeValueDiff && !steps.contains { $0.wholeResponseBytesChanged != nil }
         var report = Report(
-            status: unavailable || incomparable > 0 || omitted > 0 || omittedValueChanges > 0 ? "incomplete" : "complete",
+            status: unavailable || noValuePair || incomparable > 0 || omitted > 0 || omittedValueChanges > 0 ? "incomplete" : "complete",
             baseline: baseline.map(\.source),
             candidate: candidate.map(\.source),
             steps: steps,

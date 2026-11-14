@@ -30,9 +30,14 @@ enum MCPClientConfigSnippetBuilder {
             .appendingPathComponent("Contents", isDirectory: true)
             .appendingPathComponent("MacOS", isDirectory: true)
             .appendingPathComponent("joesproxyctl", isDirectory: false)
-        let quotedPath = "'\(executableURL.path.replacingOccurrences(of: "'", with: "'\\''"))'"
-        let quotedEndpoint = "'\(endpointURL.absoluteString.replacingOccurrences(of: "'", with: "'\\''"))'"
-        return "\(quotedPath) auth login --endpoint \(quotedEndpoint)"
+        func shellWord(_ value: String) -> String {
+            let safe = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/._-:")
+            if !value.isEmpty && value.unicodeScalars.allSatisfy(safe.contains) { return value }
+            return "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+        }
+        let command = "\(shellWord(executableURL.path)) auth login"
+        guard endpointURL.absoluteString != "http://127.0.0.1:9091/mcp" else { return command }
+        return "\(command) --endpoint \(shellWord(endpointURL.absoluteString))"
     }
 
     static func codexConfig(

@@ -53,6 +53,22 @@ final class InvestigationComparisonBriefTests: XCTestCase {
         XCTAssertTrue(unchanged.changes.isEmpty)
     }
 
+    func testValueDiffRequiresAPairAtTheSameEndpoint() throws {
+        let before = input(#"{"settings":{"enabled":true}}"#)
+        let after = #"{"settings":{"enabled":"true"}}"#
+        let unpaired = InvestigationComparisonBrief.compare(baseline: [before],
+            candidate: [input(after, path: "/different")], selectionPointer: "/settings", includeValueDiff: true)
+        XCTAssertEqual(unpaired.status, "incomplete")
+        XCTAssertEqual(unpaired.valueChanges?.count, 0)
+        let paired = InvestigationComparisonBrief.compare(baseline: [before],
+            candidate: [input(after)], selectionPointer: "/settings", includeValueDiff: true)
+        XCTAssertEqual(paired.status, "complete")
+        let change = try XCTUnwrap(paired.valueChanges?.first)
+        XCTAssertEqual(change.beforeValue, true)
+        XCTAssertNil(change.afterValue)
+        XCTAssertEqual(change.afterPreview, "true")
+    }
+
     func testPartialStructuresCannotClaimPathsAddedOrRemoved() {
         let before = input(#"{"a":{"b":{"c":{"d":{"e":1}}}}}"#)
         let after = input(#"{"other":null}"#)

@@ -65,7 +65,7 @@ final class MCPAgentExportTests: XCTestCase {
 
         XCTAssertEqual(
             command,
-            "'/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl' auth login --endpoint 'http://127.0.0.1:9091/mcp'"
+            "/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl auth login"
         )
 
         let instructions = MCPClientConfigSnippetBuilder.setupInstructions(
@@ -77,8 +77,11 @@ final class MCPAgentExportTests: XCTestCase {
         guard case .command(let setupCommand) = instructions.mechanism else {
             return XCTFail("Expected JoesProxy CLI to use an interactive command.")
         }
-        XCTAssertTrue(setupCommand.contains("joesproxyctl' auth login --endpoint"))
-        XCTAssertTrue(setupCommand.hasSuffix("'http://127.0.0.1:9091/mcp'"))
+        XCTAssertTrue(setupCommand.hasSuffix("joesproxyctl auth login"))
+        XCTAssertEqual(MCPClientConfigSnippetBuilder.joesProxyCLICommand(
+            endpointURL: URL(string: "http://127.0.0.1:9191/mcp")!,
+            appBundleURL: URL(fileURLWithPath: "/Local Apps/Joe's.app")
+        ), "'/Local Apps/Joe'\\''s.app/Contents/MacOS/joesproxyctl' auth login --endpoint http://127.0.0.1:9191/mcp")
         XCTAssertFalse(setupCommand.contains("secret-that-must-not-appear"))
         XCTAssertTrue(instructions.restartNote.contains("Keychain"))
     }

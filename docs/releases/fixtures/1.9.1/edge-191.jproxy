@@ -8729,7 +8729,7 @@
         "inspectionKind": "plain",
         "host": "edge.example.test",
         "port": 80,
-        "path": "/settings/before",
+        "path": "/settings",
         "headers": []
       },
       "state": "completed",
@@ -8758,7 +8758,7 @@
         "inspectionKind": "plain",
         "host": "edge.example.test",
         "port": 80,
-        "path": "/settings/after",
+        "path": "/settings",
         "headers": []
       },
       "state": "completed",

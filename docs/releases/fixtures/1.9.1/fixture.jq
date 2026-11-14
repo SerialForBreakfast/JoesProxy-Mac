@@ -9,6 +9,6 @@ def row($i; $path; $status; $body):
          bodyData:($text|@base64),bodySize:($text|utf8bytelength),source:"upstream"}} end);
 {schemaVersion:2,exportedAt:"2026-11-13T12:00:00Z",appVersion:"1.9.1",proxyPort:9090,recordingFidelity:"fullRecording",
  sessions:([range(0;301) as $i | row($i;"/app/status.json";(if $i==299 then null else 502 end);{case:$i,error:"synthetic upstream unavailable"})]
- + [row(301;"/settings/before";200;{settings:{featureEnabled:false,updatedAt:"2026-01-01T00:00:00Z"}}),
-    row(302;"/settings/after";200;{settings:{featureEnabled:true,updatedAt:"2026-01-02T00:00:00Z"}})])}
+ + [row(301;"/settings";200;{settings:{featureEnabled:false,updatedAt:"2026-01-01T00:00:00Z"}}),
+    row(302;"/settings";200;{settings:{featureEnabled:true,updatedAt:"2026-01-02T00:00:00Z"}})])}
  | .sessionCount=(.sessions|length)
