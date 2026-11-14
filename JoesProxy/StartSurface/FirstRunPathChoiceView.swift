@@ -17,7 +17,7 @@ struct FirstRunPathChoiceView: View {
                 Text("How do you want to start?")
                     .appFont(.title2, scale: appTextScale, weight: .semibold)
 
-                Text("Pick a working surface. Capture evidence — not this screen — finishes first-run setup.")
+                Text("Choose how to send your first request. For plain HTTP, you can start capturing before setting up certificates or connecting an agent.")
                     .appFont(.body, scale: appTextScale)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -26,7 +26,7 @@ struct FirstRunPathChoiceView: View {
             HStack(alignment: .top, spacing: 12) {
                 pathCard(
                     title: "Guided First Capture",
-                    detail: "Open the Inspector with a setup companion beside the session list.",
+                    detail: "Start the proxy, choose a device and send a request. Open HTTPS Setup when you want to inspect encrypted traffic.",
                     systemImage: "list.bullet.rectangle",
                     buttonTitle: "Start First Capture",
                     identifier: "startFirstCaptureButton",
@@ -35,7 +35,7 @@ struct FirstRunPathChoiceView: View {
 
                 pathCard(
                     title: "Agent-Assisted Capture",
-                    detail: "Open Compact Monitor so an enrolled agent can help with the first capture.",
+                    detail: "Open MCP Management alongside Compact Monitor. Start MCP and add your client. For Terminal, choose JoesProxy CLI and run the login command.",
                     systemImage: "antenna.radiowaves.left.and.right",
                     buttonTitle: "Connect an Agent",
                     identifier: "connectAnAgentButton",

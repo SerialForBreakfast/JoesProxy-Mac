@@ -445,6 +445,7 @@ struct JoesProxyApp: App {
                         presentationState.chooseConnectAnAgent()
                         coordinator.sessionStartCoordinator.syncPersistedOnboardingState()
                         compactModeController.enterCompactWorkingView()
+                        presentationState.presentMCPManagement(destination: .overview)
                     },
                     onOpenInspector: {
                         presentationState.chooseOpenInspector()

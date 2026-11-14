@@ -52,7 +52,7 @@ See the [1.9.1 candidate notes](docs/releases/1.9.1-build25.md) for the optimize
 ## Build from source
 
 
-Start with the [five-minute HTTP walkthrough](docs/GETTING-STARTED.md). It covers dependencies, local signing, and a first request to a loopback server. You do not need to install a certificate to try plain HTTP.
+Start with the [installed-app setup and five-minute HTTP walkthrough](docs/GETTING-STARTED.md). It covers dependencies, local signing, and a first request to a loopback server. You do not need to install a certificate to try plain HTTP.
 
 The app targets macOS 15.1 or later. The last tested toolchain was Xcode 27.0. Optional local model features require macOS 26 and an available system model.
 
