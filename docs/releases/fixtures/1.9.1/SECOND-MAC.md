@@ -1,0 +1,12 @@
+# Build 25 second-Mac walkthrough
+
+Prepared November 13, 2026. Allow about ten minutes. The enclosed build 25 installer is signed, notarized and stapled. From this folder, run `shasum -a 256 -c SHA256SUMS` and expect OK for the installer and recording. Record macOS version, processor, prior app version, candidate checksum, and whether this is an upgrade or a fresh installation.
+
+1. Verify the installer checksum against the candidate receipt. Install from the DMG, eject it and launch from Applications. About should show **1.9.1 (25)**.
+2. Preserve any current capture. Open **edge-191.jproxy** via File → Open Recording. Use Replace for an isolated list. Clear filters. Expect **303 requests, 304 displayed rows on import**: the app adds one `capture_loaded` lifecycle marker. This is an offline recording and requires no proxy or certificate setup.
+3. Inspect GET `/app/status.json`. The full recording has **300** responses with status 502. In the **inclusive UTC window 1970-01-01 00:00:00 through 00:04:59**, there are **299** such responses and **one pending request with no status**. The 502 at 00:05:00 is the boundary control. Use the same window with the enrolled client's filtered status calculation. Record observed counts.
+4. Open one in-window 502. Example ID `00000000-0000-4000-8000-000000000000` has path `/app/status.json`, status 502 and response JSON containing `"case":0`. Other in-window 502s are valid if their ID and body index agree.
+5. Inspect the two 200 responses at the same endpoint, `/settings`. Use their IDs (ending 301 and 302 respectively) for an ordered comparison, selecting `/settings` and requesting value differences. Review any disclosure locally. Expect **featureEnabled false → true** and **updatedAt January 1 → January 2, 2026 UTC**. Both bodies are complete. Report any omitted evidence and whether the comparison distinguishes the timestamp from the feature change.
+6. Save a new full recording, quit, relaunch, and reopen the saved copy once using Replace, not Add. Expect **303 requests, 305 displayed rows on reopen**: the saved marker and one new `capture_loaded` marker. Verify the request IDs, statuses (including the missing status), and response bodies are unchanged. Repeat the histogram and Boolean comparison. Record request, marker, and total counts separately.
+
+This fixture is for manual acceptance. Provider trials use independent version-specific RPC recordings and have their own receipts.
