@@ -77,7 +77,9 @@ final class MCPAgentExportTests: XCTestCase {
         guard case .command(let setupCommand) = instructions.mechanism else {
             return XCTFail("Expected JoesProxy CLI to use an interactive command.")
         }
-        XCTAssertTrue(setupCommand.hasSuffix("joesproxyctl auth login"))
+        XCTAssertEqual(setupCommand, MCPClientConfigSnippetBuilder.joesProxyCLICommand(
+            endpointURL: endpoint, appBundleURL: Bundle.main.bundleURL
+        ))
         XCTAssertEqual(MCPClientConfigSnippetBuilder.joesProxyCLICommand(
             endpointURL: URL(string: "http://127.0.0.1:9191/mcp")!,
             appBundleURL: URL(fileURLWithPath: "/Local Apps/Joe's.app")

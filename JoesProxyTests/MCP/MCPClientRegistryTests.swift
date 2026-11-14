@@ -97,6 +97,32 @@ final class MCPClientRegistryTests: XCTestCase {
         _ = try registry.authenticate(bearerToken: keep.plaintextCredential)
     }
 
+    func testDeniedVerifierIsRetriedOnlyByLocalUnlockAndThenCached() throws {
+        let store = MCPCountingCredentialStore()
+        let registry = MCPClientRegistry(persistenceURL: temporaryURL(named: "unlock.json"), credentialStore: store)
+        try registry.load()
+        let locked = try registry.enroll(displayName: "Locked")
+        let available = try registry.enroll(displayName: "Available")
+        store.lockedID = locked.client.id
+        try registry.load()
+        XCTAssertEqual(registry.clientsRequiringUnlock, [locked.client.id])
+        XCTAssertEqual(try registry.authenticate(bearerToken: available.plaintextCredential).id, available.client.id)
+        XCTAssertThrowsError(try registry.unlockClient(locked.client.id))
+        for _ in 0..<3 {
+            XCTAssertThrowsError(try registry.authenticate(bearerToken: locked.plaintextCredential))
+        }
+        XCTAssertEqual(store.interactiveReads, 1)
+        store.allowUnlock = true
+        try registry.unlockClient(locked.client.id)
+        try registry.unlockClient(locked.client.id)
+        XCTAssertEqual(try registry.authenticate(bearerToken: locked.plaintextCredential).id, locked.client.id)
+        XCTAssertEqual(store.interactiveReads, 2)
+        try registry.revoke(clientID: locked.client.id)
+        try registry.unlockClient(locked.client.id)
+        XCTAssertThrowsError(try registry.authenticate(bearerToken: locked.plaintextCredential))
+        XCTAssertEqual(store.interactiveReads, 2)
+    }
+
     private func temporaryURL(named: String) -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + named)
     }
@@ -106,6 +132,9 @@ private final class MCPCountingCredentialStore: MCPClientCredentialStoring, @unc
     private let lock = NSLock()
     private var verifiers: [String: Data] = [:]
     private(set) var loadCount = 0
+    var lockedID: String?
+    var allowUnlock = false
+    private(set) var interactiveReads = 0
 
     func saveVerifier(clientID: String, generation: Int, verifier: Data) throws {
         lock.withLock {
@@ -114,8 +143,17 @@ private final class MCPCountingCredentialStore: MCPClientCredentialStoring, @unc
     }
 
     func loadVerifier(clientID: String, generation: Int) throws -> Data? {
-        lock.withLock {
+        try lock.withLock {
             loadCount += 1
+            if lockedID == clientID { throw CocoaError(.fileReadNoPermission) }
+            return verifiers["\(clientID)#\(generation)"]
+        }
+    }
+
+    func unlockVerifier(clientID: String, generation: Int) throws -> Data? {
+        try lock.withLock {
+            interactiveReads += 1
+            guard allowUnlock else { throw CocoaError(.userCancelled) }
             return verifiers["\(clientID)#\(generation)"]
         }
     }

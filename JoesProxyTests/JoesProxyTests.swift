@@ -926,7 +926,7 @@ final class ProxyViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testViewModelRefreshesTextSizeWhenConfigurationChangesExternally() throws {
+    func testViewModelRefreshesTextSizeWhenConfigurationChangesExternally() async throws {
         let configuration = TestAppConfiguration(certificateLabel: "TextSize-External")
         let viewModel = ProxyViewModel(
             configuration: configuration,
@@ -945,7 +945,7 @@ final class ProxyViewModelTests: XCTestCase {
         )
 
         configuration.appTextSizeRawValue = AppTextSize.large.rawValue
-        waitForMainQueueDrain()
+        try await waitForSettingsUpdate { viewModel.appTextSize == .large }
 
         XCTAssertEqual(viewModel.appTextSize, .large)
     }

@@ -804,6 +804,16 @@ struct MCPManagementView: View {
                 .accessibilityIdentifier("mcpRevokeClientButton")
             }
             let grants = controller.grantStore.summaries(for: client.id)
+            if controller.requiresVerifierUnlock(client) {
+                Button("Unlock credential for " + client.displayName) {
+                    do {
+                        try controller.unlockClientVerifier(client.id)
+                    } catch {
+                        statusMessage = "Credential access is unavailable. Choose Unlock when you are ready to try again."
+                    }
+                }
+                .accessibilityIdentifier("mcpUnlockVerifier-" + client.id)
+            }
             let runtimeReady = runtimeControlIsPreauthorized(client)
             Label(runtimeReady ? "Unattended runtime control ready" : "Runtime control requires approval or policy setup",
                   systemImage: runtimeReady ? "checkmark.circle.fill" : "lock.fill")

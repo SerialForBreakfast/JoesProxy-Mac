@@ -771,6 +771,15 @@ final class MCPServerController: ObservableObject {
         enrolledClients = clientRegistry.clients
     }
 
+    func requiresVerifierUnlock(_ client: MCPClientRecord) -> Bool {
+        client.credentialState != .revoked && clientRegistry.clientsRequiringUnlock.contains(client.id)
+    }
+
+    func unlockClientVerifier(_ id: String) throws {
+        try clientRegistry.unlockClient(id)
+        refreshClients()
+    }
+
     private func refreshOperationState() {
         let approvalCount = approvalStore.pendingCount
         let sensitiveReadCount = approvalStore.pendingRequests.filter {
