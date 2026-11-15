@@ -38,6 +38,7 @@ final class ProxyViewModel: ObservableObject {
             case openCertificateSetup
             case openMacOSGuide
             case openIOSGuide
+            case refreshDeviceStatus
             case openTVOSGuide
             case openTrafficHelp
             case startProxy
@@ -1547,8 +1548,8 @@ final class ProxyViewModel: ObservableObject {
                 state: guidedSetupTrafficObservedState(currentNetworkSnapshot: currentNetworkSnapshot),
                 primaryActionTitle: guidedSetupTrafficObservedActionTitle(currentNetworkSnapshot: currentNetworkSnapshot),
                 primaryAction: guidedSetupTrafficObservedAction(currentNetworkSnapshot: currentNetworkSnapshot),
-                secondaryActionTitle: "macOS Setup Guide",
-                secondaryAction: .openMacOSGuide,
+                secondaryActionTitle: nil,
+                secondaryAction: nil,
                 helpTopic: .trafficStates,
                 accessibilityIdentifier: "setupChecklistRoutingRow"
             ),
@@ -1569,10 +1570,10 @@ final class ProxyViewModel: ObservableObject {
                 title: "Device traffic detected",
                 detail: guidedSetupDeviceSummary(currentNetworkSnapshot: currentNetworkSnapshot),
                 state: guidedSetupDeviceState(currentNetworkSnapshot: currentNetworkSnapshot),
-                primaryActionTitle: "iOS Setup Guide",
-                primaryAction: .openIOSGuide,
-                secondaryActionTitle: "Apple TV Setup Guide",
-                secondaryAction: .openTVOSGuide,
+                primaryActionTitle: "Refresh Device Status",
+                primaryAction: .refreshDeviceStatus,
+                secondaryActionTitle: nil,
+                secondaryAction: nil,
                 helpTopic: .certificateSetup,
                 accessibilityIdentifier: "setupChecklistDeviceRow"
             )

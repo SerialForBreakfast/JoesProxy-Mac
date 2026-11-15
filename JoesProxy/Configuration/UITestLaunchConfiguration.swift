@@ -15,6 +15,7 @@ struct UITestLaunchConfiguration {
 
     enum CertificateState: String {
         case notSetUp
+        case keychainLocked
         case installedTrustRequired
         case needsCleanup
         case ready

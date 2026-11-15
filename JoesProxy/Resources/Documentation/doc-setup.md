@@ -16,7 +16,9 @@ Remote profile installation, remote certificate trust, and device Wi-Fi proxy se
 
 If **HTTPS Setup** shows **Unlock Certificate Authority**, choosing it can open a macOS password dialog for **com.JoesProxy.CertificateAuthority**. Enter your login keychain password in that system dialog. **Allow** lets JoesProxy use the item for this run. **Always Allow** lets macOS remember access for that item. **Deny** leaves it locked and you can continue with HTTP capture. Older roots can have separate certificate and signing-key items. Setup identifies when a second item needs your permission.
 
-Keychain **access** is not certificate **trust**. On the Certificate page, create or unlock the identity, install it in the login keychain, then choose **Trust Root CA**. To review manually, choose **Open Keychain Access**, compare the current fingerprint, save the trust change and choose **Check Again**. A separate device must trust the root on that device.
+Keychain **access** is not certificate **trust**. First choose **Create Root CA** if no identity exists. If the signing item is protected, choose **Unlock Certificate Authority** and review the macOS request. Denying it leaves the identity in place; click Unlock to retry. Legacy identities can require another click for a second item. A new identity may already be accessible without a prompt.
+
+Next choose **Install Root CA**, then **Trust Root CA**. To review manually, choose **Open Keychain Access**, compare the current fingerprint, save the trust change and choose **Check Again**. A separate device must trust the root on that device. On the optional MCP/CLI page, unlocking an enrolled client's verifier and letting the CLI read its login credential are separate approvals, not permissions to use the CA.
 
 ## Optional local CLI bootstrap {#cli}
 

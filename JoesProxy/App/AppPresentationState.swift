@@ -78,7 +78,7 @@ enum GuidedSetupBlockingState: String, Equatable, Sendable {
         case .notSetUp:
             return "JoesProxy can capture basic proxy traffic, but HTTPS inspection will stay unavailable until the Root CA is created and trusted."
         case .installedTrustRequired:
-            return "The Root CA exists, but the current device or Mac has not completed the trust step needed for HTTPS inspection."
+            return "The Root CA is installed on this Mac. Approve trust on this Mac to inspect HTTPS."
         case .needsCleanup:
             return "The current certificate or trust state is no longer usable. Clean it up, then run setup again to restore HTTPS inspection."
         }

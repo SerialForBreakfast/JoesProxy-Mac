@@ -115,7 +115,7 @@ struct JoesProxyApp: App {
             let certificateIdentity: RootCertificateIdentity?
             let trustStatus: TrustInstallationStatus
             switch uiTestConfiguration.certificateState {
-            case .notSetUp, nil:
+            case .notSetUp, .keychainLocked, nil:
                 certificateIdentity = nil
                 trustStatus = .notInstalled
             case .installedTrustRequired:
@@ -130,6 +130,14 @@ struct JoesProxyApp: App {
             }
 
             let setupVerificationState: ProxyViewModel.SetupVerificationState?
+            let fixtureStore: any CertificateStore
+            if uiTestConfiguration.certificateState == .keychainLocked {
+                let store = PersistentKeychainCertificateStore(keychainHelper: UITestDeniedCAKeychain())
+                _ = store.loadRootCertificate(label: uiTestConfigurationStore.certificateLabel)
+                fixtureStore = store
+            } else {
+                fixtureStore = UITestCertificateStore(identity: certificateIdentity)
+            }
             switch uiTestConfiguration.verificationState {
             case .inspected:
                 setupVerificationState = .inspected
@@ -164,7 +172,7 @@ struct JoesProxyApp: App {
                 configuration: uiTestConfigurationStore,
                 proxyRuntime: proxyRuntime,
                 sessionStore: uiTestSessionStore,
-                certificateStore: UITestCertificateStore(identity: certificateIdentity),
+                certificateStore: fixtureStore,
                 certificateAuthority: UITestCertificateAuthority(currentIdentity: certificateIdentity),
                 trustInstaller: UITestTrustInstaller(status: trustStatus),
                 setupVerificationState: setupVerificationState,

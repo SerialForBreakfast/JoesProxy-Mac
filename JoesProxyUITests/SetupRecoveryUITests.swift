@@ -54,6 +54,52 @@ final class SetupRecoveryUITests: XCTestCase {
         XCTAssertTrue(sheet.buttons["Check Again"].exists)
         XCTAssertFalse(sheet.buttons["Create Root CA"].exists)
         XCTAssertFalse(sheet.buttons["Unlock Certificate Authority"].exists)
+        attachSetupExample(sheet, named: "Installed-awaiting-macOS-trust")
+    }
+
+    @MainActor
+    func testNewIdentityShowsApprovalPrerequisites() {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions",
+                               "\(Self.uiTestCertificateStatePrefix)notSetUp",
+                               "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
+                               "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.buttons["Create Root CA"].waitForExistence(timeout: 5))
+        XCTAssertTrue(sheet.buttons["Create Root CA"].isEnabled)
+        for title in ["Unlock Certificate Authority", "Install Root CA", "Trust Root CA"] {
+            XCTAssertTrue(sheet.buttons[title].exists, title)
+            XCTAssertFalse(sheet.buttons[title].isEnabled, title)
+        }
+        attachSetupExample(sheet, named: "New-identity-approval-prerequisites")
+    }
+
+    @MainActor
+    func testLockedIdentityShowsExplicitApprovalAndRetry() {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions",
+                               "\(Self.uiTestCertificateStatePrefix)keychainLocked",
+                               "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
+                               "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        let sheet = app.sheets.firstMatch
+        let unlock = sheet.buttons["Unlock Certificate Authority"]
+        XCTAssertTrue(unlock.waitForExistence(timeout: 5))
+        XCTAssertTrue(unlock.isEnabled)
+        XCTAssertFalse(sheet.buttons["Create Root CA"].exists)
+        unlock.click()
+        XCTAssertTrue(sheet.staticTexts["Access was not granted. You can leave setup or choose Unlock Certificate Authority to retry."].waitForExistence(timeout: 5))
+        XCTAssertTrue(unlock.isEnabled)
+        attachSetupExample(sheet, named: "Protected-CA-awaiting-Keychain-approval")
+    }
+
+    @MainActor
+    private func attachSetupExample(_ sheet: XCUIElement, named name: String) {
+        let image = XCTAttachment(screenshot: sheet.screenshot())
+        image.name = name
+        image.lifetime = .keepAlways
+        add(image)
     }
 
     @MainActor
@@ -138,7 +184,11 @@ final class SetupRecoveryUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Repair HTTPS Setup"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["The certificate is installed, but trust is still required"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.buttons["Retry Status Check"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.buttons["iOS Setup Guide"].waitForExistence(timeout: 2))
+        let guides = ["macOS Setup Guide", "iOS Setup Guide", "Apple TV Setup Guide"]
+        let sheet = app.sheets.firstMatch
+        for guide in guides { XCTAssertFalse(sheet.buttons[guide].exists, guide) }
+        sheet.radioButtons["Devices"].click()
+        for guide in guides { XCTAssertTrue(sheet.buttons[guide].waitForExistence(timeout: 2), guide) }
     }
 
     @MainActor

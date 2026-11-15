@@ -225,6 +225,9 @@ struct GuidedSetupRepairView: View {
             }
         case .devices:
             sectionCard(title: "Devices (optional)", summary: "Choose the guide for your device, then look for traffic from that device.") {
+                actionButton("macOS Setup Guide") { performChecklistAction(.openMacOSGuide) }
+                actionButton("iOS Setup Guide") { performChecklistAction(.openIOSGuide) }
+                actionButton("Apple TV Setup Guide") { performChecklistAction(.openTVOSGuide) }
                 setupChecklist
                 DisclosureGroup("Profiles and connection details") { profileMaintenanceCard }
             }
@@ -265,19 +268,6 @@ struct GuidedSetupRepairView: View {
             actionButton(certificateSetupTitle, action: {
                 isPresented = false
                 openCertificateSetup()
-            })
-
-            actionButton("macOS Setup Guide", action: {
-                isPresented = false
-                openMacOSGuide()
-            })
-            actionButton("iOS Setup Guide", action: {
-                isPresented = false
-                openIOSGuide()
-            })
-            actionButton("Apple TV Setup Guide", action: {
-                isPresented = false
-                openTVOSGuide()
             })
 
             actionButton("Retry Status Check", action: retryStatusValidation)
@@ -535,8 +525,8 @@ struct GuidedSetupRepairView: View {
                     Button {
                         performChecklistAction(action)
                     } label: {
-                        Image(systemName: checklistActionIconName(for: action))
-                            .frame(width: 18, height: 18)
+                        Label(actionTitle, systemImage: checklistActionIconName(for: action))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -571,7 +561,7 @@ struct GuidedSetupRepairView: View {
             return "book"
         case .startProxy:
             return "play.fill"
-        case .verifyCapture, .retryStatusValidation:
+        case .verifyCapture, .retryStatusValidation, .refreshDeviceStatus:
             return "arrow.clockwise"
         case .resetCertificateState:
             return "trash"
@@ -667,6 +657,8 @@ struct GuidedSetupRepairView: View {
             startProxy()
         case .verifyCapture:
             runSetupVerification()
+        case .refreshDeviceStatus:
+            captureSetupNetworkSnapshot()
         case .retryStatusValidation:
             retryStatusValidation()
         case .resetCertificateState:

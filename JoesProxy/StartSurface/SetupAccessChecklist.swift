@@ -78,18 +78,20 @@ struct SetupAccessChecklist: View {
                     }
                     Button("Open MCP Management to repair…") { managementDestination = .overview }
                 }
-                Text("2. Enroll and unlock your client").appFont(.headline, scale: textScale)
+                Text("2. Enroll your client").appFont(.headline, scale: textScale)
                 Text("For Terminal, enroll JoesProxy CLI. Paste the credential only at the CLI login prompt. If macOS asks joesproxyctl to access its saved credential, review the requesting app and Keychain item. Deny cancels that access; you can retry later.")
                 if controller.enrolledClients.isEmpty { Label("No clients enrolled", systemImage: "circle") }
                 Button("Enroll or manage an MCP / CLI client…") { managementDestination = .clients }
-                if !controller.pendingApprovals.isEmpty {
-                    Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
-                }
+                Text("3. Authorize the app to read the client verifier").appFont(.headline, scale: textScale)
+                if controller.enrolledClients.isEmpty { Text("Enroll a client first. Each locked verifier has its own Unlock button.") }
                 ForEach(controller.enrolledClients) { client in
                     GroupBox(client.displayName) {
                         VStack(alignment: .leading, spacing: 8) {
                             if controller.requiresVerifierUnlock(client) {
-                                Text("JoesProxy needs macOS permission to read this client’s verifier. Unlock requests access for this client only. Enter a password only in the macOS dialog; denying access does not revoke enrollment.")
+                                Label { Text("Keychain approval required for this client") } icon: {
+                                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                                }
+                                Text("Unlock requests access for this client only. Enter a password only in the macOS dialog; denying access does not revoke enrollment.")
                                 Button("Unlock credential for " + client.displayName) {
                                     do {
                                         try controller.unlockClientVerifier(client.id)
@@ -112,9 +114,16 @@ struct SetupAccessChecklist: View {
                     }
                 }
                 if let credentialError { Text(credentialError) }
-                Text("3. Verify the connection").appFont(.headline, scale: textScale)
+                Text("4. Authorize the CLI in Terminal and verify the connection").appFont(.headline, scale: textScale)
                 Text("Run joesproxyctl auth status to check local login, then joesproxyctl status to confirm the service accepts this client.")
-                Text("4. Review actions when requested").appFont(.headline, scale: textScale)
+                Button("Copy CLI verification commands") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(MCPClientConfigSnippetBuilder.cliVerificationCommands(), forType: .string)
+                }
+                Text("5. Review actions when requested").appFont(.headline, scale: textScale)
+                if !controller.pendingApprovals.isEmpty {
+                    Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
+                }
                 Text("A JoesProxy approval is not a Keychain prompt. If a command returns a request ID, review that ID in MCP Management → Pending Approvals. After approving, retry the same command if it did not resume. Basic setup does not require approving a mutation.")
             }
         }

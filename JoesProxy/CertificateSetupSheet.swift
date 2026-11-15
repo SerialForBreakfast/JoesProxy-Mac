@@ -547,22 +547,37 @@ struct CertificateApprovalChecklist: View {
         let state = model.certificateWorkflowState
         let accessible = model.rootCertificate?.privateKeyData != nil && !model.certificateAuthorityNeedsUnlock
         let installed = state == .installedTrustRequired || state == .ready
+        let hasIdentity = model.rootCertificate != nil || model.certificateAuthorityNeedsUnlock
         VStack(alignment: .leading, spacing: 8) {
-            step("1. Create or unlock the signing identity", done: accessible)
-            if model.certificateAuthorityNeedsUnlock {
-                Text(model.certificateUnlockWarning)
-                KeychainSetupExample(step: .unlock)
-                Button("Unlock Certificate Authority", action: model.unlockCertificateAuthority)
-                    .disabled(model.isUnlockingCertificateAuthority)
-                if let message = model.certificateUnlockMessage { Text(message) }
-            } else if !accessible && state == .notSetUp {
+            step("1. Create the signing identity", done: hasIdentity)
+            if !hasIdentity && state == .notSetUp {
                 Button("Create Root CA", action: model.createOrLoadRootCertificate)
             }
-            step("2. Install the root in the login keychain", done: installed)
-            if accessible && state == .notSetUp {
-                Button("Install Root CA", action: model.installRootCertificate)
+            step("2. Allow JoesProxy to use the CA signing key", done: accessible)
+            if !accessible || model.certificateRenewalNeedsUnlock {
+                if model.certificateRenewalNeedsUnlock {
+                    step("Allow access to the pending renewal identity", done: false)
+                }
+                if model.certificateAuthorityNeedsUnlock || model.certificateRenewalNeedsUnlock {
+                    Text(model.certificateUnlockWarning)
+                    KeychainSetupExample(step: .unlock)
+                    Button("Unlock Certificate Authority", action: model.unlockCertificateAuthority)
+                        .disabled(model.isUnlockingCertificateAuthority)
+                    if let message = model.certificateUnlockMessage { Text(message) }
+                } else if hasIdentity {
+                    Button("Review Signing Identity", action: { model.refreshCertificateStatus() })
+                } else {
+                    Button("Unlock Certificate Authority", action: model.unlockCertificateAuthority).disabled(true)
+                    Text("Create the identity first. Unlock becomes available if Keychain requires permission.")
+                }
             }
-            step("3. Approve trust for this root in macOS", done: state == .ready)
+            step("3. Install the root in the login keychain", done: installed)
+            if !installed && state != .needsCleanup {
+                Button("Install Root CA", action: model.installRootCertificate)
+                    .disabled(!accessible)
+                if !accessible { Text("Requires an accessible signing identity.") }
+            }
+            step("4. Approve trust for this root in macOS", done: state == .ready)
             if state == .installedTrustRequired {
                 Text("Trust is separate from permission to read the signing key. Choose Trust Root CA and confirm in the macOS dialog, or set trust manually in Keychain Access.")
                 Button(model.isTrustingCertificate ? "Waiting for macOS…" : "Trust Root CA", action: model.trustRootCertificate)
@@ -577,8 +592,12 @@ struct CertificateApprovalChecklist: View {
                 Button("Check Again", action: { model.refreshCertificateStatus() })
             } else if state == .ready {
                 Text("Ready for HTTPS inspection. Verify a captured response on the Verify Capture tab.")
+                KeychainSetupExample(step: .unlock)
             } else if state == .needsCleanup {
-                Text("Open certificate diagnostics and repair below to resolve the conflicting certificate before continuing.")
+                Button("Review Certificate Reset…", action: model.confirmResetCertificateState)
+            } else {
+                Button("Trust Root CA", action: model.trustRootCertificate).disabled(true)
+                Text("Install the root before requesting macOS trust.")
             }
         }
         .accessibilityElement(children: .contain)

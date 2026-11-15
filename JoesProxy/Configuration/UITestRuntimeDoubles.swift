@@ -1,5 +1,19 @@
 import Foundation
 import Combine
+import Security
+
+/// Screenshot fixture: no Security calls, even if Unlock is clicked.
+final class UITestDeniedCAKeychain: CertificateKeychainAccessing {
+    func addCertificate(_ certificate: SecCertificate, label: String) throws {}
+    func deleteCertificate(_ certificate: SecCertificate, label: String) throws {}
+    func retrieveCertificate(withLabel label: String) throws -> SecCertificate? { nil }
+    func retrieveCertificates(withLabel label: String) throws -> [SecCertificate] { [] }
+    func saveData(_ data: Data, service: String, account: String) throws {}
+    func deleteData(service: String, account: String) throws {}
+    func retrieveData(service: String, account: String, interactive: Bool) throws -> Data? {
+        throw CertificateAuthorityError.keychainAccessFailed("Simulated Keychain denial")
+    }
+}
 
 final class UITestCertificateAuthority: CertificateAuthorityProviding {
     private(set) var currentIdentity: RootCertificateIdentity?
