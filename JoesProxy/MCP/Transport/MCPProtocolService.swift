@@ -1601,6 +1601,38 @@ final class MCPProtocolService {
                 includeAuthChain = false
             }
 
+            let epoch = snapshotService.captureEpoch
+            let policyRevision = policyStore.policyRevision
+            let latestSequence = snapshotService.highWaterSequence
+            let page = try snapshotService.page(
+                request: .init(limit: requestedLimit, cursor: cursor, queryDigest: effectiveQueryDigest,
+                               orderingDigest: "sequence_asc", filter: filter, minimumSequenceExclusive: sinceSequence,
+                               includeAggregateInput: deduplicateBy != nil || includeAuthChain),
+                clientID: client.id, policyRevision: policyRevision)
+            var endpointGroups: [MCPEndpointGroupDTO]?
+            var authChain: AuthChainBrief.Report?
+            if let matches = page.aggregateInput {
+                // Capture membership and page rows together on the main actor. Hash headers only on
+                // the analysis worker, then revalidate access before releasing either result.
+                let serializer = disclosureSerializer
+                guard !artifactWorker.busy else {
+                    throw MCPStructuredError(code: .busy, message: "Another analysis is running. Retry this search.")
+                }
+                (endpointGroups, authChain) = try await artifactWorker.perform {
+                    let groups = deduplicateBy == "endpoint" ? MCPSessionSnapshotService.deduplicateEndpoints(
+                        items: matches, profile: profile, disclosure: serializer) : nil
+                    let chain = includeAuthChain ? AuthChainBrief.analyze(records: matches.map(\.record),
+                        disclosure: serializer, inspectionLimit: matches.count) : nil
+                    return (groups, chain)
+                }
+                guard let current = clientRegistry.client(id: client.id), current.credentialState == .active,
+                      current.credentialGeneration == client.credentialGeneration,
+                      current.assignedProfileID == client.assignedProfileID, policyStore.policyRevision == policyRevision,
+                      policyEvaluator.effectiveAllows(capability: queryDigest == "sessions_list" ? .sessionList : .sessionSearch, client: current),
+                      epoch == snapshotService.captureEpoch else {
+                    throw MCPStructuredError(code: .policyDenied, message: "Capture or access changed during the search.")
+                }
+            }
             var limit = requestedLimit
             var truncatedByBudget = false
             var encodedData = Data()
@@ -1610,19 +1642,8 @@ final class MCPProtocolService {
                 // MCPNIOHTTPTransport has already fired and cancelled this task, stop retrying
                 // instead of continuing to loop on the MainActor after the client has moved on.
                 try Task.checkCancellation()
-                let page = try snapshotService.page(
-                    request: MCPSessionSnapshotService.PageRequest(
-                        limit: limit,
-                        cursor: cursor,
-                        queryDigest: effectiveQueryDigest,
-                        orderingDigest: "sequence_asc",
-                        filter: filter,
-                        minimumSequenceExclusive: sinceSequence
-                    ),
-                    clientID: client.id,
-                    policyRevision: policyStore.policyRevision
-                )
-                let items = try page.items.map { indexed in
+                let visible = page.items.prefix(limit)
+                let items = try visible.map { indexed in
                     let summary = try disclosureSerializer.sessionSummary(
                         record: indexed.record,
                         captureSequence: indexed.captureSequence,
@@ -1630,37 +1651,39 @@ final class MCPProtocolService {
                     )
                     return projectedSessionSummary(summary, projection: projection)
                 }
-                let endpointGroups = deduplicateBy == "endpoint"
-                    ? MCPSessionSnapshotService.deduplicateEndpoints(items: page.items, profile: profile, disclosure: disclosureSerializer)
-                    : nil
-                let authChain = includeAuthChain
-                    ? AuthChainBrief.analyze(records: page.items.map(\.record), disclosure: disclosureSerializer)
-                    : nil
+                var nextCursor = page.nextCursor
+                if visible.count < page.items.count, let last = visible.last {
+                    nextCursor = MCPSessionQueryCursor(token: UUID().uuidString, clientID: client.id,
+                        policyRevision: policyRevision, captureEpoch: epoch, queryDigest: effectiveQueryDigest,
+                        orderingDigest: "sequence_asc", highWaterSequence: page.highWaterSequence,
+                        lastSequence: last.captureSequence)
+                }
                 let pageDTO = MCPSessionListPageDTO(
-                    captureWarning: capacityWarning(status: capacity, records: page.items.map(\.record), includesHistory: true),
+                    captureWarning: capacityWarning(status: capacity, records: visible.map(\.record), includesHistory: true),
                     items: items,
-                    nextCursor: try page.nextCursor.map { try encodeCursor($0) },
-                    hasMore: page.nextCursor != nil,
+                    nextCursor: try nextCursor.map { try encodeCursor($0) },
+                    hasMore: nextCursor != nil,
                     captureEpoch: snapshotService.captureEpoch,
                     policyRevision: policyStore.policyRevision,
                     truncated: truncatedByBudget,
                     truncationReason: truncatedByBudget ? "response_exceeded_requested_budget" : nil,
                     projection: projection,
-                    latestSequence: snapshotService.highWaterSequence,
+                    latestSequence: latestSequence,
                     stateToken: stateToken,
-                    aggregateScope: endpointGroups != nil || authChain != nil ? "page" : nil,
+                    aggregateScope: page.aggregateInput == nil ? nil : "allMatches",
+                    aggregateMatchCount: page.aggregateInput?.count,
                     endpointGroups: endpointGroups,
                     authChain: authChain
                 )
                 encodedData = try encoder.encode(MCPDTOEnvelope(payload: pageDTO))
 
-                if encodedData.count <= responseBudget || items.isEmpty {
+                if encodedData.count <= responseBudget {
                     break
                 }
                 if limit <= 1 {
                     throw MCPStructuredError(
                         code: .policyDenied,
-                        message: "One session does not fit the requested response budget.",
+                        message: "The page and requested summaries exceed the response budget. Narrow the search or increase maxResponseBytes.",
                         details: [
                             "requestedBytes": String(responseBudget),
                             "requiredBytes": String(encodedData.count),
@@ -5503,8 +5526,8 @@ final class MCPProtocolService {
             properties["minDurationMs"] = ["type": "number", "minimum": 0, "description": "Minimum total duration in milliseconds."]
             properties["hasOverrideHit"] = ["type": "boolean", "description": "Filter by whether an active rule/effect matched."]
             properties["bodyAvailable"] = ["type": "boolean", "description": "Filter by whether response body bytes are retained."]
-            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Optional grouping mode; endpoint groups matching sessions on the returned page."]
-            properties["includeAuthChain"] = ["type": "boolean", "description": "Include zero-secret auth/cookie continuity report for matching sessions on the returned page."]
+            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Group all matching sessions in the cursor range. Returns up to 32 endpoint groups and the total aggregateMatchCount."]
+            properties["includeAuthChain"] = ["type": "boolean", "description": "Inspect credential and cookie continuity across all matches in the cursor range. The report counts omitted tokens and anomalies."]
             inputSchema = [
                 "type": "object",
                 "properties": properties,
