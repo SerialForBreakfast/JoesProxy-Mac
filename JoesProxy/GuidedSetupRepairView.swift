@@ -7,9 +7,9 @@ struct GuidedSetupRepairView: View {
     @Environment(\.appTextScale) private var appTextScale
     @Binding var isPresented: Bool
     let context: GuidedSetupContext
+    @ObservedObject var certificateModel: ProxyViewModel
     let accessChecklist: SetupAccessChecklist
     let setupChecklistItems: [ProxyViewModel.GuidedSetupChecklistItem]
-    let nextSetupActionItem: ProxyViewModel.GuidedSetupChecklistItem?
     let certificateSetupTitle: String
     let openCertificateSetup: () -> Void
     let openMacOSGuide: () -> Void
@@ -17,7 +17,6 @@ struct GuidedSetupRepairView: View {
     let openTVOSGuide: () -> Void
     let exportSkill: () -> Void
     let openHelpTopic: (MainWindowHelpTopic) -> Void
-    let openHelpHub: () -> Void
     let startProxy: () -> Void
     let runSetupVerification: () -> Void
     let retryStatusValidation: () -> Void
@@ -47,9 +46,9 @@ struct GuidedSetupRepairView: View {
     init(
         isPresented: Binding<Bool>,
         context: GuidedSetupContext,
+        certificateModel: ProxyViewModel,
         accessChecklist: SetupAccessChecklist,
         setupChecklistItems: [ProxyViewModel.GuidedSetupChecklistItem],
-        nextSetupActionItem: ProxyViewModel.GuidedSetupChecklistItem?,
         certificateSetupTitle: String,
         openCertificateSetup: @escaping () -> Void,
         openMacOSGuide: @escaping () -> Void,
@@ -57,7 +56,6 @@ struct GuidedSetupRepairView: View {
         openTVOSGuide: @escaping () -> Void,
         exportSkill: @escaping () -> Void,
         openHelpTopic: @escaping (MainWindowHelpTopic) -> Void,
-        openHelpHub: @escaping () -> Void,
         startProxy: @escaping () -> Void,
         runSetupVerification: @escaping () -> Void,
         retryStatusValidation: @escaping () -> Void,
@@ -83,9 +81,9 @@ struct GuidedSetupRepairView: View {
     ) {
         _isPresented = isPresented
         self.context = context
+        self.certificateModel = certificateModel
         self.accessChecklist = accessChecklist
         self.setupChecklistItems = setupChecklistItems
-        self.nextSetupActionItem = nextSetupActionItem
         self.certificateSetupTitle = certificateSetupTitle
         self.openCertificateSetup = openCertificateSetup
         self.openMacOSGuide = openMacOSGuide
@@ -93,7 +91,6 @@ struct GuidedSetupRepairView: View {
         self.openTVOSGuide = openTVOSGuide
         self.exportSkill = exportSkill
         self.openHelpTopic = openHelpTopic
-        self.openHelpHub = openHelpHub
         self.startProxy = startProxy
         self.runSetupVerification = runSetupVerification
         self.retryStatusValidation = retryStatusValidation
@@ -123,42 +120,58 @@ struct GuidedSetupRepairView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
 
-            Picker("Setup section", selection: $selectedSection) {
-                ForEach(GuidedSetupSection.allCases) { section in
-                    Text(section.compactTitle)
-                        .help(section.title)
-                        .accessibilityLabel(section.title)
-                        .tag(section)
-                }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("guidedSetupSectionPicker")
-
-            if case .repair(let blockingState) = context.mode {
-                repairStatusCard(for: blockingState)
+            ViewThatFits(in: .horizontal) {
+                topicPicker.pickerStyle(.segmented).fixedSize(horizontal: true, vertical: false)
+                topicPicker.pickerStyle(.menu)
             }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if selectedSection == .certificate, case .repair(let state) = context.mode {
+                        repairStatusCard(for: state)
+                    }
                     sectionContent
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 2)
             }
-        }
-        .padding(18)
-        .frame(minWidth: 700, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity)
-        .joesProxyResizableWorkspaceSheet(minWidth: 700, minHeight: 620)
-        .accessibilityIdentifier("guidedSetupRepairView")
-        .onAppear(perform: captureSetupNetworkSnapshot)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done") {
-                    isPresented = false
+            Divider()
+            HStack {
+                if selectedSection == .verifyCapture {
+                    Text("Devices and MCP/CLI are optional.").font(.caption)
                 }
-                .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Close") { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("guidedSetupClose")
             }
         }
+        .padding(16)
+        .frame(minWidth: 360, idealWidth: 620, maxWidth: .infinity, minHeight: 300, idealHeight: 520, maxHeight: .infinity)
+        #if DEBUG
+        .frame(width: compactFixture ? 400 : nil, height: compactFixture ? 320 : nil)
+        #endif
+        .joesProxyResizableWorkspaceSheet(minWidth: 360, minHeight: 300)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("guidedSetupRepairView")
+        .onAppear(perform: captureSetupNetworkSnapshot)
+        .certificateTrustAlert(certificateModel)
+    }
+
+    #if DEBUG
+    private var compactFixture: Bool {
+        ProcessInfo.processInfo.arguments.contains("--ui-test-compact-setup-sheet")
+    }
+    #endif
+
+    private var topicPicker: some View {
+        Picker("Setup section", selection: $selectedSection) {
+            ForEach(GuidedSetupSection.allCases) { section in
+                Text(section.title).tag(section)
+            }
+        }
+        .labelsHidden()
+        .accessibilityIdentifier("guidedSetupSectionPicker")
     }
 
     private var header: some View {
@@ -166,10 +179,6 @@ struct GuidedSetupRepairView: View {
             Text(headerTitle)
                 .appFont(.title2, scale: appTextScale, weight: .semibold)
 
-            Text(headerMessage)
-                .appFont(.body, scale: appTextScale)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -184,30 +193,36 @@ struct GuidedSetupRepairView: View {
         }
     }
 
-    private var headerMessage: String {
-        switch context.mode {
-        case .firstRun:
-            return "Get JoesProxy ready for your first capture and learn where the core tools live."
-        case .replay:
-            return "Use this flow to revisit setup, refresh trust, or relearn the core traffic workflow."
-        case .repair:
-            return "A blocking setup problem needs attention before HTTPS inspection can work as expected."
-        }
-    }
-
     @ViewBuilder
     private var sectionContent: some View {
         switch selectedSection {
-        case .welcome:
-            welcomeSection
-        case .startCapturing:
-            startCapturingSection
-        case .httpsAndTrust:
-            httpsAndTrustSection
-        case .exploreTraffic:
-            exploreTrafficSection
-        case .needHelp:
-            needHelpSection
+        case .certificate:
+            sectionCard(title: "Certificate", summary: "Trust the current root on this Mac for HTTPS inspection. For HTTP only, continue to Proxy.") {
+                CertificateApprovalChecklist(model: certificateModel)
+                DisclosureGroup("Certificate diagnostics and repair") { setupChecklist }
+                Button("Continue to Proxy") { selectedSection = .proxy }
+            }
+        case .proxy:
+            sectionCard(title: "Proxy", summary: "Choose a listener port and start the proxy. Routing all Mac traffic is optional.") {
+                accessChecklist.scoped(to: .proxy)
+                setupChecklist
+                Button("Continue to Verify Capture") { selectedSection = .verifyCapture }
+            }
+        case .verifyCapture:
+            sectionCard(title: "Verify Capture", summary: "Check that requests reach this Mac and that HTTPS is inspected rather than tunneled.") {
+                setupChecklist
+            }
+        case .devices:
+            sectionCard(title: "Devices (optional)", summary: "Choose the guide for your device, then look for traffic from that device.") {
+                setupChecklist
+                DisclosureGroup("Profiles and connection details") { profileMaintenanceCard }
+            }
+        case .mcpCLI:
+            sectionCard(title: "MCP/CLI (optional)", summary: "Start MCP, connect one client, and verify its access. Local capture does not require an agent.") {
+                accessChecklist.scoped(to: .client)
+                Button("Export MCP Skill…", action: exportSkill)
+                    .accessibilityIdentifier("guidedSetupExportSkillButton")
+            }
         }
     }
 
@@ -215,16 +230,13 @@ struct GuidedSetupRepairView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label(blockingState.title, systemImage: "exclamationmark.triangle.fill")
                 .appFont(.headline, scale: appTextScale, weight: .semibold)
-                .foregroundStyle(.yellow)
+                .foregroundStyle(.red)
 
             Text(blockingState.message)
                 .appFont(.body, scale: appTextScale)
                 .fixedSize(horizontal: false, vertical: true)
 
             repairActions(for: blockingState)
-            if selectedSection != .welcome {
-                Button("Review setup checklist and saved permissions") { selectedSection = .welcome }
-            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -273,26 +285,6 @@ struct GuidedSetupRepairView: View {
             }
             .buttonStyle(.link)
             .accessibilityIdentifier("guidedSetupRepairTrustHelpButton")
-        }
-    }
-
-    private var welcomeSection: some View {
-        sectionCard(
-            title: "Setup Checklist",
-            summary: "Follow the next recommended action, then watch each setup step move from blocked or waiting to complete."
-        ) {
-            nextRecommendedAction
-            setupChecklist
-            accessChecklist
-            profileMaintenanceCard
-            Button("Export MCP Skill…") {
-                exportSkill()
-            }
-            .buttonStyle(.bordered)
-            .accessibilityIdentifier("guidedSetupExportSkillButton")
-            helpLinkButton("Learn about traffic states") {
-                openHelpTopic(.trafficStates)
-            }
         }
     }
 
@@ -449,7 +441,7 @@ struct GuidedSetupRepairView: View {
     }
 
     private var profileStatusColor: Color {
-        profileSnapshotDiagnosis.health.isStale ? .yellow : .green
+        latestProfileSnapshot == nil ? .secondary : (profileSnapshotDiagnosis.health.isStale ? .red : .green)
     }
 
     private func exportProfile(kind: GeneratedProfileKind) {
@@ -478,39 +470,12 @@ struct GuidedSetupRepairView: View {
         }
     }
 
-    @ViewBuilder
-    private var nextRecommendedAction: some View {
-        if let item = nextSetupActionItem,
-           let actionTitle = item.primaryActionTitle,
-            let action = item.primaryAction {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Next step")
-                    .appFont(.headline, scale: appTextScale, weight: .semibold)
-
-                Text(item.detail)
-                    .appFont(.caption, scale: appTextScale)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button(actionTitle) {
-                    performChecklistAction(action)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("setupNextActionButton")
-                .accessibilityLabel("\(actionTitle). \(item.title). \(item.detail)")
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-    }
-
     private var setupChecklist: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Setup status")
                 .appFont(.headline, scale: appTextScale, weight: .semibold)
 
-            ForEach(setupChecklistItems) { item in
+            ForEach(setupChecklistItems.filter { section(for: $0) == selectedSection }) { item in
                 setupChecklistRow(item)
             }
         }
@@ -623,13 +588,9 @@ struct GuidedSetupRepairView: View {
         switch state {
         case .complete:
             return .green
-        case .needsAction, .warning:
-            return .yellow
-        case .waiting:
-            return .blue
-        case .stale:
-            return .orange
-        case .neutral:
+        case .needsAction, .warning, .stale:
+            return .red
+        case .waiting, .neutral:
             return .secondary
         }
     }
@@ -648,85 +609,6 @@ struct GuidedSetupRepairView: View {
             return "Not verified yet"
         case .stale:
             return "Stale"
-        }
-    }
-
-    private var startCapturingSection: some View {
-        sectionCard(
-            title: "Start Capturing",
-            summary: "Start the proxy, point a client or this Mac at the proxy host and port, then confirm sessions appear."
-        ) {
-            sectionBullet("Use the Proxy controls to start the listener on the configured local port.")
-            sectionBullet("Configure the Mac, device, simulator, or app you care about to use JoesProxy as its HTTP/HTTPS proxy.")
-            sectionBullet("If traffic still does not appear, revisit the setup guides and confirm the client is using the current host and port.")
-            helpLinkButton("Troubleshoot missing traffic") {
-                openHelpTopic(.trafficStates)
-            }
-        }
-    }
-
-    private var httpsAndTrustSection: some View {
-        sectionCard(
-            title: "HTTPS & Trust",
-            summary: "HTTPS inspection requires the JoesProxy Root CA to exist and be trusted by the device generating the request."
-        ) {
-            sectionBullet("Without trust, you may still see tunneled metadata, but decrypted request and response bodies will stay unavailable.")
-            sectionBullet("If trust is broken, expired, or stale, use the certificate flow and device guides here instead of guessing.")
-            KeychainSetupExample(step: .findCertificate)
-            KeychainSetupExample(step: .trustCertificate)
-            VStack(alignment: .leading, spacing: 8) {
-                actionButton(certificateSetupTitle, action: {
-                    isPresented = false
-                    openCertificateSetup()
-                })
-                actionButton("macOS Setup Guide", action: {
-                    isPresented = false
-                    openMacOSGuide()
-                })
-                actionButton("iOS Setup Guide", action: {
-                    isPresented = false
-                    openIOSGuide()
-                })
-                actionButton("Apple TV Setup Guide", action: {
-                    isPresented = false
-                    openTVOSGuide()
-                })
-            }
-            helpLinkButton("Why trust is required") {
-                openHelpTopic(.certificateSetup)
-            }
-            helpLinkButton("Understand inspected vs tunneled traffic") {
-                openHelpTopic(.trafficStates)
-            }
-        }
-    }
-
-    private var exploreTrafficSection: some View {
-        sectionCard(
-            title: "Explore Traffic",
-            summary: "Once traffic is flowing, use the two browser modes and the inspector to narrow in on the requests that matter."
-        ) {
-            sectionBullet("Table is best for chronological scanning and sorting through recent traffic quickly.")
-            sectionBullet("Explorer is best for grouped navigation by host and path when captures get dense.")
-            sectionBullet("Use the Request Inspector to understand whether a session was inspected, tunneled, truncated, or omitted in a saved recording.")
-        }
-    }
-
-    private var needHelpSection: some View {
-        sectionCard(
-            title: "Need Help",
-            summary: "When something looks wrong, reopen this flow, the Help hub, or the device-specific guides instead of relying on stale setup assumptions."
-        ) {
-            sectionBullet("Use Help Topics & Glossary for terminology, recording guidance, and troubleshooting explanations.")
-            sectionBullet("Reopen Guided Setup & Repair any time from the Help menu.")
-            sectionBullet("Use the certificate setup and device guides when trust, proxy settings, or local configuration have changed.")
-            helpLinkButton("Troubleshoot HTTPS bodies still missing") {
-                openHelpTopic(.trafficStates)
-            }
-            actionButton("Open Help Topics & Glossary", action: {
-                isPresented = false
-                openHelpHub()
-            })
         }
     }
 
@@ -749,20 +631,6 @@ struct GuidedSetupRepairView: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    private func sectionBullet(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 6 * appTextScale))
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
-                .accessibilityHidden(true)
-
-            Text(text)
-                .appFont(.body, scale: appTextScale)
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 
     private func performChecklistAction(_ action: ProxyViewModel.GuidedSetupChecklistItem.Action) {
@@ -798,14 +666,10 @@ struct GuidedSetupRepairView: View {
 
     private func section(for item: ProxyViewModel.GuidedSetupChecklistItem) -> GuidedSetupSection {
         switch item.id {
-        case "certificate", "verification":
-            return .httpsAndTrust
-        case "proxy", "traffic":
-            return .startCapturing
-        case "device":
-            return .httpsAndTrust
-        default:
-            return .welcome
+        case "proxy": return .proxy
+        case "traffic", "verification": return .verifyCapture
+        case "device": return .devices
+        default: return .certificate
         }
     }
 
@@ -815,9 +679,4 @@ struct GuidedSetupRepairView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func helpLinkButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(title, action: action)
-            .buttonStyle(.link)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
 }

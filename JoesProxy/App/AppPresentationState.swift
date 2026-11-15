@@ -42,41 +42,17 @@ struct ReproPackagePresentationContext: Identifiable, Equatable, Sendable {
 }
 
 enum GuidedSetupSection: String, CaseIterable, Identifiable, Sendable {
-    case welcome
-    case startCapturing
-    case httpsAndTrust
-    case exploreTraffic
-    case needHelp
+    case certificate, proxy, verifyCapture, devices, mcpCLI
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .welcome:
-            return "Welcome"
-        case .startCapturing:
-            return "Start Capturing"
-        case .httpsAndTrust:
-            return "HTTPS & Trust"
-        case .exploreTraffic:
-            return "Explore Traffic"
-        case .needHelp:
-            return "Need Help"
-        }
-    }
-
-    var compactTitle: String {
-        switch self {
-        case .welcome:
-            return "Welcome"
-        case .startCapturing:
-            return "Capture"
-        case .httpsAndTrust:
-            return "Trust"
-        case .exploreTraffic:
-            return "Explore"
-        case .needHelp:
-            return "Help"
+        case .certificate: "Certificate"
+        case .proxy: "Proxy"
+        case .verifyCapture: "Verify Capture"
+        case .devices: "Devices"
+        case .mcpCLI: "MCP/CLI"
         }
     }
 }
@@ -303,7 +279,7 @@ final class AppPresentationState: ObservableObject {
     }
 
     func presentGuidedSetup(
-        section: GuidedSetupSection = .welcome,
+        section: GuidedSetupSection = .certificate,
         mode: GuidedSetupEntryMode = .replay
     ) {
         log("Presenting guided setup in mode \(String(describing: mode)) at section \(section.rawValue)")
@@ -409,7 +385,7 @@ final class AppPresentationState: ObservableObject {
     }
 
     func presentGuidedRepair(for blockingState: GuidedSetupBlockingState) {
-        presentGuidedSetup(section: .httpsAndTrust, mode: .repair(blockingState))
+        presentGuidedSetup(section: .certificate, mode: .repair(blockingState))
     }
 
     func transitionFromHelpHub(to destination: HelpDestination) {

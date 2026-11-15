@@ -213,9 +213,9 @@ struct ContentView: View {
                         }
                     ),
                     context: context,
+                    certificateModel: viewModel,
                     accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: selfValidationCoordinator),
                     setupChecklistItems: viewModel.guidedSetupChecklistItems,
-                    nextSetupActionItem: viewModel.guidedSetupNextActionItem,
                     certificateSetupTitle: viewModel.certificateSetupEntryPointTitle,
                     openCertificateSetup: {
                         presentationState.transitionFromGuidedSetup(to: .certificateSetup)
@@ -242,10 +242,6 @@ struct ContentView: View {
                     openHelpTopic: { topic in
                         presentationState.dismissGuidedSetup()
                         presentationState.presentHelpHub(topic: topic)
-                    },
-                    openHelpHub: {
-                        presentationState.dismissGuidedSetup()
-                        presentationState.presentHelpHub()
                     },
                     startProxy: {
                         viewModel.startProxy()
@@ -600,36 +596,11 @@ struct ContentView: View {
                     )
                 }
             }
-            .alert(item: $viewModel.trustAlertContext) { context in
-                switch context.primaryAction {
-                case .acknowledge:
-                    return Alert(
-                        title: Text(context.title),
-                        message: Text(context.message),
-                        dismissButton: .default(Text("OK")) {
-                            viewModel.dismissTrustAlert()
-                        }
-                    )
-                case .resetCertificateState:
-                    return Alert(
-                        title: Text(context.title),
-                        message: Text(context.message),
-                        primaryButton: .destructive(Text("Reset Certificate State")) {
-                            viewModel.dismissTrustAlert()
-                            viewModel.resetCertificateState()
-                        },
-                        secondaryButton: .cancel {
-                            viewModel.dismissTrustAlert()
-                        }
-                    )
+            .certificateTrustAlert(viewModel, active: !presentationState.isCertificateSetupPresented && !presentationState.isMacOSSetupWalkthroughPresented && presentationState.guidedSetupContext == nil)
+            .background {
+                Color.clear.alert(item: $exportAlert) { context in
+                    Alert(title: Text(context.title), message: Text(context.message), dismissButton: .default(Text("OK")))
                 }
-            }
-            .alert(item: $exportAlert) { context in
-                Alert(
-                    title: Text(context.title),
-                    message: Text(context.message),
-                    dismissButton: .default(Text("OK"))
-                )
             }
     }
 

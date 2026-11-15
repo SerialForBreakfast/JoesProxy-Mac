@@ -28,26 +28,72 @@ final class SetupRecoveryUITests: XCTestCase {
         let guidedSetup = identifiedElement("guidedSetupRepairView", in: app)
         XCTAssertTrue(guidedSetup.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Guided Setup & Repair"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["Setup Checklist"].waitForExistence(timeout: 2))
+        XCTAssertTrue(identifiedElement("certificateApprovalChecklist", in: app).waitForExistence(timeout: 2))
         XCTAssertTrue(
-            app.buttons["Done"].waitForExistence(timeout: 2),
+            app.buttons["guidedSetupClose"].waitForExistence(timeout: 2),
             "Guided Setup sheet must remain dismissible after resizable configuration"
         )
     }
 
     @MainActor
-    func testGuidedSetupDeepLinkOpensExploreTrafficSection() throws {
+    func testInstalledCertificateStillNeedsSeparateMacOSTrustApproval() {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions",
+                               "\(Self.uiTestCertificateStatePrefix)installedTrustRequired",
+                               "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
+                               "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.buttons["Trust Root CA"].waitForExistence(timeout: 5))
+        XCTAssertTrue(sheet.buttons["openKeychainAccess"].exists)
+        XCTAssertTrue(sheet.buttons["Check Again"].exists)
+        XCTAssertFalse(sheet.buttons["Create Root CA"].exists)
+        XCTAssertFalse(sheet.buttons["Unlock Certificate Authority"].exists)
+    }
+
+    @MainActor
+    func testCompactSetupKeepsCloseReachableOnEveryPage() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-compact-setup-sheet",
+                               "\(Self.uiTestGuidedSetupSectionPrefix)certificate", "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+        let close = sheet.buttons["Close"]
+        for title in ["Certificate", "Proxy", "Verify Capture", "Devices", "MCP/CLI"] {
+            if title != "Certificate" {
+                let menu = sheet.popUpButtons["guidedSetupSectionPicker"]
+                if menu.exists {
+                    menu.click()
+                    app.menuItems[title].click()
+                } else {
+                    sheet.radioButtons[title].click()
+                }
+            }
+            let heading = title == "Devices" || title == "MCP/CLI" ? "\(title) (optional)" : title
+            XCTAssertTrue(sheet.staticTexts[heading].waitForExistence(timeout: 2))
+            XCTAssertLessThanOrEqual(sheet.frame.width, 430)
+            XCTAssertLessThanOrEqual(sheet.frame.height, 355)
+            XCTAssertTrue(sheet.frame.contains(close.frame), title)
+            XCTAssertTrue(close.isHittable, title)
+        }
+        close.click()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 2))
+    }
+
+    @MainActor
+    func testGuidedSetupDeepLinkOpensVerifyCaptureSection() throws {
         let app = XCUIApplication()
         app.launchArguments = [
             "\(Self.uiTestFixturePrefix)demo-sessions",
-            "\(Self.uiTestGuidedSetupSectionPrefix)exploreTraffic",
+            "\(Self.uiTestGuidedSetupSectionPrefix)verifyCapture",
             "\(Self.uiTestGuidedSetupModePrefix)replay"
         ]
         app.launchJoesProxyForTesting()
 
         let guidedSetup = identifiedElement("guidedSetupRepairView", in: app)
         XCTAssertTrue(guidedSetup.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Explore Traffic"].waitForExistence(timeout: 2))
+        XCTAssertTrue(identifiedElement("setupChecklistVerificationRow", in: app).waitForExistence(timeout: 2))
     }
 
     @MainActor
@@ -55,7 +101,7 @@ final class SetupRecoveryUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "\(Self.uiTestFixturePrefix)demo-sessions",
-            "\(Self.uiTestGuidedSetupSectionPrefix)httpsAndTrust",
+            "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
             "\(Self.uiTestGuidedSetupModePrefix)repair",
             "\(Self.uiTestGuidedSetupBlockingStatePrefix)needsCleanup"
         ]
@@ -76,7 +122,7 @@ final class SetupRecoveryUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "\(Self.uiTestFixturePrefix)demo-sessions",
-            "\(Self.uiTestGuidedSetupSectionPrefix)httpsAndTrust",
+            "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
             "\(Self.uiTestGuidedSetupModePrefix)repair",
             "\(Self.uiTestGuidedSetupBlockingStatePrefix)installedTrustRequired"
         ]
@@ -95,7 +141,7 @@ final class SetupRecoveryUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "\(Self.uiTestFixturePrefix)demo-sessions",
-            "\(Self.uiTestGuidedSetupSectionPrefix)httpsAndTrust",
+            "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
             "\(Self.uiTestGuidedSetupModePrefix)repair",
             "\(Self.uiTestGuidedSetupBlockingStatePrefix)installedTrustRequired"
         ]

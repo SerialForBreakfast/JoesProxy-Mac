@@ -145,6 +145,7 @@ struct CertificateSetupSheet: View {
             if viewModel.shouldShowTrustInstructions {
                 GroupBox("Trust In Keychain Access") {
                     VStack(alignment: .leading, spacing: 8) {
+                        OpenKeychainAccessButton()
                         ForEach(Array(viewModel.certificateTrustInstructions.enumerated()), id: \.offset) { index, step in
                             Text("\(index + 1). \(step)")
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -316,6 +317,7 @@ struct CertificateSetupSheet: View {
         .frame(minWidth: 520, maxWidth: .infinity, minHeight: 420, maxHeight: .infinity)
         .joesProxyResizableWorkspaceSheet(minWidth: 520, minHeight: 420)
         .accessibilityIdentifier("certificateSetupSheet")
+        .certificateTrustAlert(viewModel)
     }
 
     private func setupVerificationCard(for state: ProxyViewModel.SetupVerificationState) -> some View {
@@ -492,6 +494,106 @@ struct CertificateSetupSheet: View {
                 message: error.localizedDescription
             )
         }
+    }
+}
+
+extension View {
+    @MainActor
+    func certificateTrustAlert(_ model: ProxyViewModel, active: Bool = true) -> some View {
+        alert(item: Binding(get: { active ? model.trustAlertContext : nil }, set: {
+            if active { model.trustAlertContext = $0 }
+        })) { context in
+            switch context.primaryAction {
+            case .acknowledge:
+                return Alert(title: Text(context.title), message: Text(context.message),
+                             dismissButton: .default(Text("OK")))
+            case .resetCertificateState:
+                return Alert(title: Text(context.title), message: Text(context.message),
+                             primaryButton: .destructive(Text("Reset Certificate State")) {
+                                 model.resetCertificateState()
+                             }, secondaryButton: .cancel())
+            }
+        }
+    }
+}
+
+struct OpenKeychainAccessButton: View {
+    @State private var launchFailed = false
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Button("Open Keychain Access") {
+                guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.keychainaccess") else {
+                    launchFailed = true
+                    return
+                }
+                NSWorkspace.shared.openApplication(at: url, configuration: .init()) { _, error in
+                    DispatchQueue.main.async { launchFailed = error != nil }
+                }
+            }
+            .accessibilityIdentifier("openKeychainAccess")
+            if launchFailed {
+                Text("Open Spotlight and search for Keychain Access. Select the login keychain.")
+                    .font(.caption)
+            }
+        }
+    }
+}
+
+struct CertificateApprovalChecklist: View {
+    @ObservedObject var model: ProxyViewModel
+
+    var body: some View {
+        let state = model.certificateWorkflowState
+        let accessible = model.rootCertificate?.privateKeyData != nil && !model.certificateAuthorityNeedsUnlock
+        let installed = state == .installedTrustRequired || state == .ready
+        VStack(alignment: .leading, spacing: 8) {
+            step("1. Create or unlock the signing identity", done: accessible)
+            if model.certificateAuthorityNeedsUnlock {
+                Text(model.certificateUnlockWarning)
+                KeychainSetupExample(step: .unlock)
+                Button("Unlock Certificate Authority", action: model.unlockCertificateAuthority)
+                    .disabled(model.isUnlockingCertificateAuthority)
+                if let message = model.certificateUnlockMessage { Text(message) }
+            } else if !accessible && state == .notSetUp {
+                Button("Create Root CA", action: model.createOrLoadRootCertificate)
+            }
+            step("2. Install the root in the login keychain", done: installed)
+            if accessible && state == .notSetUp {
+                Button("Install Root CA", action: model.installRootCertificate)
+            }
+            step("3. Approve trust for this root in macOS", done: state == .ready)
+            if state == .installedTrustRequired {
+                Text("Trust is separate from permission to read the signing key. Choose Trust Root CA and confirm in the macOS dialog, or set trust manually in Keychain Access.")
+                Button(model.isTrustingCertificate ? "Waiting for macOS…" : "Trust Root CA", action: model.trustRootCertificate)
+                    .disabled(model.isTrustingCertificate)
+                Text("For manual setup, select login, find \(model.configuration.certificateLabel), and compare its SHA-256 fingerprint before changing Trust. Close the certificate window to save.")
+                if let fingerprint = model.currentCertificateFingerprint {
+                    Text(fingerprint).font(.caption.monospaced()).textSelection(.enabled)
+                }
+                OpenKeychainAccessButton()
+                KeychainSetupExample(step: .findCertificate)
+                KeychainSetupExample(step: .trustCertificate)
+                Button("Check Again", action: { model.refreshCertificateStatus() })
+            } else if state == .ready {
+                Text("Ready for HTTPS inspection. Verify a captured response on the Verify Capture tab.")
+            } else if state == .needsCleanup {
+                Text("Open certificate diagnostics and repair below to resolve the conflicting certificate before continuing.")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("certificateApprovalChecklist")
+    }
+
+    private func step(_ title: String, done: Bool) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: done ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .foregroundStyle(done ? Color.green : .red)
+        }
+            .font(.headline)
+            .accessibilityValue(done ? "Complete" : "Not verified")
     }
 }
 

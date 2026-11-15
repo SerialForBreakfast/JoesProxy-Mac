@@ -1461,7 +1461,7 @@ final class ProxyViewModelTests: XCTestCase {
         let configuration = TestAppConfiguration(certificateLabel: "GuidedSetup-Dismiss")
         let presentationState = AppPresentationState(configuration: configuration)
 
-        presentationState.presentGuidedSetup(section: .welcome, mode: .firstRun)
+        presentationState.presentGuidedSetup(section: .certificate, mode: .firstRun)
         presentationState.dismissGuidedSetup()
 
         XCTAssertNil(presentationState.guidedSetupContext)
@@ -1479,7 +1479,7 @@ final class ProxyViewModelTests: XCTestCase {
 
             XCTAssertEqual(
                 presentationState.guidedSetupContext,
-                GuidedSetupContext(section: .httpsAndTrust, mode: .repair(blockingState))
+                GuidedSetupContext(section: .certificate, mode: .repair(blockingState))
             )
 
             presentationState.dismissGuidedSetup()
@@ -1489,7 +1489,7 @@ final class ProxyViewModelTests: XCTestCase {
     @MainActor
     func testTransitionFromGuidedSetupPresentsCertificateSetup() {
         let presentationState = AppPresentationState()
-        presentationState.presentGuidedSetup(section: .httpsAndTrust, mode: .replay)
+        presentationState.presentGuidedSetup(section: .certificate, mode: .replay)
 
         presentationState.transitionFromGuidedSetup(to: .certificateSetup)
 
@@ -1558,11 +1558,11 @@ final class ProxyViewModelTests: XCTestCase {
     func testAppPresentationStatePresentsReplayGuidedSetupAtRequestedSection() {
         let presentationState = AppPresentationState()
 
-        presentationState.presentGuidedSetup(section: .exploreTraffic)
+        presentationState.presentGuidedSetup(section: .verifyCapture)
 
         XCTAssertEqual(
             presentationState.guidedSetupContext,
-            GuidedSetupContext(section: .exploreTraffic, mode: .replay)
+            GuidedSetupContext(section: .verifyCapture, mode: .replay)
         )
     }
 
@@ -1574,7 +1574,7 @@ final class ProxyViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             presentationState.guidedSetupContext,
-            GuidedSetupContext(section: .httpsAndTrust, mode: .repair(.installedTrustRequired))
+            GuidedSetupContext(section: .certificate, mode: .repair(.installedTrustRequired))
         )
     }
 
@@ -1616,11 +1616,11 @@ final class ProxyViewModelTests: XCTestCase {
         configuration.hasCompletedInitialGuidedSetupPresentation = true
         let presentationState = AppPresentationState(configuration: configuration)
 
-        presentationState.presentGuidedSetup(section: .startCapturing, mode: .replay)
+        presentationState.presentGuidedSetup(section: .proxy, mode: .replay)
 
         XCTAssertEqual(
             presentationState.guidedSetupContext,
-            GuidedSetupContext(section: .startCapturing, mode: .replay)
+            GuidedSetupContext(section: .proxy, mode: .replay)
         )
     }
 
@@ -4179,10 +4179,21 @@ final class ProxyViewModelTests: XCTestCase {
 
         _ = try viewModel.prepareCertificateRenewal()
         XCTAssertNotNil(store.loadRootCertificate(label: pendingLabel))
+        let host = "rotate.example.test"
+        let oldLeaf = try provider.issueLeafCertificate(for: host)
         viewModel.resetCertificateState()
         XCTAssertNil(store.loadRootCertificate(label: pendingLabel))
         XCTAssertNil(store.loadRootCertificate(label: configuration.certificateLabel))
         XCTAssertTrue(metadataStore.pendingRenewalInstances().isEmpty)
+        XCTAssertThrowsError(try provider.issueLeafCertificate(for: host))
+
+        viewModel.createOrLoadRootCertificate()
+        let replacement = try XCTUnwrap(provider.currentRootCertificate())
+        XCTAssertNotEqual(replacement.certificateData, root.certificateData)
+        let newLeaf = try provider.issueLeafCertificate(for: host)
+        XCTAssertNotEqual(newLeaf.certificateData, oldLeaf.certificateData)
+        XCTAssertEqual(newLeaf.issuerCertificateSHA256Fingerprint,
+                       CertificateIdentityExtraction.sha256Fingerprint(from: replacement.certificateData))
     }
 
     @MainActor

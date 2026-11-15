@@ -1205,7 +1205,7 @@ struct JoesProxyApp: App {
             return
         }
 
-        let section = configuration.guidedSetupSection ?? .welcome
+        let section = configuration.guidedSetupSection ?? .certificate
         switch mode {
         case .firstRun:
             presentationState.presentFirstRunPathChoiceIfNeeded()

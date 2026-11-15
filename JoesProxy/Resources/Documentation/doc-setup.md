@@ -16,6 +16,8 @@ Remote profile installation, remote certificate trust, and device Wi-Fi proxy se
 
 If **HTTPS Setup** shows **Unlock Certificate Authority**, choosing it can open a macOS password dialog for **com.JoesProxy.CertificateAuthority**. Enter your login keychain password in that system dialog. **Allow** lets JoesProxy use the item for this run. **Always Allow** lets macOS remember access for that item. **Deny** leaves it locked and you can continue with HTTP capture. Older roots can have separate certificate and signing-key items. Setup identifies when a second item needs your permission.
 
+Keychain **access** is not certificate **trust**. On the Certificate page, create or unlock the identity, install it in the login keychain, then choose **Trust Root CA**. To review manually, choose **Open Keychain Access**, compare the current fingerprint, save the trust change and choose **Check Again**. A separate device must trust the root on that device.
+
 ## Optional local CLI bootstrap {#cli}
 
 The bundled `joesproxyctl` can provide safe local help before MCP is enabled:
@@ -34,6 +36,8 @@ Without an enrolled credential, `doctor` reports bootstrap-only evidence. It doe
 In the setup checklist, choose **Start MCP on this Mac**, then **Enroll or manage an MCP / CLI client**. Choose the client and its disclosure profile. Place the credential only in that client’s configuration or hidden CLI prompt.
 
 Return to the checklist and expand **Standing approvals** under the client’s name. Select the permissions it should remember and save them together. For unattended CLI startup and runtime control, enable local CLI startup in preferences and grant runtime control to the enrolled Shareable client. Clear a standing approval and save to remove it. If the checklist shows a locked credential, choose **Unlock credential** to start the Keychain confirmation.
+
+A runner using the CLI may also encounter a macOS prompt to read the CLI credential. This is separate from unlocking JoesProxy's verifier for that client. Neither grants standing permissions or approves a particular mutation. For a pending action, match its request ID in MCP Management, review its scope and retry the original command if it did not resume.
 
 The connected-agent sequence is:
 

@@ -107,16 +107,7 @@ struct macOSSetupWalkthroughView: View {
                 Button("Done") { isPresented = false }
             }
         }
-        .alert(item: $viewModel.trustAlertContext) { context in
-            Alert(
-                title: Text(context.title),
-                message: Text(context.message),
-                primaryButton: .default(Text("OK")) { viewModel.dismissTrustAlert() },
-                secondaryButton: context.primaryAction == .resetCertificateState
-                    ? .destructive(Text("Reset Certificate State")) { viewModel.confirmResetCertificateState() }
-                    : .cancel(Text("Cancel")) { viewModel.dismissTrustAlert() }
-            )
-        }
+        .certificateTrustAlert(viewModel)
         .onChange(of: hasRootCA) { _, has in
             if has { stepCompletedAt[1] = stepCompletedAt[1] ?? Date() }
         }
@@ -303,7 +294,8 @@ struct macOSSetupWalkthroughView: View {
 
             DisclosureGroup("Trust manually (Keychain Access)") {
                 VStack(alignment: .leading, spacing: 6) {
-                    instructionStep(1, "Open Keychain Access (Spotlight → Keychain Access).")
+                    OpenKeychainAccessButton()
+                    instructionStep(1, "In Keychain Access, use the steps below to trust this root.")
                     instructionStep(2, "Select the login keychain in the sidebar.")
                     instructionStep(3, "Find \(viewModel.configuration.certificateLabel) in the list.")
                     KeychainSetupExample(step: .findCertificate)

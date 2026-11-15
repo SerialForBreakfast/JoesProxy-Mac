@@ -17,77 +17,106 @@ struct SetupAccessChecklist: View {
     @State private var cliStartup: Bool?
     @State private var preferenceMessage: String?
 
+    enum Scope { case all, proxy, client }
+    var scope: Scope = .all
+
+    func scoped(to scope: Scope) -> Self {
+        var copy = self
+        copy.scope = scope
+        return copy
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Capture and agent preferences").appFont(.headline, scale: textScale)
-            Text("Select the access you need and choose Save Preferences. Reopen this checklist in Help → Guided Setup & Repair.")
-            LabeledContent("Proxy listening port") {
-                TextField("Listening port", text: draft($listener, current: settings.savedListeningPort))
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(!settings.canEditProxyPort)
+            if scope == .all {
+                Text("Capture and agent preferences").appFont(.headline, scale: textScale)
+                Text("Select the access you need and choose Save Preferences.")
             }
-            if !settings.canEditProxyPort { Text(settings.proxyPortEditingHelpText) }
-            Toggle("Route this Mac’s traffic when I manually start the proxy", isOn: draft($routing, current: settings.isSystemProxyManagementEnabled))
-            if routing == true { Text(settings.systemProxyConsentMessage) }
-            Toggle("Allow SDK clients to connect while capturing", isOn: draft($sdk, current: settings.sdkEventServerEnabled))
-            Toggle("Allow Map Remote rules to reach local Mac servers", isOn: draft($localServers, current: settings.isLoopbackMapRemoteEnabled))
-            if localServers ?? settings.isLoopbackMapRemoteEnabled {
-                Text("Enter the destination ports these rules may reach, separated by commas. Removing a port closes matching streams and disables their rules.")
-                LabeledContent("Destination ports") {
-                    TextField("e.g. 3000, 8080", text: draft($destinations, current: LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
+            if scope != .client {
+                LabeledContent("Proxy listening port") {
+                    TextField("Listening port", text: draft($listener, current: settings.savedListeningPort))
                         .textFieldStyle(.roundedBorder)
+                        .disabled(!settings.canEditProxyPort)
                 }
-                Text("Authorized ports: " + (settings.authorizedLoopbackPorts.isEmpty ? "None" : LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
+                if !settings.canEditProxyPort { Text(settings.proxyPortEditingHelpText) }
+                Toggle("Route this Mac’s traffic when I manually start the proxy", isOn: draft($routing, current: settings.isSystemProxyManagementEnabled))
+                if routing == true { Text(settings.systemProxyConsentMessage) }
+                Toggle("Allow SDK clients to connect while capturing", isOn: draft($sdk, current: settings.sdkEventServerEnabled))
+                Toggle("Allow Map Remote rules to reach local Mac servers", isOn: draft($localServers, current: settings.isLoopbackMapRemoteEnabled))
+                if localServers ?? settings.isLoopbackMapRemoteEnabled {
+                    Text("Enter the destination ports these rules may reach, separated by commas. Removing a port closes matching streams and disables their rules.")
+                    LabeledContent("Destination ports") {
+                        TextField("e.g. 3000, 8080", text: draft($destinations, current: LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    Text("Authorized ports: " + (settings.authorizedLoopbackPorts.isEmpty ? "None" : LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
+                }
             }
-            Toggle("Allow the local CLI to start MCP", isOn: draft($cliStartup, current: controller.isCLIAutomationStartEnabled))
-            Text("Local processes can request MCP startup. Enroll each client and choose its access below.")
+            if scope != .proxy {
+                Toggle("Allow the local CLI to start MCP", isOn: draft($cliStartup, current: controller.isCLIAutomationStartEnabled))
+                Text("Local processes can request MCP startup. Enroll each client and choose its access below.")
+            }
             Button("Save Preferences", action: savePreferences)
                 .disabled(listener == nil && destinations == nil && routing == nil && sdk == nil && localServers == nil && cliStartup == nil)
             if let preferenceMessage { Text(preferenceMessage) }
-            Divider()
-            Text("Connect a client (optional)").appFont(.headline, scale: textScale)
-            Text("Start MCP, enroll your client, then follow its connection instructions. For Terminal, choose JoesProxy CLI and paste the credential at the login prompt.")
-            switch controller.state {
-            case .stopped:
-                Button("Start MCP on this Mac") {
-                    // The main-actor controller owns startup and rejects duplicate starts.
-                    Task { await controller.start() }
-                }
-            case .starting: Text("Starting MCP…")
-            case .running(let port, _): Label("MCP listening on port \(String(port))", systemImage: "checkmark.circle")
-            case .failed(let message), .degraded(let message):
-                Text(message)
-                Button("Open MCP Management to repair…") { managementDestination = .overview }
-            }
-            if controller.enrolledClients.isEmpty { Label("No clients enrolled", systemImage: "circle") }
-            Button("Enroll or manage an MCP / CLI client…") { managementDestination = .clients }
-            if !controller.pendingApprovals.isEmpty {
-                Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
-            }
-            ForEach(controller.enrolledClients) { client in
-                GroupBox(client.displayName) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if controller.requiresVerifierUnlock(client) {
-                            Button("Unlock credential for " + client.displayName) {
-                                do {
-                                    try controller.unlockClientVerifier(client.id)
-                                    credentialError = nil
-                                } catch {
-                                    credentialError = "Credential remains locked. Choose Unlock to try again."
-                                }
-                            }
-                        } else if client.credentialState == .active {
-                            Label("Credential ready", systemImage: "checkmark.circle")
-                            SetupClientPermissions(controller: controller, client: client)
-                                .id(client.credentialGeneration)
-                        } else {
-                            Text(client.credentialState == .revoked ? "Credential revoked. Open client management to enroll again." : "Credential needs rotation. Open client management and choose Rotate.")
-                        }
+            if scope != .proxy {
+                Divider()
+                Text("1. Start the MCP service").appFont(.headline, scale: textScale)
+                switch controller.state {
+                case .stopped:
+                    Button("Start MCP on this Mac") {
+                        // The main-actor controller owns startup and rejects duplicate starts.
+                        Task { await controller.start() }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                case .starting: Text("Starting MCP…")
+                case .running(let port, _): Label { Text("MCP listening on port \(String(port))") } icon: {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 }
+                case .failed(let message), .degraded(let message):
+                    Label { Text(message) } icon: {
+                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    }
+                    Button("Open MCP Management to repair…") { managementDestination = .overview }
+                }
+                Text("2. Enroll and unlock your client").appFont(.headline, scale: textScale)
+                Text("For Terminal, enroll JoesProxy CLI. Paste the credential only at the CLI login prompt. If macOS asks joesproxyctl to access its saved credential, review the requesting app and Keychain item. Deny cancels that access; you can retry later.")
+                if controller.enrolledClients.isEmpty { Label("No clients enrolled", systemImage: "circle") }
+                Button("Enroll or manage an MCP / CLI client…") { managementDestination = .clients }
+                if !controller.pendingApprovals.isEmpty {
+                    Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
+                }
+                ForEach(controller.enrolledClients) { client in
+                    GroupBox(client.displayName) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if controller.requiresVerifierUnlock(client) {
+                                Text("JoesProxy needs macOS permission to read this client’s verifier. Unlock requests access for this client only. Enter a password only in the macOS dialog; denying access does not revoke enrollment.")
+                                Button("Unlock credential for " + client.displayName) {
+                                    do {
+                                        try controller.unlockClientVerifier(client.id)
+                                        credentialError = nil
+                                    } catch {
+                                        credentialError = "Credential remains locked. Choose Unlock to try again."
+                                    }
+                                }
+                            } else if client.credentialState == .active {
+                                Label { Text("Credential ready") } icon: {
+                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                                }
+                                SetupClientPermissions(controller: controller, client: client)
+                                    .id(client.credentialGeneration)
+                            } else {
+                                Text(client.credentialState == .revoked ? "Credential revoked. Open client management to enroll again." : "Credential needs rotation. Open client management and choose Rotate.")
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                if let credentialError { Text(credentialError) }
+                Text("3. Verify the connection").appFont(.headline, scale: textScale)
+                Text("Run joesproxyctl auth status to check local login, then joesproxyctl status to confirm the service accepts this client.")
+                Text("4. Review actions when requested").appFont(.headline, scale: textScale)
+                Text("A JoesProxy approval is not a Keychain prompt. If a command returns a request ID, review that ID in MCP Management → Pending Approvals. After approving, retry the same command if it did not resume. Basic setup does not require approving a mutation.")
             }
-            if let credentialError { Text(credentialError) }
         }
         .toggleStyle(.checkbox)
         .fixedSize(horizontal: false, vertical: true)

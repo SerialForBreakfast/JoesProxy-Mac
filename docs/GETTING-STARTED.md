@@ -9,6 +9,8 @@ Revision November 14, 2026. Installed-app setup appears first. Source builds fol
 3. **Connect the bundled CLI for Terminal access.** Open **MCP Management → Overview → Start MCP**, then **Clients → JoesProxy CLI → Add Client**. Start with Metadata Only for basic inspection. Choose **Copy command**, run it in Terminal, then use **Copy credential** at the waiting login prompt. Keep the credential on this Mac. Expect the CLI to print `state: stored`.
 4. **Verify the connection.** Run `/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl auth status`, followed by `/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl status`. The first checks local credential storage. The second checks the running service. If the first reports `configured: false`, finish the interactive login. If the second fails, check that MCP is running and the client is active. Review additional disclosure locally when a task needs response values.
 
+In the updated development build, open **Help → Guided Setup & Repair** to revisit one topic. Start with **Certificate** for HTTPS, **Proxy** for the listener, and **Verify Capture** to distinguish a captured request from an inspected HTTPS response. **Devices** and **MCP/CLI** are optional and can be opened directly. Choose **Close** or press Escape to leave any page.
+
 ## Requirements
 
 The app target is macOS 15.1 or newer. The source was last built and tested with Xcode 27.0, build 27A266a. The companion SDK manifest requires Swift tools 6.3. Physical older-OS acceptance remains pending. Optional local model features require macOS 26 and an available system model.
