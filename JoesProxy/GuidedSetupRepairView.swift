@@ -41,6 +41,7 @@ struct GuidedSetupRepairView: View {
     let copyCertificateShortCode: () -> Void
 
     @State private var selectedSection: GuidedSetupSection
+    @State private var openingSize: CGSize
     @State private var profileActionMessage: String?
 
     init(
@@ -114,6 +115,14 @@ struct GuidedSetupRepairView: View {
         self.copyCertificateFingerprint = copyCertificateFingerprint
         self.copyCertificateShortCode = copyCertificateShortCode
         _selectedSection = State(initialValue: context.section)
+        let parent = NSApp.keyWindow
+        let visible = (parent?.screen ?? NSScreen.main)?.visibleFrame
+        let top = min(parent?.frame.maxY ?? .infinity, visible?.maxY ?? .infinity)
+        let availableHeight = visible.map { top - $0.minY - 64 } ?? 800
+        _openingSize = State(initialValue: CGSize(
+            width: max(360, min(960, (visible?.width ?? 1008) - 48)),
+            height: max(300, min(800, availableHeight))
+        ))
     }
 
     var body: some View {
@@ -147,11 +156,13 @@ struct GuidedSetupRepairView: View {
             }
         }
         .padding(16)
-        .frame(minWidth: 360, idealWidth: 620, maxWidth: .infinity, minHeight: 300, idealHeight: 520, maxHeight: .infinity)
+        .frame(minWidth: 360, idealWidth: openingSize.width, maxWidth: .infinity,
+               minHeight: 300, idealHeight: openingSize.height, maxHeight: .infinity)
         #if DEBUG
         .frame(width: compactFixture ? 400 : nil, height: compactFixture ? 320 : nil)
         #endif
         .joesProxyResizableWorkspaceSheet(minWidth: 360, minHeight: 300)
+        .presentationSizing(.fitted)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("guidedSetupRepairView")
         .onAppear(perform: captureSetupNetworkSnapshot)

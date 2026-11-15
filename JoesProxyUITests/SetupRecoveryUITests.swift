@@ -28,6 +28,11 @@ final class SetupRecoveryUITests: XCTestCase {
         let guidedSetup = identifiedElement("guidedSetupRepairView", in: app)
         XCTAssertTrue(guidedSetup.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Guided Setup & Repair"].waitForExistence(timeout: 2))
+        let sheet = app.sheets.firstMatch
+        if let display = NSScreen.main?.visibleFrame, display.width >= 1024 {
+            XCTAssertGreaterThanOrEqual(sheet.frame.width, 900)
+        }
+        XCTAssertTrue(sheet.frame.contains(sheet.buttons["guidedSetupClose"].frame))
         XCTAssertTrue(identifiedElement("certificateApprovalChecklist", in: app).waitForExistence(timeout: 2))
         XCTAssertTrue(
             app.buttons["guidedSetupClose"].waitForExistence(timeout: 2),
