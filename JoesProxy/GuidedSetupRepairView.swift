@@ -672,6 +672,8 @@ struct GuidedSetupRepairView: View {
         ) {
             sectionBullet("Without trust, you may still see tunneled metadata, but decrypted request and response bodies will stay unavailable.")
             sectionBullet("If trust is broken, expired, or stale, use the certificate flow and device guides here instead of guessing.")
+            KeychainSetupExample(step: .findCertificate)
+            KeychainSetupExample(step: .trustCertificate)
             VStack(alignment: .leading, spacing: 8) {
                 actionButton(certificateSetupTitle, action: {
                     isPresented = false

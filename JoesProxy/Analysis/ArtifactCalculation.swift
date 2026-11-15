@@ -314,15 +314,21 @@ struct ArtifactCalculation: Sendable {
     static func analyze(rows: [ArtifactJSONValue], query: Query, deadline: ContinuousClock.Instant) throws -> Report {
         try ArtifactSnapshotReader.check(deadline)
         guard rows.count <= 10_000 else { throw ArtifactAnalysisFailure.inputLimit }
+        if query.kind == .rowCount, query.predicate == nil {
+            return Report(operation: .rowCount, selectionPointer: query.selectionPointer, rows: rows.count,
+                          result: Result(count: rows.count))
+        }
+        return try analyze(source: rows, query: query, deadline: deadline) { $0 }
+    }
+
+    /// Projects and consumes one source item at a time on the analysis worker. Nil excludes an item
+    /// from the selection. Checking every source batch also bounds scans with no matching records.
+    static func analyze<Element>(source: [Element], query: Query, deadline: ContinuousClock.Instant,
+                                 project: (Element) throws -> ArtifactJSONValue?) throws -> Report {
         let pointer = try ArtifactJSONValue.pointer(query.fieldPointer)
         var result = Result()
         var report = Report(operation: query.kind, selectionPointer: query.selectionPointer,
-            fieldPointer: query.kind == .rowCount ? nil : query.fieldPointer, rows: rows.count, result: result)
-        if query.kind == .rowCount, query.predicate == nil {
-            result.count = rows.count
-            report.result = result
-            return report
-        }
+            fieldPointer: query.kind == .rowCount ? nil : query.fieldPointer, rows: 0, result: result)
         var matchedRowCount = 0
         var missing = 0
         var null = 0
@@ -335,11 +341,13 @@ struct ArtifactCalculation: Sendable {
         var maximum: Int64?
         var top: [(Int, Int64)] = []
 
-        for (index, row) in rows.enumerated() {
+        for (index, element) in source.enumerated() {
             if index % 256 == 0 {
                 guard !Task.isCancelled else { throw ArtifactAnalysisFailure.cancelled }
                 guard ContinuousClock.now < deadline else { throw ArtifactAnalysisFailure.deadlineExceeded }
             }
+            guard let row = try project(element) else { continue }
+            report.rows += 1
             if let predicate = query.predicate {
                 guard try predicate.matches(row) else { continue }
             }

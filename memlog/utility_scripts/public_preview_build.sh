@@ -61,7 +61,7 @@ case "${1:-}" in
       -resultBundlePath "$EVIDENCE/filtered-calculations.xcresult" \
       -destination "platform=macOS" -testPlan JoesProxy-Policy -parallel-testing-enabled NO \
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationChecksAuthorityAndQualifiesEmptyWindows \
-      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredWindowDetectsLateCompletion \
+      -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredWindowRetainsSnapshotDuringLateCompletion \
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredGroupsReconcileTiesHistoryLossAndWorkLimit \
       -only-testing:JoesProxyTests/MCPResponseDisclosureIntegrationTests/testFilteredCalculationAgainstPagedSearchAndExplicitBatches \
       -only-testing:JoesProxyTests/CLIArtifactArgumentsTests/testFilteredMetadataArgumentsRequireExactlyOneSelection \
@@ -69,6 +69,7 @@ case "${1:-}" in
       -only-testing:JoesProxyTests/ArtifactCalculationTests \
       -only-testing:JoesProxyTests/ResponseEvidenceBriefTests \
       -only-testing:JoesProxyTests/InvestigationComparisonBriefTests \
+      -only-testing:JoesProxyTests/LoopbackDestinationPolicyTests \
       -only-testing:JoesProxyTests/AuthChainBriefTests \
       -only-testing:JoesProxyTests/MCPCaptureActivitySinceMarkerTests \
       -only-testing:JoesProxyTests/MCPMediaDiscoveryTests \

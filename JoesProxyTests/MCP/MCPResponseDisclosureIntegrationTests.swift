@@ -354,8 +354,7 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         args["filter"] = scope.merging(["path": "/secret"]) { _, new in new }
         let denied = try await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args)
         XCTAssertNotNil(denied.errorData)
-        let permitted = try await makeStack()
-        _ = try permitted.grantStore.addGrant(clientID: permitted.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let permitted = stack
         args["filter"] = scope
         let empty = try summaryPayload(from: await callSessionSummary(stack: permitted, toolName: "capture_calculate", toolArguments: args))
         XCTAssertEqual(empty["rows"] as? Int, 0)
@@ -365,7 +364,7 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(mixed["status"] as? String, "unavailable")
     }
 
-    func testFilteredWindowDetectsLateCompletion() async throws {
+    func testFilteredWindowRetainsSnapshotDuringLateCompletion() async throws {
         let gate = ArtifactTestGate()
         let stack = try await makeStack(worker: ArtifactAnalysisWorker(beforeWork: { gate.wait() }))
         _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
@@ -381,8 +380,9 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         stack.sessionStore.update(stack.session)
         gate.open()
         let result = try summaryPayload(from: await call.value)
-        XCTAssertEqual(result["reason"] as? String, "source_changed")
-        XCTAssertTrue(result["result"] is NSNull)
+        XCTAssertEqual(result["status"] as? String, "complete")
+        XCTAssertEqual((result["result"] as? [String: Any])?["count"] as? Int, 1)
+        XCTAssertNotNil(result["stateRevision"])
     }
 
     func testFilteredGroupsReconcileTiesHistoryLossAndWorkLimit() async throws {
@@ -417,8 +417,8 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
             SessionRecord(request: stack.session.request, state: .pending, timing: timing)
         })
         let over = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args))
-        XCTAssertEqual(over["reason"] as? String, "input_limit")
-        XCTAssertTrue(over["result"] is NSNull)
+        XCTAssertEqual(over["rows"] as? Int, 10_001)
+        XCTAssertEqual((over["result"] as? [String: Any])?["missing"] as? Int, 10_001)
     }
 
     func testFilteredCalculationAgainstPagedSearchAndExplicitBatches() async throws {

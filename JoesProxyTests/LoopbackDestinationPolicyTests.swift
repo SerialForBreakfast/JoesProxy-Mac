@@ -43,6 +43,15 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
 
     // MARK: - Address Classification & Normalization
 
+    /// A synthetic interface inventory distinguishes this Mac from another host on the same subnet.
+    func testLocalInterfaceClassificationIncludesMappedAddress() throws {
+        let local = try XCTUnwrap(LoopbackAddressInspector.parseLiteralIP("192.0.2.7"))
+        let mapped = try XCTUnwrap(LoopbackAddressInspector.parseLiteralIP("::ffff:192.0.2.7"))
+        let peer = try XCTUnwrap(LoopbackAddressInspector.parseLiteralIP("192.0.2.8"))
+        XCTAssertEqual(LoopbackAddressInspector.routingClassification(mapped, interfaces: [local]), .loopback)
+        XCTAssertEqual(LoopbackAddressInspector.routingClassification(peer, interfaces: [local]), .external)
+    }
+
     func testIPv4MappedIPv6UnwrapsAndMatchesIPv4Classification() throws {
         let mappedLoopbackDotted = try XCTUnwrap(LoopbackAddressInspector.parseLiteralIP("::ffff:127.0.0.1"))
         let mappedLoopbackHex = try XCTUnwrap(LoopbackAddressInspector.parseLiteralIP("[::ffff:7f00:1]"))
@@ -540,7 +549,7 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         XCTAssertTrue(getOK.statusLine.contains("200 OK"), "Got \(getOK.statusLine)")
         let recordedGET = try XCTUnwrap(localBackend.receivedRequests.last)
         XCTAssertEqual(recordedGET.hostHeader, "backend.example.invalid")
-        XCTAssertEqual(recordedGET.hopHeader, "1")
+        XCTAssertNil(recordedGET.hopHeader)
 
         // Verify nondefault port and bracketed IPv6 preserved Host authority end-to-end.
         let nonDefaultReq = makeRequest(method: "GET", scheme: .http, host: "backend.example.invalid", port: 8443, path: "/v2")
@@ -599,7 +608,8 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
             proxyPort: proxy.port,
             rawRequest: "GET http://backend.example.invalid/items HTTP/1.1\r\nHost: backend.example.invalid\r\nX-JoesProxy-MapRemote-Hop: 3\r\nConnection: close\r\n\r\n"
         )
-        XCTAssertTrue(loopResp.statusLine.contains("508 Loop Detected"), "Got \(loopResp.statusLine)")
+        XCTAssertTrue(loopResp.statusLine.contains("200 OK"), "Got \(loopResp.statusLine)")
+        XCTAssertNil(localBackend.receivedRequests.last?.hopHeader)
 
         let reservedReq = makeRequest(method: "GET", scheme: .http, host: "self-loop.example.invalid", port: 80, path: "/self")
         config.authorizedLoopbackMapRemotePorts.append(Int(proxy.port))
@@ -628,6 +638,7 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(100))
         let hasMapRemoteSession = sessionStore.sessions.contains { $0.response?.source == .mapRemote }
         XCTAssertTrue(hasMapRemoteSession)
+        XCTAssertTrue(sessionStore.sessions.contains { $0.state == .failed && $0.response?.source == .proxyError && $0.response?.statusCode == 502 })
     }
 
     func testRevocationClosesInFlightLoopbackStream() async throws {

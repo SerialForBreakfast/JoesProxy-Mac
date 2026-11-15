@@ -15,7 +15,8 @@ module PublicPreviewSecurity
   def self.validate_workflow(document)
     raise "Workflow permissions must default to contents read" unless document["permissions"] == { "contents" => "read" }
     events = document.fetch("on")
-    raise "Untrusted workflow trigger" unless (events.keys - %w[workflow_dispatch push schedule]).empty?
+    raise "Untrusted workflow trigger" unless (events.keys - %w[workflow_dispatch pull_request push schedule]).empty?
+    raise "Pull requests must target main" unless events["pull_request"] == { "branches" => ["main"] }
     raise "Pushes must target main" unless events.fetch("push").fetch("branches") == ["main"]
     groups = {
       "Public preview build" => "public-preview-build-${{ github.ref }}",

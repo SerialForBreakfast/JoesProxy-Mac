@@ -70,11 +70,11 @@ of silently presenting a missing companion list as a complete search.
 
 ## capture_calculate {#capture-calculate}
 
-For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.
+For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Filtered metadata uses search permissions and reports its snapshot revision. Explicit session IDs require sensitive-read approval.
 
-Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. A scan above 50,000 retained sessions or 10,000 matches returns unavailable.
+Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. A scan above 50,000 retained sessions returns unavailable. Clearing history invalidates an in-flight scan.
 
-Capability category: bodyRead.
+Capability category: sessionSearch.
 
 ## artifact_source_register {#artifact-source-register}
 

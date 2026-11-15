@@ -751,7 +751,8 @@ final class MCPProtocolService {
     private func logCompletedRequest(message: [String: Any], responseObject: [String: Any], requestBytes: Int,
                                      responseBytes: Int, started: ContinuousClock.Instant, client: MCPClientRecord) {
         let method = message["method"] as? String ?? "unknown"
-        let tool = method == "tools/call" ? ((message["params"] as? [String: Any])?["name"] as? String ?? "") : ""
+        let suppliedTool = (message["params"] as? [String: Any])?["name"] as? String ?? ""
+        let tool = method == "tools/call" ? (MCPCapabilitiesManifestBuilder.productionTool(named: suppliedTool)?.name ?? "unknown") : ""
         let outcome: String
         if responseObject["error"] != nil {
             outcome = "rpc_error"
@@ -764,7 +765,7 @@ final class MCPProtocolService {
         let milliseconds = Double(elapsed.components.seconds) * 1_000
             + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000
         MCPLog.protocolLog.info("""
-            Completed \(method, privacy: .public) tool=\(tool, privacy: .public) outcome=\(outcome, privacy: .public) \
+            Completed \(method, privacy: .private) tool=\(tool, privacy: .public) outcome=\(outcome, privacy: .public) \
             durationMs=\(milliseconds, format: .fixed(precision: 1), privacy: .public) \
             requestBytes=\(requestBytes, privacy: .public) responseBytes=\(responseBytes, privacy: .public) \
             client=\(client.id, privacy: .public)
@@ -789,7 +790,7 @@ final class MCPProtocolService {
             return cancelled
         }
 
-        MCPLog.protocolLog.debug("Dispatching \(method, privacy: .public) for client \(client.id, privacy: .public).")
+        MCPLog.protocolLog.debug("Dispatching \(method, privacy: .private) for client \(client.id, privacy: .public).")
         switch method {
         case "initialize":
             return handleInitialize(id: id, params: params, client: client)
@@ -919,6 +920,7 @@ final class MCPProtocolService {
         for client: MCPClientRecord
     ) -> [MCPCapabilitiesManifestBuilder.ProductionTool] {
         MCPCapabilitiesManifestBuilder.productionTools.filter { tool in
+            if tool.name == "capture_calculate", policyEvaluator.profileAllows(capability: .bodyRead, profileID: client.assignedProfileID) { return true }
             guard policyEvaluator.profileAllows(
                 capability: tool.capability,
                 profileID: client.assignedProfileID
@@ -1646,6 +1648,7 @@ final class MCPProtocolService {
                     projection: projection,
                     latestSequence: snapshotService.highWaterSequence,
                     stateToken: stateToken,
+                    aggregateScope: endpointGroups != nil || authChain != nil ? "page" : nil,
                     endpointGroups: endpointGroups,
                     authChain: authChain
                 )
@@ -2434,8 +2437,8 @@ final class MCPProtocolService {
         }
     }
 
-    private func filteredCalculation(id: Any?, arguments: [String: Any], client: MCPClientRecord,
-                                     context: RequestContext) async throws -> [String: Any] {
+    /// Copies the retained source on the main actor, scans on the worker, then rechecks disclosure and history.
+    private func filteredCalculation(id: Any?, arguments: [String: Any], client: MCPClientRecord) async throws -> [String: Any] {
         guard try JSONSerialization.data(withJSONObject: MCPArgumentDigest.dispatchArguments(arguments)).count <= 8192,
               Set(arguments.keys).isSubset(of: ["filter", "operation", "dataset", "selectionPointer", "approval"]),
               arguments["dataset"] as? String == "sessionMetadata", arguments["selectionPointer"] as? String == "",
@@ -2456,15 +2459,11 @@ final class MCPProtocolService {
         if filter.domain != nil { fields.insert(.sanitizedHost) }
         if filter.method != nil { fields.insert(.method) }
         if query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode" { fields.insert(.statusCode) }
-        guard fields.isSubset(of: profile.allowedFieldClasses) else {
+        guard policyEvaluator.effectiveAllows(capability: .sessionSearch, client: client),
+              fields.isSubset(of: profile.allowedFieldClasses) else {
             throw MCPStructuredError(code: .policyDenied, message: "Profile does not grant the selected metadata.")
         }
         guard !artifactWorker.busy else { throw ArtifactAnalysisFailure.busy }
-        var approval = arguments
-        approval["includeBody"] = true
-        _ = try resolveSensitiveReadApproval(toolName: "capture_calculate", arguments: approval, client: client,
-            capability: .bodyRead, mcpSessionID: context.headers[MCPNetworkConstants.sessionIDHeader.lowercased()],
-            reason: "Count retained metadata in the selected capture window.")
         let revision = snapshotService.stateRevision
         let epoch = snapshotService.captureEpoch
         let policy = policyStore.policyRevision
@@ -2474,24 +2473,19 @@ final class MCPProtocolService {
         let needsStatus = query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode"
         let report = try await artifactWorker.perform {
             let deadline = ContinuousClock.now.advanced(by: .seconds(1))
-            var rows: [ArtifactJSONValue] = []
-            for (index, record) in records.enumerated() {
-                if index.isMultiple(of: 64) { try ArtifactSnapshotReader.check(deadline) }
-                guard MCPSessionSnapshotService.matchesFilter(record, filter: filter, disclosure: serializer) else { continue }
-                guard rows.count < 10_000 else { throw ArtifactAnalysisFailure.inputLimit }
+            return try ArtifactCalculation.analyze(source: records, query: query, deadline: deadline) { record in
+                guard MCPSessionSnapshotService.matchesFilter(record, filter: filter, disclosure: serializer) else { return nil }
                 if needsStatus, let status = record.response?.statusCode {
-                    rows.append(.object([("statusCode", .number(String(status)))]))
-                } else {
-                    rows.append(.object([]))
+                    return .object([("statusCode", .number(String(status)))])
                 }
+                return .object([])
             }
-            return try ArtifactCalculation.analyze(rows: rows, query: query, deadline: deadline)
         }
         guard let current = clientRegistry.client(id: client.id), current.credentialState == .active,
               current.credentialGeneration == client.credentialGeneration, current.assignedProfileID == client.assignedProfileID,
-              policy == policyStore.policyRevision, policyEvaluator.effectiveAllows(capability: .bodyRead, client: current)
+              policy == policyStore.policyRevision, policyEvaluator.effectiveAllows(capability: .sessionSearch, client: current)
         else { throw ArtifactAnalysisFailure.sourceUnavailable }
-        guard revision == snapshotService.stateRevision, epoch == snapshotService.captureEpoch else {
+        guard epoch == snapshotService.captureEpoch else {
             MCPLog.protocolLog.notice("""
                 Filtered calculation abandoned: capture changed during evaluation \
                 scannedRows=\(records.count, privacy: .public)
@@ -2531,7 +2525,7 @@ final class MCPProtocolService {
     private func captureCalculateTool(id: Any?, arguments: [String: Any], client: MCPClientRecord,
                                       context: RequestContext) async -> [String: Any] {
         do {
-            if arguments["filter"] != nil { return try await filteredCalculation(id: id, arguments: arguments, client: client, context: context) }
+            if arguments["filter"] != nil { return try await filteredCalculation(id: id, arguments: arguments, client: client) }
             let allowed: Set<String> = ["sessionIDs", "dataset", "selectionPointer", "operation", "operations", "approval"]
             let hasSingle = arguments["operation"] != nil
             let hasBatch = arguments["operations"] != nil
@@ -4911,7 +4905,7 @@ final class MCPProtocolService {
             return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32001, "Session expired."))
         }
         if !session.initialized, method != "notifications/initialized", method != "initialized" {
-            MCPLog.protocolLog.notice("Session rejected: \(method, privacy: .public) called before initialization.")
+            MCPLog.protocolLog.notice("Session rejected: \(method, privacy: .private) called before initialization.")
             return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32001, "Session not initialized."))
         }
         let protocolVersionHeaderName = MCPNetworkConstants.protocolVersionHeader.lowercased()
@@ -5509,8 +5503,8 @@ final class MCPProtocolService {
             properties["minDurationMs"] = ["type": "number", "minimum": 0, "description": "Minimum total duration in milliseconds."]
             properties["hasOverrideHit"] = ["type": "boolean", "description": "Filter by whether an active rule/effect matched."]
             properties["bodyAvailable"] = ["type": "boolean", "description": "Filter by whether response body bytes are retained."]
-            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Optional grouping mode; endpoint collapses matched sessions into endpointGroups."]
-            properties["includeAuthChain"] = ["type": "boolean", "description": "Include zero-secret auth/cookie continuity report across matched sessions."]
+            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Optional grouping mode; endpoint groups matching sessions on the returned page."]
+            properties["includeAuthChain"] = ["type": "boolean", "description": "Include zero-secret auth/cookie continuity report for matching sessions on the returned page."]
             inputSchema = [
                 "type": "object",
                 "properties": properties,

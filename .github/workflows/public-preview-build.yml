@@ -2,6 +2,8 @@ name: Public preview build
 
 'on':
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 
@@ -32,7 +34,7 @@ jobs:
       - name: Test companion SDK on macOS
         run: bash memlog/utility_scripts/public_preview_build.sh sdk
       - name: Measure filtered capture calculations
-        if: github.event_name == 'workflow_dispatch' && github.ref_name == 'filtered-efficiency-gains'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'filtered-efficiency-gains')
         run: bash memlog/utility_scripts/public_preview_build.sh filtered-calculations
       - name: Collect hosted test launch evidence
         if: always() && github.event_name == 'workflow_dispatch' && github.ref_name == 'filtered-efficiency-gains'

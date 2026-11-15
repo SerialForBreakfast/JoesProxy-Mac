@@ -152,7 +152,6 @@ final class HTTPUpstreamConnector {
     ) -> EventLoopFuture<StreamingUpstreamForwarder> {
         guard (1...Int(UInt16.max)).contains(request.port) else {
             let error = HTTPUpstreamConnectorError.invalidPort(request.port)
-            onSessionFailed(error)
             return group.next().makeFailedFuture(error)
         }
 
@@ -243,7 +242,6 @@ final class HTTPUpstreamConnector {
                         self.logHTTPS("Upstream request failed before response for \(request.method) \(request.host):\(request.port)\(request.path): \(error.localizedDescription)")
                         channel.close(promise: nil)
                         timingRecorder.transport.failed(error: error)
-                        onSessionFailed(error)
                         return channel.eventLoop.makeFailedFuture(error)
                     }
                 }
@@ -251,12 +249,11 @@ final class HTTPUpstreamConnector {
                 self.logHTTPS("Failed to prepare upstream request \(request.method) \(request.host):\(request.port)\(request.path): \(error.localizedDescription)")
                 channel.close(promise: nil)
                 timingRecorder.transport.failed(error: error)
-                onSessionFailed(error)
                 return channel.eventLoop.makeFailedFuture(error)
             }
         }.flatMapError { error in
             timingRecorder.transport.failed(error: error)
-            onSessionFailed(error)
+            // The connection handler owns pre-response failures and records the HTTP error it emits.
             return self.group.next().makeFailedFuture(error)
         }
     }

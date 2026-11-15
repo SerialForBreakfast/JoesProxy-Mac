@@ -218,6 +218,7 @@ final class AuthChainBriefTests: XCTestCase {
         let searchResult = try XCTUnwrap(searchObj["result"] as? [String: Any])
         let searchStructured = try XCTUnwrap(searchResult["structuredContent"] as? [String: Any])
         let searchPayload = try XCTUnwrap(searchStructured["payload"] as? [String: Any])
+        XCTAssertEqual(searchPayload["aggregateScope"] as? String, "page")
         let endpointGroups = try XCTUnwrap(searchPayload["endpointGroups"] as? [[String: Any]])
         XCTAssertEqual(endpointGroups.first?["normalizedPath"] as? String, "/v1/items/:id")
         let authChain = try XCTUnwrap(searchPayload["authChain"] as? [String: Any])

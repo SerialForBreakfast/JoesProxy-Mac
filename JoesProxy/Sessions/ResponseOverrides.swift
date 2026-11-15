@@ -6,6 +6,8 @@ private let overrideLogger = Logger(subsystem: "com.JoesProxyApp.Capture", categ
 
 /// Describes the origin of a captured response.
 enum CapturedResponseSource: String, Codable, Equatable, Sendable {
+    /// JoesProxy generated an HTTP error before receiving an upstream response.
+    case proxyError
     /// Response came from the real upstream server.
     case upstream
     /// Response was served from a Map Local override (captured draft, inline text, or local file).
@@ -1726,7 +1728,7 @@ actor ResponseOverrideStore {
         let stripped = LoopbackAddressInspector.stripBracketsAndTrailingDot(rawHost)
         guard !stripped.malformed else { return false }
         if let literal = LoopbackAddressInspector.parseLiteralIP(rawHost) {
-            return LoopbackAddressInspector.classify(literal) == .loopback
+            return LoopbackAddressInspector.routingClassification(literal, interfaces: ReservedListenerRegistry.localInterfaceAddresses()) == .loopback
         }
         return LoopbackAddressInspector.isLocalhostName(stripped.host)
     }

@@ -157,20 +157,22 @@ actor ProxySessionRecorder {
     }
 
     /// Records a failed session using classified user-facing network copy.
-    func failSession(id: UUID, error: Error) async {
+    func failSession(id: UUID, error: Error, responseStatus: Int? = nil) async {
         let presentation = NetworkFailureClassifier.presentation(for: error)
-        await failSession(id: id, presentation: presentation)
+        await failSession(id: id, presentation: presentation, responseStatus: responseStatus)
     }
 
     /// Records a failed session with an explicit message (used by tests and synthetic fixtures).
-    func failSession(id: UUID, message: String) async {
+    func failSession(id: UUID, message: String, responseStatus: Int? = nil) async {
         await failSession(
             id: id,
-            presentation: NetworkFailureClassifier.presentation(forMessage: message)
+            presentation: NetworkFailureClassifier.presentation(forMessage: message),
+            responseStatus: responseStatus
         )
     }
 
-    private func failSession(id: UUID, presentation: NetworkFailurePresentation) async {
+    /// Finalizes on the recorder actor. Only callers emitting an HTTP error supply a status.
+    private func failSession(id: UUID, presentation: NetworkFailurePresentation, responseStatus: Int?) async {
         let signpost = ProxyIOPerformanceSignposts.beginSessionIngest()
         defer { ProxyIOPerformanceSignposts.endSessionIngest(signpost) }
 
@@ -178,6 +180,9 @@ actor ProxySessionRecorder {
             return
         }
 
+        if let responseStatus {
+            record.response = CapturedResponse(statusCode: responseStatus, headers: [], bodyData: nil, bodySize: nil, source: .proxyError)
+        }
         record.state = .failed
         record.failure = SessionFailure(message: presentation.userFacingMessage, bucket: presentation.bucket)
         record.timing.completedAt = Date()

@@ -14,7 +14,7 @@ enum MCPCapabilitiesManifestBuilder {
         case "capture_calculate", "artifact_calculate":
             return .init(inputKind: "explicit_live_or_approved_saved_selection", method: "deterministic_exact_decimal_calculations",
                 limits: ["inputBytes": 1_048_576, "rows": 10_000, "groups": 256, "outputBytes": 16_384, "fractionalDigits": 6],
-                coverage: "Complete selected domain only; group output omissions explicit. Live reads require body authority; saved sources require calculations-v1 consent.",
+                coverage: name == "capture_calculate" ? "Filtered metadata scans up to 50,000 retained sessions with search permission. Explicit IDs require body authority. Group omissions are reported." : "Group omissions are reported. Saved sources require calculations-v1 consent.",
                 nextAction: "Review counts and source identity before requesting selected source detail. No automatic retry or cache.")
         case "artifact_compare_responses":
             return .init(inputKind: "two_approved_saved_responses", method: "explicit_ordered_structure_diff",
@@ -62,7 +62,7 @@ enum MCPCapabilitiesManifestBuilder {
 
     /// Production MCP tools mirrored by ``MCPProtocolService/handleToolsList``.
     static let productionTools: [ProductionTool] = [
-        ProductionTool(name: "capture_calculate", description: "For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Requires sensitive-read approval. Concurrent changes invalidate the result.", capability: .bodyRead),
+        ProductionTool(name: "capture_calculate", description: "For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Filtered metadata uses search permissions and reports its snapshot revision. Explicit session IDs require sensitive-read approval.", capability: .sessionSearch),
         ProductionTool(name: "artifact_source_register", description: "Request local file selection and review of one immutable temporary source. No remote path input. The local user selects and shares; retry the same request key after approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_status", description: "Owner-only pending source state; no selected-file metadata before approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_inspect", description: "Inspect an owned unexpired source descriptor. No raw content or local filenames.", capability: .artifactSourceAccess),

@@ -1,5 +1,6 @@
 import Foundation
 import NIOCore
+import NIOHTTP1
 import NIOPosix
 import NIOSSL
 import os
@@ -427,7 +428,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                 bodyData: body.data, bodySize: upload.size,
                 bodyTruncated: upload.size > (body.data?.count ?? 0), clientAddress: clientAddress)
             if let admission = recorder.admitSession(request: request, responseBodyLimit: 0) {
-                Task { if let id = await admission.value { await recorder.failSession(id: id, error: error) } }
+                let responseStatus = context.channel.isActive ? Int(Self.responseStatus(for: error).code) : nil
+                Task { if let id = await admission.value { await recorder.failSession(id: id, error: error, responseStatus: responseStatus) } }
             }
         }
         uploadWork = nil
@@ -1160,7 +1162,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                     if let sessionRecorder, let sessionID = await sessionIDTask.value {
                         await sessionRecorder.failSession(
                             id: sessionID,
-                            message: "Map Remote denied [\(reason.rawValue)]: \(detail)"
+                            message: "Map Remote denied [\(reason.rawValue)]: \(detail)", responseStatus: 403
                         )
                     }
                     eventLoop.execute {
@@ -1184,43 +1186,27 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                     let allowLoopbackDestination,
                     let preserveHostHeader
                 ):
-                    let incomingHop = Self.highestMapRemoteHopCount(in: request.headers)
-                    if incomingHop >= 3 {
-                        let loopMessage = "Map Remote forwarding loop detected (hop count \(incomingHop) >= 3)."
-                        if let sessionRecorder, let sessionID = await sessionIDTask.value {
-                            await sessionRecorder.failSession(id: sessionID, message: loopMessage)
-                        }
-                        eventLoop.execute {
-                            let handler = loopBoundSelf.value
-                            let context = loopBoundContext.value
-                            handler.logHTTPS("Map Remote loop detected for \(request.method) \(request.host):\(request.port)\(request.path)")
-                            handler.sendMapRemoteErrorResponse(
-                                statusLine: "508 Loop Detected",
-                                reasonCode: "map_remote_loop_detected",
-                                body: loopMessage,
-                                context: context
-                            )
-                        }
-                        break
-                    }
-
                     let livePolicy = self.configuration?.loopbackDestinationPolicy ?? .disabled
                     let validatedEndpoint: ValidatedUpstreamEndpoint
                     do {
-                        validatedEndpoint = try LoopbackAddressInspector.resolveAndValidate(
-                            destinationHost: remoteHost,
-                            port: remotePort,
-                            scheme: remoteScheme,
-                            incomingHeaders: request.headers,
-                            originalRequestHost: request.host,
-                            originalRequestPort: request.port,
-                            originalRequestScheme: upstreamScheme,
-                            isMapRemote: true,
-                            allowLoopbackDestination: allowLoopbackDestination,
-                            preserveHostHeader: preserveHostHeader,
-                            policy: livePolicy,
-                            reservedRegistry: .shared
-                        )
+                        // Keep blocking DNS off the cooperative executor and the channel event loop.
+                        validatedEndpoint = try await NIOThreadPool.singleton.runIfActive {
+                            try LoopbackAddressInspector.resolveAndValidate(
+                                destinationHost: remoteHost,
+                                port: remotePort,
+                                scheme: remoteScheme,
+                                incomingHeaders: request.headers,
+                                originalRequestHost: request.host,
+                                originalRequestPort: request.port,
+                                originalRequestScheme: upstreamScheme,
+                                isMapRemote: true,
+                                allowLoopbackDestination: allowLoopbackDestination,
+                                preserveHostHeader: preserveHostHeader,
+                                policy: livePolicy,
+                                reservedRegistry: .shared
+                            )
+                        }
+                        try Task.checkCancellation()
                     } catch MapRemoteValidationError.policyDenied(let reason, let detail) {
                         // Always recorded: a denial changes what the client receives. Reason code only.
                         self.logger.notice("Map Remote denied at request time reason=\(reason.rawValue, privacy: .public)")
@@ -1228,7 +1214,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         if let sessionRecorder, let sessionID = await sessionIDTask.value {
                             await sessionRecorder.failSession(
                                 id: sessionID,
-                                message: "Map Remote denied [\(reason.rawValue)]: \(detail)"
+                                message: "Map Remote denied [\(reason.rawValue)]: \(detail)", responseStatus: reason == .resolutionFailed ? 502 : 403
                             )
                         }
                         eventLoop.execute {
@@ -1247,7 +1233,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         if let sessionRecorder, let sessionID = await sessionIDTask.value {
                             await sessionRecorder.failSession(
                                 id: sessionID,
-                                message: "Map Remote denied [malformed_destination]: \(detail)"
+                                message: "Map Remote denied [malformed_destination]: \(detail)", responseStatus: 403
                             )
                         }
                         eventLoop.execute {
@@ -1263,10 +1249,9 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         break
                     }
 
-                    var remappedHeaders = request.headers.filter {
+                    let remappedHeaders = request.headers.filter {
                         $0.name.caseInsensitiveCompare("X-JoesProxy-MapRemote-Hop") != .orderedSame
                     }
-                    remappedHeaders.append(HTTPHeaderField(name: "X-JoesProxy-MapRemote-Hop", value: String(incomingHop + 1)))
 
                     let remappedRequest = HTTPProxyRequest(
                         kind: request.kind,
@@ -1377,7 +1362,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                 }
             } catch {
                 if let sessionRecorder, let sessionID = await sessionIDTask.value {
-                    await sessionRecorder.failSession(id: sessionID, error: error)
+                    await sessionRecorder.failSession(id: sessionID, error: error, responseStatus: Int(Self.responseStatus(for: error).code))
                 }
                 eventLoop.execute {
                     loopBoundSelf.value.sendFailureResponse(for: error, context: loopBoundContext.value)
@@ -1453,7 +1438,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         if let sessionID = await sessionIDTask.value {
                             await sessionRecorder.failSession(
                                 id: sessionID,
-                                message: "Map Remote denied [\(denialReason.rawValue)]: \(detail)"
+                                message: "Map Remote denied [\(denialReason.rawValue)]: \(detail)", responseStatus: 403
                             )
                         }
                     }
@@ -1561,6 +1546,13 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                 let ctx = loopBoundContext.value
                 handler.activeStreamingForwarder = nil
                 handler.logHTTPS("Upstream request failed for \(request.method) \(request.host):\(request.port)\(request.path): \(error.localizedDescription)")
+                if let sessionRecorder {
+                    Task {
+                        if let id = await sessionIDTask.value {
+                            await sessionRecorder.failSession(id: id, error: error, responseStatus: Int(Self.responseStatus(for: error).code))
+                        }
+                    }
+                }
                 handler.sendFailureResponse(for: error, context: ctx)
             }
         }
@@ -1652,7 +1644,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         if let sessionRecorder {
                             Task {
                                 if let sessionID = await sessionIDTask.value {
-                                    await sessionRecorder.failSession(id: sessionID, error: error)
+                                    await sessionRecorder.failSession(id: sessionID, error: error, responseStatus: Int(Self.responseStatus(for: error).code))
                                 }
                             }
                         }
@@ -1663,7 +1655,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                 if let sessionRecorder {
                     Task {
                         if let sessionID = await sessionIDTask.value {
-                            await sessionRecorder.failSession(id: sessionID, error: error)
+                            await sessionRecorder.failSession(id: sessionID, error: error, responseStatus: Int(Self.responseStatus(for: error).code))
                         }
                     }
                 }
@@ -1790,7 +1782,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         }
         let presentation = NetworkFailureClassifier.presentation(for: error)
         logHTTPS("Sending failure response [\(presentation.bucket.rawValue)]: \(presentation.message)")
-        let statusLine = responseStatusLine(for: error)
+        let statusLine = Self.responseStatus(for: error).description
         // Always logged: a synthesized failure status is otherwise indistinguishable from an origin response.
         logger.notice("Proxy failure response status=\(statusLine, privacy: .public) bucket=\(presentation.bucket.rawValue, privacy: .public) errorType=\(String(describing: type(of: error)), privacy: .public) detail=\(String(describing: error), privacy: .private)")
         let body = (error as? UploadBodySpoolError)?.errorDescription ?? presentation.userFacingMessage
@@ -1826,23 +1818,13 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         write(Data(response.utf8), keepConnectionOpen: false, nextState: .closed, context: context)
     }
 
-    private static func highestMapRemoteHopCount(in headers: [HTTPHeaderField]) -> Int {
-        headers
-            .filter { $0.name.caseInsensitiveCompare("X-JoesProxy-MapRemote-Hop") == .orderedSame }
-            .compactMap { Int($0.value.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            .max() ?? 0
-    }
 
-    private func responseStatusLine(for error: Error) -> String {
+    /// Shares the generated HTTP status between downstream serialization and the recorder.
+    private static func responseStatus(for error: Error) -> HTTPResponseStatus {
         switch error {
-        case is UploadBodySpoolError:
-            return "507 Insufficient Storage"
-        case is HTTPRequestParserError:
-            return "400 Bad Request"
-        case is CertificateAuthorityError:
-            return "502 Bad Gateway"
-        default:
-            return "502 Bad Gateway"
+        case is UploadBodySpoolError: return .insufficientStorage
+        case is HTTPRequestParserError: return .badRequest
+        default: return .badGateway
         }
     }
 

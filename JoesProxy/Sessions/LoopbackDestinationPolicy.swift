@@ -480,6 +480,19 @@ enum LoopbackAddressInspector {
         }
     }
 
+    /// Classifies this Mac's interface addresses under the same policy as loopback.
+    static func routingClassification(_ address: ResolvedIPAddress, interfaces: [ResolvedIPAddress]) -> AddressClassification {
+        let kind = classify(address)
+        guard kind == .external else { return kind }
+        let local = interfaces.contains { candidate in
+            if let lhs = address.unwrappedIPv4, let rhs = candidate.unwrappedIPv4 {
+                return lhs.s_addr == rhs.s_addr
+            }
+            return candidate == address
+        }
+        return local ? .loopback : .external
+    }
+
     static func classify(_ address: ResolvedIPAddress) -> AddressClassification {
         if let v4 = address.unwrappedIPv4 {
             let hostOrder = UInt32(bigEndian: v4.s_addr)
@@ -530,7 +543,7 @@ enum LoopbackAddressInspector {
         let normalizedHost = stripped.host
 
         if let literal = parseLiteralIP(rawHost) {
-            let classification = classify(literal)
+            let classification = routingClassification(literal, interfaces: ReservedListenerRegistry.localInterfaceAddresses())
             if classification == .unspecifiedOrLinkLocal {
                 throw MapRemoteValidationError.policyDenied(
                     .addressForbidden,
@@ -770,10 +783,11 @@ enum LoopbackAddressInspector {
             )
         }
 
+        let interfaces = ReservedListenerRegistry.localInterfaceAddresses()
         var sawLoopback = false
         var sawExternal = false
         for addr in candidates {
-            let classification = classify(addr)
+            let classification = routingClassification(addr, interfaces: interfaces)
             if classification == .unspecifiedOrLinkLocal {
                 throw MapRemoteValidationError.policyDenied(
                     .addressForbidden,

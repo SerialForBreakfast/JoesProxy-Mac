@@ -775,8 +775,8 @@ enum MCPDiagnosticPrompt {
     - `--min-duration-ms <ms>` — Filter by minimum session duration in milliseconds.
     - `--has-override-hit` / `--no-override-hit` — Filter by whether an active rule or effect matched.
     - `--body-available` / `--no-body-available` — Filter by retained response body availability.
-    - `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside matched items.
-    - `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report across matched sessions.
+    - `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside the returned page’s items.
+    - `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report for the returned page.
     - `--since <iso-timestamp>` / `--until <iso-timestamp>` — Filter by start timestamp range.
     - `--session-id-prefix <prefix>` — Filter by the starting hex/UUID characters of the session ID.
     - `--limit <n>` — Maximum number of sessions to return (default: 50).

@@ -10,6 +10,68 @@
 import AppKit
 import SwiftUI
 
+/// Read-only illustrations of the two Keychain windows and the system approval dialog.
+/// The examples use fixed labels and have no connection to the user's Keychain.
+struct KeychainSetupExample: View {
+    enum Step {
+        case findCertificate, trustCertificate, unlock
+
+        var title: String {
+            switch self {
+            case .findCertificate: return "Show where to find the certificate"
+            case .trustCertificate: return "Show where to change trust"
+            case .unlock: return "Preview the macOS password prompt"
+            }
+        }
+    }
+
+    let step: Step
+
+    var body: some View {
+        DisclosureGroup(step.title) {
+            VStack(alignment: .leading, spacing: 8) {
+                switch step {
+                case .findCertificate:
+                    Label("Keychain Access", systemImage: "key.fill")
+                    Divider()
+                    Label("login", systemImage: "lock.open")
+                    Text("Certificates").font(.subheadline.bold())
+                    highlighted("JoesProxy Root CA", symbol: "checkmark.seal")
+                    Text("In the login keychain, select Certificates. Double-click the certificate whose name matches your setup.")
+                case .trustCertificate:
+                    Label("JoesProxy Root CA", systemImage: "checkmark.seal")
+                    Divider()
+                    Label("Trust", systemImage: "chevron.down")
+                    Text("When using this certificate")
+                    highlighted("Always Trust", symbol: "chevron.up.chevron.down")
+                    Text("Match the certificate to the identity in JoesProxy before changing trust. Close the certificate window to save, then refresh its status in JoesProxy.")
+                case .unlock:
+                    Label("JoesProxy wants to use your login keychain", systemImage: "lock.fill")
+                    Divider()
+                    Text(verbatim: "com.JoesProxy.CertificateAuthority")
+                    highlighted("Password", symbol: "key")
+                    Text("Enter your password only in the macOS dialog. Allow grants access once. Always Allow remembers access for this item. Deny leaves it locked.")
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            .accessibilityElement(children: .combine)
+            Text("Illustration · macOS appearance may vary")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Highlights the label to look for in the real macOS window without simulating an input.
+    private func highlighted(_ label: String, symbol: String) -> some View {
+        Label(label, systemImage: symbol)
+            .fontWeight(.semibold)
+            .padding(6)
+            .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 5))
+    }
+}
+
 struct CertificateSetupSheet: View {
     @EnvironmentObject private var presentationState: AppPresentationState
 
@@ -37,6 +99,7 @@ struct CertificateSetupSheet: View {
                 Text(viewModel.certificateUnlockWarning)
             }
             if viewModel.certificateAuthorityNeedsUnlock || viewModel.certificateRenewalNeedsUnlock {
+                KeychainSetupExample(step: .unlock)
                 Button("Unlock Certificate Authority", action: viewModel.unlockCertificateAuthority)
                     .disabled(viewModel.isUnlockingCertificateAuthority)
                 if let message = viewModel.certificateUnlockMessage { Text(message) }
@@ -90,6 +153,9 @@ struct CertificateSetupSheet: View {
                         Text(viewModel.certificateTrustSuccessText)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+
+                        KeychainSetupExample(step: .findCertificate)
+                        KeychainSetupExample(step: .trustCertificate)
 
                         Text(viewModel.certificateRefreshHelpText)
                             .font(.caption)

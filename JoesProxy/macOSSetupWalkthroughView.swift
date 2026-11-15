@@ -182,6 +182,7 @@ struct macOSSetupWalkthroughView: View {
             switch viewModel.certificateWorkflowState {
             case .notSetUp where viewModel.certificateAuthorityNeedsUnlock:
                 Text(viewModel.certificateUnlockWarning)
+                KeychainSetupExample(step: .unlock)
                 Button("Unlock Certificate Authority", action: viewModel.unlockCertificateAuthority)
                     .disabled(viewModel.isUnlockingCertificateAuthority)
                 if let message = viewModel.certificateUnlockMessage { Text(message) }
@@ -305,9 +306,11 @@ struct macOSSetupWalkthroughView: View {
                     instructionStep(1, "Open Keychain Access (Spotlight → Keychain Access).")
                     instructionStep(2, "Select the login keychain in the sidebar.")
                     instructionStep(3, "Find \(viewModel.configuration.certificateLabel) in the list.")
+                    KeychainSetupExample(step: .findCertificate)
                     instructionStep(4, "Double-click the certificate.")
                     instructionStep(5, "Expand the Trust section.")
                     instructionStep(6, "Set When using this certificate to Always Trust.")
+                    KeychainSetupExample(step: .trustCertificate)
                     instructionStep(7, "Close the window. macOS may prompt to confirm.")
                     instructionStep(8, "Return here and tap Refresh Status above.")
                 }
