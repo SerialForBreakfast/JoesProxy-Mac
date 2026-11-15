@@ -123,8 +123,10 @@ struct MCPSessionListPageDTO: Equatable, Sendable, Codable {
     var latestSequence: UInt64 = 0
     var stateToken: String = ""
     var unchanged: Bool = false
-    /// Aggregates describe only items delivered on this cursor page.
+    /// Requested summaries cover every retained match inside the cursor watermark.
     var aggregateScope: String? = nil
+    /// Includes matches in endpoint groups beyond the 32 displayed groups.
+    var aggregateMatchCount: Int? = nil
     var endpointGroups: [MCPEndpointGroupDTO]? = nil
     var authChain: AuthChainBrief.Report? = nil
 }

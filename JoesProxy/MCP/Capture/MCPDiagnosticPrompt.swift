@@ -775,8 +775,8 @@ enum MCPDiagnosticPrompt {
     - `--min-duration-ms <ms>` — Filter by minimum session duration in milliseconds.
     - `--has-override-hit` / `--no-override-hit` — Filter by whether an active rule or effect matched.
     - `--body-available` / `--no-body-available` — Filter by retained response body availability.
-    - `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside the returned page’s items.
-    - `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report for the returned page.
+    - `--deduplicate-by endpoint` — Group all matches within the cursor range. Compare the displayed groups’ counts with `aggregateMatchCount` to identify omitted groups.
+    - `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report across the same matches, including those on other pages.
     - `--since <iso-timestamp>` / `--until <iso-timestamp>` — Filter by start timestamp range.
     - `--session-id-prefix <prefix>` — Filter by the starting hex/UUID characters of the session ID.
     - `--limit <n>` — Maximum number of sessions to return (default: 50).
@@ -814,7 +814,7 @@ enum MCPDiagnosticPrompt {
     - **Compact discovery:** start routine triage with `agent_toolset_select` set to `core`
       (CLI `toolset select core`), then select the task-specific catalog when needed. Preserve
       existing client preferences; use `all` for coverage audits. Discovery does not change authority.
-    - **Find examples:** use `sessions_search` for status, duration, body availability or override-hit filters. Endpoint groups summarize the returned page. Request auth-chain evidence only for credential continuity.
+    - **Find examples:** use `sessions_search` for status, duration, body availability or override-hit filters. Endpoint groups summarize the matched query. Request auth-chain evidence only for credential continuity.
     - **Review a rule after a marker:** use `capture_activity_since_marker` with the rule ID and marker or sequence. Near misses describe predicate mismatches. Verify delivery against recorded evidence.
     - **Count across a time window:** use `capture_calculate` with `filter.startedAfter` and `filter.startedBefore`, dataset `sessionMetadata`, empty selectionPointer, and one rowCount or groupCount on /statusCode. CLI: `capture calculate --started-after <ISO8601> --started-before <ISO8601> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode`. Treat missing status as a group. Check omittedGroups and capture coverage before reporting an exact histogram. Request a matching session only when the caller needs an example.
     - **Local calculations:** use `capture_calculate` (CLI `capture calculate`) for explicit live

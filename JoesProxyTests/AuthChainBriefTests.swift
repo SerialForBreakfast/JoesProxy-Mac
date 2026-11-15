@@ -158,6 +158,9 @@ final class AuthChainBriefTests: XCTestCase {
             timing: SessionTiming(startedAt: Date())
         )
         sessionStore.append(s1)
+        for _ in 1..<300 {
+            sessionStore.append(SessionRecord(request: s1.request, response: s1.response, state: .completed, timing: s1.timing))
+        }
 
         let shareable = try clientRegistry.enroll(displayName: "ShareableClient", assignedProfileID: .shareable)
 
@@ -209,6 +212,7 @@ final class AuthChainBriefTests: XCTestCase {
                 "name": "sessions_search",
                 "arguments": [
                     "statusClass": "4xx",
+                    "limit": 1,
                     "deduplicateBy": "endpoint",
                     "includeAuthChain": true
                 ]
@@ -218,14 +222,34 @@ final class AuthChainBriefTests: XCTestCase {
         let searchResult = try XCTUnwrap(searchObj["result"] as? [String: Any])
         let searchStructured = try XCTUnwrap(searchResult["structuredContent"] as? [String: Any])
         let searchPayload = try XCTUnwrap(searchStructured["payload"] as? [String: Any])
-        XCTAssertEqual(searchPayload["aggregateScope"] as? String, "page")
+        XCTAssertEqual(searchPayload["aggregateScope"] as? String, "allMatches")
+        XCTAssertEqual(searchPayload["aggregateMatchCount"] as? Int, 300)
+        XCTAssertEqual((searchPayload["items"] as? [[String: Any]])?.count, 1)
+        XCTAssertNotNil(searchPayload["nextCursor"] as? String)
         let endpointGroups = try XCTUnwrap(searchPayload["endpointGroups"] as? [[String: Any]])
+        XCTAssertEqual(endpointGroups.first?["count"] as? Int, 300)
         XCTAssertEqual(endpointGroups.first?["normalizedPath"] as? String, "/v1/items/:id")
         let authChain = try XCTUnwrap(searchPayload["authChain"] as? [String: Any])
+        XCTAssertEqual(authChain["inspectedSessionCount"] as? Int, 300)
         let anomalies = try XCTUnwrap(authChain["anomalies"] as? [[String: Any]])
         XCTAssertTrue(anomalies.contains { ($0["kind"] as? String) == "credential_rejected" })
         let encodedSearch = String(decoding: searchResp.body, as: UTF8.self)
         XCTAssertFalse(encodedSearch.contains("secret-tok-1"))
+
+        // New traffic falls outside the original cursor's watermark. Page two still summarizes
+        // page one and the remaining original matches.
+        sessionStore.append(SessionRecord(request: s1.request, response: s1.response, state: .completed, timing: s1.timing))
+        let continued = try await call(bearer: shareable.plaintextCredential, sessionID: mcpSession,
+            method: "tools/call", params: ["name": "sessions_search", "arguments": [
+                "statusClass": "4xx", "limit": 1, "deduplicateBy": "endpoint", "includeAuthChain": true,
+                "cursor": try XCTUnwrap(searchPayload["nextCursor"] as? String)
+            ]])
+        let continuedResult = try XCTUnwrap(try continued.jsonBodyObject()["result"] as? [String: Any])
+        let continuedEnvelope = try XCTUnwrap(continuedResult["structuredContent"] as? [String: Any])
+        let continuedPage = try XCTUnwrap(continuedEnvelope["payload"] as? [String: Any])
+        XCTAssertEqual(continuedPage["aggregateMatchCount"] as? Int, 300)
+        XCTAssertEqual((continuedPage["authChain"] as? [String: Any])?["inspectedSessionCount"] as? Int, 300)
+        XCTAssertEqual((continuedPage["endpointGroups"] as? [[String: Any]])?.first?["count"] as? Int, 300)
 
         // 2. response_evidence_brief with fieldPointers + rowLimit through MCP transport
         let briefArgs: [String: Any] = [

@@ -63,12 +63,15 @@ final class MCPSessionSnapshotService {
         var orderingDigest: String
         var filter: ListFilter?
         var minimumSequenceExclusive: UInt64 = 0
+        /// Request all retained matches inside the cursor watermark for optional query summaries.
+        var includeAggregateInput = false
     }
 
     struct PageResult: Equatable, Sendable {
         var items: [IndexedSession]
         var nextCursor: MCPSessionQueryCursor?
         var highWaterSequence: UInt64
+        var aggregateInput: [IndexedSession]? = nil
     }
 
     private(set) var captureEpoch: MCPCaptureEpoch = .initial
@@ -188,21 +191,29 @@ final class MCPSessionSnapshotService {
         var pageItems: [IndexedSession] = []
         pageItems.reserveCapacity(limit)
         var hasMore = false
+        var aggregateInput: [IndexedSession]? = request.includeAggregateInput ? [] : nil
 
         for entry in candidateEntries(for: request.filter) {
-            guard entry.captureSequence > startSequence else { continue }
+            guard entry.captureSequence > (request.includeAggregateInput ? request.minimumSequenceExclusive : startSequence) else { continue }
             guard entry.captureSequence <= highWater else { break }
             guard let record = sessionStore.record(for: entry.id),
                   matchesFilter(record, filter: request.filter) else {
                 continue
             }
+            let item = IndexedSession(record: record, captureSequence: entry.captureSequence)
+            if request.includeAggregateInput {
+                guard (aggregateInput?.count ?? 0) < 50_000 else {
+                    throw MCPStructuredError.malformedRequest(message: "Aggregate scope exceeds 50,000 matches. Narrow the search window.")
+                }
+                aggregateInput?.append(item)
+            }
+            guard entry.captureSequence > startSequence else { continue }
             if pageItems.count == limit {
                 hasMore = true
+                if request.includeAggregateInput { continue }
                 break
             }
-            pageItems.append(
-                IndexedSession(record: record, captureSequence: entry.captureSequence)
-            )
+            pageItems.append(item)
         }
 
         let nextCursor: MCPSessionQueryCursor?
@@ -221,7 +232,7 @@ final class MCPSessionSnapshotService {
             nextCursor = nil
         }
 
-        return PageResult(items: pageItems, nextCursor: nextCursor, highWaterSequence: highWater)
+        return PageResult(items: pageItems, nextCursor: nextCursor, highWaterSequence: highWater, aggregateInput: aggregateInput)
     }
 
     func indexedSession(id: SessionRecord.ID) -> IndexedSession? {

@@ -55,12 +55,15 @@ enum AuthChainBrief {
         "x-session-id"
     ]
 
+    /// Inspects records in capture order. Search passes its bounded match count so page size
+    /// does not truncate credential continuity. Other callers keep the diagnostic sample limit.
     static func analyze(
         records: [SessionRecord],
-        disclosure: MCPDisclosureSerializer? = nil
+        disclosure: MCPDisclosureSerializer? = nil,
+        inspectionLimit: Int = maximumInspectedSessions
     ) -> Report {
         let key = SymmetricKey(size: .bits256)
-        let boundedRecords = Array(records.prefix(maximumInspectedSessions))
+        let boundedRecords = records.prefix(inspectionLimit)
         let omittedSessions = max(0, records.count - boundedRecords.count)
 
         struct SlotKey: Hashable {
