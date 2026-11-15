@@ -5,6 +5,7 @@ import SwiftUI
 /// Shows short code, fingerprint, serial, validity, storage state, and optional nickname editing.
 /// Copy / paste-compare actions keep fingerprint comparison honest without relying on hostnames.
 struct CertificateIdentityCard: View {
+    var needsUnlock = false
     let metadata: CAInstanceMetadata?
     let identityStatus: CertificateIdentityStatus?
     let fingerprint: String?
@@ -26,7 +27,9 @@ struct CertificateIdentityCard: View {
                 Text("Certificate Identity")
                     .appFont(.headline, scale: appTextScale, weight: .semibold)
                 Spacer()
-                if let identityStatus {
+                if needsUnlock {
+                    Text("Unlock required to check identity")
+                } else if let identityStatus {
                     Text(identityStatus.title)
                         .appFont(.caption, scale: appTextScale, weight: .semibold)
                         .foregroundStyle(statusColor(for: identityStatus))

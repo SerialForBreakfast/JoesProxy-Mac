@@ -41,6 +41,7 @@ struct SetupAccessChecklist: View {
                 if !settings.canEditProxyPort { Text(settings.proxyPortEditingHelpText) }
                 Toggle("Route this Mac’s traffic when I manually start the proxy", isOn: draft($routing, current: settings.isSystemProxyManagementEnabled))
                 if routing == true { Text(settings.systemProxyConsentMessage) }
+                DisclosureGroup("Advanced capture settings") {
                 Toggle("Allow SDK clients to connect while capturing", isOn: draft($sdk, current: settings.sdkEventServerEnabled))
                 Toggle("Allow Map Remote rules to reach local Mac servers", isOn: draft($localServers, current: settings.isLoopbackMapRemoteEnabled))
                 if localServers ?? settings.isLoopbackMapRemoteEnabled {
@@ -51,10 +52,12 @@ struct SetupAccessChecklist: View {
                     }
                     Text("Authorized ports: " + (settings.authorizedLoopbackPorts.isEmpty ? "None" : LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
                 }
+                }
             }
             if scope != .proxy {
-                Toggle("Allow the local CLI to start MCP", isOn: draft($cliStartup, current: controller.isCLIAutomationStartEnabled))
-                Text("Local processes can request MCP startup. Enroll each client and choose its access below.")
+                DisclosureGroup("CLI startup preference") {
+                    Toggle("Allow the local CLI to start MCP", isOn: draft($cliStartup, current: controller.isCLIAutomationStartEnabled))
+                }
             }
             Button("Save Preferences", action: savePreferences)
                 .disabled(listener == nil && destinations == nil && routing == nil && sdk == nil && localServers == nil && cliStartup == nil)
@@ -79,10 +82,10 @@ struct SetupAccessChecklist: View {
                     Button("Open MCP Management to repair…") { managementDestination = .overview }
                 }
                 Text("2. Enroll your client").appFont(.headline, scale: textScale)
-                Text("For Terminal, enroll JoesProxy CLI. Paste the credential only at the CLI login prompt. If macOS asks joesproxyctl to access its saved credential, review the requesting app and Keychain item. Deny cancels that access; you can retry later.")
+                Text("For Terminal, choose JoesProxy CLI. Enter its credential only at the local login prompt.")
                 if controller.enrolledClients.isEmpty { Label("No clients enrolled", systemImage: "circle") }
                 Button("Enroll or manage an MCP / CLI client…") { managementDestination = .clients }
-                Text("3. Authorize the app to read the client verifier").appFont(.headline, scale: textScale)
+                Text("3. Allow access to this client’s saved credential").appFont(.headline, scale: textScale)
                 if controller.enrolledClients.isEmpty { Text("Enroll a client first. Each locked verifier has its own Unlock button.") }
                 ForEach(controller.enrolledClients) { client in
                     GroupBox(client.displayName) {
@@ -129,7 +132,7 @@ struct SetupAccessChecklist: View {
                 if !controller.pendingApprovals.isEmpty {
                     Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
                 }
-                Text("A JoesProxy approval is not a Keychain prompt. If a command returns a request ID, review that ID in MCP Management → Pending Approvals. After approving, retry the same command if it did not resume. Basic setup does not require approving a mutation.")
+                Text("If a command returns a request ID, review it in MCP Management → Pending Approvals. No rule approval is needed for basic setup.").font(.caption)
             }
         }
         .toggleStyle(.checkbox)

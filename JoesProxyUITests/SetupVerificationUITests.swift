@@ -54,6 +54,7 @@ final class SetupVerificationUITests: XCTestCase {
         let app = launchVerificationApp(verificationState: "noTrafficObserved")
 
         XCTAssertTrue(identifiedElement("certificateSetupSheet", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Certificate: Ready for HTTPS inspection"].exists)
         XCTAssertTrue(app.staticTexts["No test traffic was observed yet"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["No routed session observed yet. Verify proxy host, port, browser or device proxy settings, and network reachability."].waitForExistence(timeout: 2))
         XCTAssertTrue(identifiedElement("setupDiagnosticCommands", in: app).waitForExistence(timeout: 2))
@@ -81,6 +82,9 @@ final class SetupVerificationUITests: XCTestCase {
             Self.uiTestOpenCertificateSetup
         ]
         app.launchJoesProxyForTesting()
+        let history = app.disclosureTriangles["Earlier capture activity"].firstMatch
+        XCTAssertTrue(history.waitForExistence(timeout: 5))
+        history.click()
         return app
     }
 

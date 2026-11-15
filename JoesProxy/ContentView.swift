@@ -970,9 +970,8 @@ struct ContentView: View {
             openMCPManagement: { destination in
                 presentationState.presentMCPManagement(destination: destination)
             },
-            showsSetupChip: presentationState.showsFirstRunSetupChip,
-            openSetupCompanion: {
-                presentationState.revealInspectorSetupCompanionFromChip()
+            openGuidedSetup: {
+                presentationState.presentGuidedSetup()
             }
         )
     }

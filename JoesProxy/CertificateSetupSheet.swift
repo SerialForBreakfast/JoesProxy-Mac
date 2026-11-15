@@ -106,6 +106,7 @@ struct CertificateSetupSheet: View {
             }
 
             CertificateIdentityCard(
+                needsUnlock: viewModel.certificateAuthorityNeedsUnlock,
                 metadata: viewModel.certificateIdentity,
                 identityStatus: viewModel.certificateIdentityStatus,
                 fingerprint: viewModel.currentCertificateFingerprint,
@@ -185,9 +186,8 @@ struct CertificateSetupSheet: View {
             if viewModel.shouldShowSetupVerificationSection {
                 GroupBox("Verify Capture") {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(viewModel.setupVerificationIntroText)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        SetupLiveChecks(model: viewModel)
+                        DisclosureGroup("Earlier capture activity") {
 
                         Button(viewModel.setupVerificationButtonTitle) {
                             viewModel.runSetupVerification()
@@ -198,8 +198,7 @@ struct CertificateSetupSheet: View {
                             setupVerificationCard(for: setupVerificationState)
                             setupVerificationActions(for: setupVerificationState)
                             setupVerificationHelpLink(for: setupVerificationState)
-                        } else {
-                            diagnosticCommandList
+                        }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -571,9 +570,10 @@ struct CertificateApprovalChecklist: View {
                     Text("Create the identity first. Unlock becomes available if Keychain requires permission.")
                 }
             }
+            Divider()
             step("3. Install the root in the login keychain", done: installed)
             if !installed && state != .needsCleanup {
-                Button("Install Root CA", action: model.installRootCertificate)
+                Button("Install in Login Keychain", action: model.installRootCertificate)
                     .disabled(!accessible)
                 if !accessible { Text("Requires an accessible signing identity.") }
             }
@@ -592,7 +592,6 @@ struct CertificateApprovalChecklist: View {
                 Button("Check Again", action: { model.refreshCertificateStatus() })
             } else if state == .ready {
                 Text("Ready for HTTPS inspection. Verify a captured response on the Verify Capture tab.")
-                KeychainSetupExample(step: .unlock)
             } else if state == .needsCleanup {
                 Button("Review Certificate Reset…", action: model.confirmResetCertificateState)
             } else {

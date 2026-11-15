@@ -41,6 +41,7 @@ struct GuidedSetupRepairView: View {
     let copyCertificateShortCode: () -> Void
 
     @State private var selectedSection: GuidedSetupSection
+    @State private var devicePlatform = "iOS"
     @State private var openingSize: CGSize
     @State private var profileActionMessage: String?
 
@@ -136,24 +137,13 @@ struct GuidedSetupRepairView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if selectedSection == .certificate, case .repair(let state) = context.mode {
-                        repairStatusCard(for: state)
-                    }
                     sectionContent
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 2)
             }
             Divider()
-            HStack {
-                if selectedSection == .verifyCapture {
-                    Text("Devices and MCP/CLI are optional.").font(.caption)
-                }
-                Spacer()
-                Button("Close") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("guidedSetupClose")
-            }
+            footer
         }
         .padding(16)
         .frame(minWidth: 360, idealWidth: openingSize.width, maxWidth: .infinity,
@@ -185,6 +175,19 @@ struct GuidedSetupRepairView: View {
         .accessibilityIdentifier("guidedSetupSectionPicker")
     }
 
+    private var footer: some View {
+        let pages = GuidedSetupSection.allCases
+        let index = pages.firstIndex(of: selectedSection) ?? 0
+        let finishes = selectedSection == .verifyCapture || selectedSection == .mcpCLI
+        let nextTitle = finishes ? "Finish setup" : pages[index + 1].title
+        return SetupNavigationFooter(nextTitle: nextTitle, finishes: finishes,
+            back: index == 0 ? nil : { selectedSection = pages[index - 1] },
+            close: { isPresented = false },
+            next: {
+                if finishes { isPresented = false } else { selectedSection = pages[index + 1] }
+            })
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(headerTitle)
@@ -208,31 +211,48 @@ struct GuidedSetupRepairView: View {
     private var sectionContent: some View {
         switch selectedSection {
         case .certificate:
-            sectionCard(title: "Certificate", summary: "Trust the current root on this Mac for HTTPS inspection. For HTTP only, continue to Proxy.") {
+            sectionCard(title: "Set up HTTPS on this Mac", summary: "For HTTP only, continue to Proxy.") {
                 CertificateApprovalChecklist(model: certificateModel)
-                DisclosureGroup("Certificate diagnostics and repair") { setupChecklist }
-                Button("Continue to Proxy") { selectedSection = .proxy }
+                if case .repair(let state) = context.mode { repairStatusCard(for: state) }
+                DisclosureGroup("Diagnostics & repair") {
+                    setupChecklist
+                }
             }
         case .proxy:
-            sectionCard(title: "Proxy", summary: "Choose a listener port and start the proxy. Routing all Mac traffic is optional.") {
+            sectionCard(title: "Start the proxy", summary: "Choose a port, save any changes, then start listening.") {
                 accessChecklist.scoped(to: .proxy)
-                setupChecklist
-                Button("Continue to Verify Capture") { selectedSection = .verifyCapture }
+                Divider()
+                if case .running(let port) = certificateModel.proxyState {
+                    Label("Listening on port \(String(port))", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                } else {
+                    Button("Start proxy", action: startProxy).buttonStyle(.borderedProminent)
+                        .disabled(!certificateModel.canStartProxy)
+                }
             }
         case .verifyCapture:
-            sectionCard(title: "Verify Capture", summary: "Check that requests reach this Mac and that HTTPS is inspected rather than tunneled.") {
-                setupChecklist
+            sectionCard(title: "Verify a live request", summary: "Send two test requests to example.org through this proxy. No system routing change is needed.") {
+                SetupLiveChecks(model: certificateModel)
+                Divider()
+                Text("Finished on this Mac? Choose Finish setup. Devices and MCP/CLI are optional.").font(.callout)
+                Button("Connect a device instead") { selectedSection = .devices }
             }
         case .devices:
-            sectionCard(title: "Devices (optional)", summary: "Choose the guide for your device, then look for traffic from that device.") {
-                actionButton("macOS Setup Guide") { performChecklistAction(.openMacOSGuide) }
-                actionButton("iOS Setup Guide") { performChecklistAction(.openIOSGuide) }
-                actionButton("Apple TV Setup Guide") { performChecklistAction(.openTVOSGuide) }
-                setupChecklist
+            sectionCard(title: "Connect a device (optional)", summary: "Skip this page if you only capture traffic on this Mac.") {
+                Picker("Platform", selection: $devicePlatform) {
+                    ForEach(["iOS", "macOS", "Apple TV"], id: \.self) { Text($0) }
+                }.pickerStyle(.segmented)
+                Text("1. Set the device proxy").font(.headline)
+                LabeledContent("Host", value: profileHostResolution.host)
+                LabeledContent("Port", value: String(currentProxyPort))
+                Text("2. Install and trust the root on the device").font(.headline)
+                actionButton("\(devicePlatform) Setup Guide") {
+                    performChecklistAction(devicePlatform == "iOS" ? .openIOSGuide : devicePlatform == "macOS" ? .openMacOSGuide : .openTVOSGuide)
+                }
+                DisclosureGroup("3. Check device traffic") { setupChecklist }
                 DisclosureGroup("Profiles and connection details") { profileMaintenanceCard }
             }
         case .mcpCLI:
-            sectionCard(title: "MCP/CLI (optional)", summary: "Start MCP, connect one client, and verify its access. Local capture does not require an agent.") {
+            sectionCard(title: "Connect a command-line client (optional)", summary: "Skip this page if you only use the app.") {
                 accessChecklist.scoped(to: .client)
                 Button("Export MCP Skill…", action: exportSkill)
                     .accessibilityIdentifier("guidedSetupExportSkillButton")
@@ -326,6 +346,7 @@ struct GuidedSetupRepairView: View {
             profileMetadataGrid
 
             CertificateIdentityCard(
+                needsUnlock: certificateModel.certificateAuthorityNeedsUnlock,
                 metadata: certificateIdentity,
                 identityStatus: certificateIdentityStatus,
                 fingerprint: currentCertificateFingerprint,
@@ -656,7 +677,7 @@ struct GuidedSetupRepairView: View {
         case .startProxy:
             startProxy()
         case .verifyCapture:
-            runSetupVerification()
+            selectedSection = .verifyCapture
         case .refreshDeviceStatus:
             captureSetupNetworkSnapshot()
         case .retryStatusValidation:

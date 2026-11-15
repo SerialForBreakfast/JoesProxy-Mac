@@ -366,8 +366,7 @@ struct MainStatusTitleBar: View {
     var mcpPipelineStatus: MCPPipelineStatus = .hidden
     var openMCPManagement: (MCPPipelineStatus.ManagementDestination) -> Void = { _ in }
     /// Quiet BA-3 Setup chip while first capture or expert bypass is still in progress.
-    var showsSetupChip: Bool = false
-    var openSetupCompanion: () -> Void = {}
+    var openGuidedSetup: () -> Void = {}
 
     @State private var titleBarWidth: CGFloat = 1_400
 
@@ -439,18 +438,16 @@ struct MainStatusTitleBar: View {
             .layoutPriority(3)
             .help(mcpPipelineStatus.detail ?? "Open MCP Management.")
 
-            if showsSetupChip {
-                Button(action: openSetupCompanion) {
-                    Label("Setup", systemImage: "checklist")
-                        .appFont(.caption, scale: textScale, weight: .semibold)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("First-run setup is still in progress. Capture a request from the selected target to finish.")
-                .accessibilityLabel("Setup in progress")
-                .accessibilityIdentifier("firstRunSetupChip")
-                .layoutPriority(3)
+            Button(action: openGuidedSetup) {
+                Label("Setup", systemImage: "checklist")
+                    .appFont(.caption, scale: textScale, weight: .semibold)
             }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Open Setup & Repair")
+            .accessibilityLabel("Open Setup & Repair")
+            .accessibilityIdentifier("firstRunSetupChip")
+            .layoutPriority(3)
 
             // The three per-component pills stay available for detail, but only in the
             // full-width layout — the unified pill above carries the at-a-glance answer.

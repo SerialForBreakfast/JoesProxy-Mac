@@ -68,7 +68,7 @@ final class SetupRecoveryUITests: XCTestCase {
         let sheet = app.sheets.firstMatch
         XCTAssertTrue(sheet.buttons["Create Root CA"].waitForExistence(timeout: 5))
         XCTAssertTrue(sheet.buttons["Create Root CA"].isEnabled)
-        for title in ["Unlock Certificate Authority", "Install Root CA", "Trust Root CA"] {
+        for title in ["Unlock Certificate Authority", "Install in Login Keychain", "Trust Root CA"] {
             XCTAssertTrue(sheet.buttons[title].exists, title)
             XCTAssertFalse(sheet.buttons[title].isEnabled, title)
         }
@@ -151,7 +151,9 @@ final class SetupRecoveryUITests: XCTestCase {
         let sheet = app.sheets.firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
         let close = sheet.buttons["Close"]
-        for title in ["Certificate", "Proxy", "Verify Capture", "Devices", "MCP/CLI"] {
+        for (title, heading) in [("Certificate", "Set up HTTPS on this Mac"), ("Proxy", "Start the proxy"),
+                                 ("Verify Capture", "Verify a live request"), ("Devices", "Connect a device (optional)"),
+                                 ("MCP/CLI", "Connect a command-line client (optional)")] {
             if title != "Certificate" {
                 let menu = sheet.popUpButtons["guidedSetupSectionPicker"]
                 if menu.exists {
@@ -161,7 +163,6 @@ final class SetupRecoveryUITests: XCTestCase {
                     sheet.radioButtons[title].click()
                 }
             }
-            let heading = title == "Devices" || title == "MCP/CLI" ? "\(title) (optional)" : title
             XCTAssertTrue(sheet.staticTexts[heading].waitForExistence(timeout: 2))
             XCTAssertLessThanOrEqual(sheet.frame.width, 430)
             XCTAssertLessThanOrEqual(sheet.frame.height, 355)
@@ -184,7 +185,11 @@ final class SetupRecoveryUITests: XCTestCase {
 
         let guidedSetup = identifiedElement("guidedSetupRepairView", in: app)
         XCTAssertTrue(guidedSetup.waitForExistence(timeout: 5))
-        XCTAssertTrue(identifiedElement("setupChecklistVerificationRow", in: app).waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Verify a live request"].exists)
+        let finish = app.buttons["guidedSetupFinish"]
+        XCTAssertTrue(finish.isHittable)
+        finish.click()
+        XCTAssertTrue(guidedSetup.waitForNonExistence(timeout: 2))
     }
 
     @MainActor
@@ -228,7 +233,10 @@ final class SetupRecoveryUITests: XCTestCase {
         let sheet = app.sheets.firstMatch
         for guide in guides { XCTAssertFalse(sheet.buttons[guide].exists, guide) }
         sheet.radioButtons["Devices"].click()
-        for guide in guides { XCTAssertTrue(sheet.buttons[guide].waitForExistence(timeout: 2), guide) }
+        for platform in ["iOS", "macOS", "Apple TV"] {
+            sheet.radioButtons[platform].click()
+            XCTAssertTrue(sheet.buttons["\(platform) Setup Guide"].waitForExistence(timeout: 2))
+        }
     }
 
     @MainActor
@@ -282,6 +290,12 @@ final class SetupRecoveryUITests: XCTestCase {
         XCTAssertFalse(identifiedElement("guidedSetupRepairView", in: app).exists)
         XCTAssertTrue(identifiedElement("firstRunSetupChip", in: app).waitForExistence(timeout: 2))
         XCTAssertTrue(identifiedElement("proxyToggleButton", in: app).exists)
+        for _ in 0..<2 {
+            identifiedElement("firstRunSetupChip", in: app).click()
+            let setup = identifiedElement("guidedSetupRepairView", in: app)
+            XCTAssertTrue(setup.waitForExistence(timeout: 5))
+            identifiedElement("guidedSetupClose", in: app).click()
+        }
     }
 
     @MainActor

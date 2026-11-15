@@ -320,6 +320,51 @@ final class ProxyViewModel: ObservableObject {
     @Published private(set) var openAPIMockPacks: [OpenAPIMockPack] = []
     @Published private(set) var isResettingTrafficModifications = false
     @Published private(set) var setupVerificationState: SetupVerificationState?
+    @Published private(set) var setupCheckResults: [SetupTrafficProbe.Kind: SetupTrafficProbe.Outcome] = [:]
+    @Published private(set) var runningSetupChecks = false
+
+    func runLiveSetupChecks() {
+        guard !runningSetupChecks, case .running(let port) = proxyState else { return }
+        runningSetupChecks = true
+        setupCheckResults = [:]
+        let nonce = UUID()
+        Task {
+            defer { runningSetupChecks = false }
+            for kind in SetupTrafficProbe.Kind.allCases {
+                guard proxyState == .running(port: port) else {
+                    setupCheckResults[kind] = .failed("Listener stopped or changed. Run again.")
+                    continue
+                }
+                let probe = SetupTrafficProbe(kind: kind, nonce: nonce)
+                setupCheckResults[kind] = .checking
+                do {
+                    let status = try await probe.send(port: port)
+                    guard (200..<300).contains(status) else {
+                        setupCheckResults[kind] = .failed("Received HTTP \(status). Check the origin and active rules.")
+                        continue
+                    }
+                    // Capture publication may arrive a little after the client gets its response.
+                    var matched = false
+                    for attempt in 0..<12 {
+                        matched = captureWorkspace.allSessions.contains { row in
+                            probe.matches(method: row.request.method, host: row.request.host,
+                                          scheme: row.request.scheme.rawValue, path: row.request.path,
+                                          inspection: row.request.inspectionKind.rawValue,
+                                          status: row.response?.statusCode, clientStatus: status)
+                        }
+                        if matched { break }
+                        if attempt < 11 { try await Task.sleep(for: .milliseconds(200)) }
+                    }
+                    setupCheckResults[kind] = matched
+                        ? .passed(kind == .https ? "HTTPS inspected" : "HTTP request captured")
+                        : .failed(kind == .https ? "No matching inspected response. Check capture and HTTPS bypass rules."
+                                                : "No matching captured response. Check capture and routing.")
+                } catch {
+                    setupCheckResults[kind] = .failed(error.localizedDescription)
+                }
+            }
+        }
+    }
     @Published private(set) var setupNetworkSnapshot: SetupNetworkSnapshot?
     /// Base URL of the running profile server (e.g. `http://192.168.1.5:8765`).
     /// `nil` when the server is not running.
@@ -1328,7 +1373,7 @@ final class ProxyViewModel: ObservableObject {
             lines.append("Stored CA summary: \(rootCertificate.subjectSummary)")
             lines.append("Stored private key available: \(rootCertificate.privateKeyData != nil ? "Yes" : "No")")
         } else {
-            lines.append("Stored CA summary: Missing")
+            lines.append(certificateAuthorityNeedsUnlock ? "Stored CA summary: Unlock required to check identity" : "Stored CA summary: Missing")
         }
 
         if let lastErrorMessage {
@@ -4005,6 +4050,10 @@ final class ProxyViewModel: ObservableObject {
         (certificateStore as? PersistentKeychainCertificateStore)?.requiresUnlock(label: configuration.certificateLabel) == true
     }
 
+    var certificateReadinessSummary: String {
+        certificateAuthorityNeedsUnlock ? "Unlock required to check identity" : certificateWorkflowState.rawValue
+    }
+
     /// Prefer the active CA when both it and a pending renewal need access.
     private var certificateUnlockLabel: String? {
         if certificateAuthorityNeedsUnlock { return configuration.certificateLabel }
@@ -4139,7 +4188,7 @@ final class ProxyViewModel: ObservableObject {
     func confirmResetCertificateState() {
         trustAlertContext = TrustAlertContext(
             title: "Reset Certificate State",
-            message: "This removes installed JoesProxy root certificates and clears JoesProxy's stored CA material. If anything remains in Keychain Access afterward, JoesProxy will tell you what still needs manual cleanup.",
+            message: "This retires the current CA: it removes the matching installed root and deletes the saved signing identity. To keep the identity for reinstall, cancel and choose Remove Installed Certificate instead.",
             primaryAction: .resetCertificateState
         )
     }
@@ -4147,25 +4196,33 @@ final class ProxyViewModel: ObservableObject {
     func resetCertificateState() {
         logger.info("Trust flow: reset certificate state requested for label '\(self.configuration.certificateLabel, privacy: .public)'")
 
-        let retiringFingerprint = rootCertificate.map {
-            CertificateIdentityExtraction.sha256Fingerprint(from: $0.certificateData)
-        }
+        let retiringFingerprint: String?
         var failureMessages: [String] = []
 
         do {
-            try trustInstaller.removeCertificate(label: configuration.certificateLabel)
-            logger.info("Trust flow: reset removed installed certificate state for label '\(self.configuration.certificateLabel, privacy: .public)'")
+            let label = configuration.certificateLabel
+            retiringFingerprint = try CertificateRetirement.run(readFingerprint: {
+                try certificateStore.readRootBeforeCreation(label: label).map {
+                    CertificateIdentityExtraction.sha256Fingerprint(from: $0.certificateData)
+                }
+            }, removeInstalled: { fingerprint in
+                if let cleaner = trustInstaller as? CertificateFingerprintTrustCleaning {
+                    if let fingerprint {
+                        try cleaner.removeInstalledCertificate(matchingFingerprint: fingerprint, label: label)
+                    } else if trustInstaller.installationStatus(for: label) != .notInstalled {
+                        throw CertificateAuthorityError.trustRemovalFailed("Cannot identify the installed root. Compare fingerprints in Keychain Access before removing anything.")
+                    }
+                } else {
+                    try trustInstaller.removeCertificate(label: label)
+                }
+            }, removeStored: {
+                try certificateStore.removeRootCertificate(label: label)
+            })
         } catch {
-            logger.error("Trust flow: reset could not remove installed certificate for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-            failureMessages.append("Installed certificate cleanup: \(error.localizedDescription)")
-        }
-
-        do {
-            try certificateStore.removeRootCertificate(label: configuration.certificateLabel)
-            logger.info("Trust flow: reset removed persisted root CA material for label '\(self.configuration.certificateLabel, privacy: .public)'")
-        } catch {
-            logger.error("Trust flow: reset could not remove persisted root CA material for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-            failureMessages.append("Persisted CA cleanup: \(error.localizedDescription)")
+            logger.error("Trust flow: reset incomplete: \(error.localizedDescription, privacy: .public)")
+            refreshCertificateStatus()
+            presentTrustFailure(title: "Reset Incomplete", message: error.localizedDescription, suggestsReset: false)
+            return
         }
 
         // Pending renewal Keychain labels are keyed by the *active* short code at prepare time.
@@ -4216,7 +4273,7 @@ final class ProxyViewModel: ObservableObject {
             lastErrorMessage = nil
             trustAlertContext = TrustAlertContext(
                 title: "Certificate State Reset",
-                message: "JoesProxy removed its stored CA material and any visible installed JoesProxy root certificates.",
+                message: "The current signing identity and its matching installed root are absent. Other installed roots were not targeted.",
                 primaryAction: .acknowledge
             )
             logger.info("Trust flow: reset completed successfully for label '\(self.configuration.certificateLabel, privacy: .public)'")

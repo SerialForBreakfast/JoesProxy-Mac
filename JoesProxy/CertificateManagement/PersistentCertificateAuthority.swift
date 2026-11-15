@@ -490,12 +490,6 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         logger.info("Trust flow: removing root CA from keychain for label '\(label, privacy: .public)'")
         let installedCertificates = try keychainHelper.retrieveCertificates(withLabel: label)
         guard !installedCertificates.isEmpty else {
-            if certificateStore.loadRootCertificate(label: label) != nil {
-                logger.error("Trust flow: persisted root CA exists but keychain item is missing during remove for label '\(label, privacy: .public)'")
-                throw CertificateAuthorityError.trustRemovalFailed(
-                    "JoesProxy has stored root CA material for '\(label)', but no matching installed certificate was found in the keychain to remove."
-                )
-            }
             logger.info("Trust flow: nothing to remove from keychain for label '\(label, privacy: .public)'")
             return
         }
@@ -536,6 +530,12 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         }
         for certificate in matches {
             try keychainHelper.deleteCertificate(certificate, label: label)
+        }
+        let remaining = try keychainHelper.retrieveCertificates(withLabel: label)
+        guard !remaining.contains(where: {
+            CertificateIdentityExtraction.sha256Fingerprint(from: SecCertificateCopyData($0) as Data) == normalized
+        }) else {
+            throw CertificateAuthorityError.trustRemovalFailed("The selected root is still installed after removal.")
         }
         logger.info(
             "Trust flow: removed \(matches.count) fingerprint-matched installed certificate(s) for label '\(label, privacy: .public)'"
