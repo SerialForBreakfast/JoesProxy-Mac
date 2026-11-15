@@ -40,35 +40,35 @@ Use `joesproxyctl help` for the exact command surface and `--json` for stable re
 
 ### Deterministic session filtering and CLI JSON output
 
-When searching, filtering, or extracting captured network traffic via the CLI, **always pass `--json`** to receive the structured `CLIResultEnvelope` (`{"command": ..., "success": true, "result": {"sessions": [...]}}`), and parse output directly with `jq`.
+When searching, filtering, or extracting captured network traffic via the CLI, **always pass `--json`** to receive the structured `CLIResultEnvelope` (session pages are in `.result.payload`, with rows in `items` and continuation in `nextCursor`), and parse output directly with `jq`.
 
 **Supported `joesproxyctl sessions search` filter options:**
 - `--domain <domain>` — Filter by host/domain name (e.g. `--domain api.example.com`).
-- `--path <path>` — Filter by request path or path prefix (e.g. `--path /v1/auth` or `--path .m3u8`).
+- `--path <path>` — Match a case-insensitive substring of the disclosed request path (e.g. `--path /v1/auth` or `--path .m3u8`).
 - `--method <method>` — Filter by HTTP method (e.g. `--method POST`, `--method GET`).
-- `--host-category <category>` — Filter by classified category (`direct_origin`, `synthetic_asset`, `capture_marker`, `ad_telemetry`, etc.).
+- `--host-category <category>` — Filter by classified category (`local`, `api`, `cdn`, `other`).
 - `--status-code <code>` / `--status-class 2xx|3xx|4xx|5xx|error|non200` — Filter by exact HTTP status or family.
 - `--min-duration-ms <ms>` — Filter by minimum session duration in milliseconds.
 - `--has-override-hit` / `--no-override-hit` — Filter by whether an active rule or effect matched.
 - `--body-available` / `--no-body-available` — Filter by retained response body availability.
-- `--deduplicate-by endpoint` — Collapse repetitive endpoints into `endpointGroups` alongside the returned page’s items.
-- `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report for the returned page.
+- `--deduplicate-by endpoint` — Group all matches within the cursor range into up to 32 displayed groups. Compare the displayed groups’ counts with `aggregateMatchCount` to identify omitted groups.
+- `--include-auth-chain` — Attach a zero-secret HMAC `authChain` report across the same matches, including those on other pages. For either aggregate option, narrow the filters if the range exceeds 50,000 matches. For selected sessions, use `joesproxyctl lineage trace --auth-chain --candidate-sessions <id,id>` (`trace_data_lineage` with `mode: "authChain"`).
 - `--since <iso-timestamp>` / `--until <iso-timestamp>` — Filter by start timestamp range.
 - `--session-id-prefix <prefix>` — Filter by the starting hex/UUID characters of the session ID.
-- `--limit <n>` — Maximum number of sessions to return (default: 50).
+- `--limit <n>` — Maximum number of sessions per page (default: 10).
 - `--projection minimal|summary|full` — Information depth (`minimal` is fastest and avoids large payloads).
 - `--json` — Format output as standardized JSON.
 
 **Common CLI recipes with `jq`:**
 ```bash
 # Find all POST requests to a specific domain and extract IDs and status codes
-joesproxyctl sessions search --domain api.example.com --method POST --json | jq '.result.sessions[] | {id: .sessionID, path: .path, status: .statusCode}'
+joesproxyctl sessions search --domain api.example.com --method POST --projection summary --json | jq '.result.payload.items[] | {id, path: .sanitizedPath, statusCode}'
 
 # Find media playlist requests
-joesproxyctl sessions search --path .m3u8 --json | jq '.result.sessions[] | {id: .sessionID, path: .path}'
+joesproxyctl sessions search --path .m3u8 --projection summary --json | jq '.result.payload.items[] | {id, path: .sanitizedPath}'
 
-# List newest 10 sessions in minimal projection
-joesproxyctl sessions list --limit 10 --projection minimal --json | jq '.result.sessions'
+# List the first 10 sessions in capture sequence order
+joesproxyctl sessions list --limit 10 --projection minimal --json | jq '.result.payload.items'
 
 # Inspect one session's summary (status, headers, timing)
 joesproxyctl session show <session-id> --include-headers --json | jq '.result'

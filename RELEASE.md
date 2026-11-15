@@ -16,6 +16,8 @@ Keep compiler outputs and test results under build/. Release artifacts belong in
 
 Publishing, installation and host UI acceptance are separate operator actions. The prepared snapshot has no public publication approval. Fresh-install and manual-upgrade testing remain required for a distributable installer. Automated updates require a configured and verified signing key and feed.
 
+Future images also include the portable `joesproxy-mcp-diagnostics` folder beside the app. Install the entire folder in the agent's skills directory so its references resolve. The release Policy tests compare the staged source files with the app's skill export.
+
 ## 1.9.1 build 25
 
 

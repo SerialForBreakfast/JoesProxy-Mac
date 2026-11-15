@@ -41,7 +41,7 @@ final class SetupRecoveryUITests: XCTestCase {
     }
 
     @MainActor
-    func testInstalledCertificateStillNeedsSeparateMacOSTrustApproval() {
+    func testInstalledCertificateStillNeedsSeparateMacOSTrustApproval() async throws {
         let app = XCUIApplication()
         app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions",
                                "\(Self.uiTestCertificateStatePrefix)installedTrustRequired",
@@ -54,11 +54,11 @@ final class SetupRecoveryUITests: XCTestCase {
         XCTAssertTrue(sheet.buttons["Check Again"].exists)
         XCTAssertFalse(sheet.buttons["Create Root CA"].exists)
         XCTAssertFalse(sheet.buttons["Unlock Certificate Authority"].exists)
-        attachSetupExample(sheet, named: "Installed-awaiting-macOS-trust")
+        try await attachSetupExample(sheet, named: "Installed-awaiting-macOS-trust")
     }
 
     @MainActor
-    func testNewIdentityShowsApprovalPrerequisites() {
+    func testNewIdentityShowsApprovalPrerequisites() async throws {
         let app = XCUIApplication()
         app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions",
                                "\(Self.uiTestCertificateStatePrefix)notSetUp",
@@ -72,11 +72,11 @@ final class SetupRecoveryUITests: XCTestCase {
             XCTAssertTrue(sheet.buttons[title].exists, title)
             XCTAssertFalse(sheet.buttons[title].isEnabled, title)
         }
-        attachSetupExample(sheet, named: "New-identity-approval-prerequisites")
+        try await attachSetupExample(sheet, named: "New-identity-approval-prerequisites")
     }
 
     @MainActor
-    func testLockedIdentityShowsExplicitApprovalAndRetry() {
+    func testLockedIdentityShowsExplicitApprovalAndRetry() async throws {
         let app = XCUIApplication()
         app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions",
                                "\(Self.uiTestCertificateStatePrefix)keychainLocked",
@@ -91,12 +91,52 @@ final class SetupRecoveryUITests: XCTestCase {
         unlock.click()
         XCTAssertTrue(sheet.staticTexts["Access was not granted. You can leave setup or choose Unlock Certificate Authority to retry."].waitForExistence(timeout: 5))
         XCTAssertTrue(unlock.isEnabled)
-        attachSetupExample(sheet, named: "Protected-CA-awaiting-Keychain-approval")
+        try await attachSetupExample(sheet, named: "Protected-CA-awaiting-Keychain-approval")
     }
 
     @MainActor
-    private func attachSetupExample(_ sheet: XCUIElement, named name: String) {
-        let image = XCTAttachment(screenshot: sheet.screenshot())
+    func testCertificateGuideIllustrations() async throws {
+        let cases = [
+            ("installedTrustRequired", ["Show where to find the certificate", "Show where to change trust"]),
+            ("keychainLocked", ["Preview the macOS password prompt"])
+        ]
+        for (state, titles) in cases {
+            let app = XCUIApplication()
+            app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-primary-screen",
+                                   "\(Self.uiTestCertificateStatePrefix)\(state)",
+                                   "\(Self.uiTestGuidedSetupSectionPrefix)certificate",
+                                   "\(Self.uiTestGuidedSetupModePrefix)replay"]
+            app.launchJoesProxyForTesting()
+            let sheet = app.sheets.firstMatch
+            XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+            // Require an attributable app window before using coordinates on a multi-display Mac.
+            try await attachSetupExample(sheet, named: "\(state)-before-expansion")
+            for title in titles {
+                let toggle = sheet.disclosureTriangles[title]
+                XCTAssertTrue(toggle.waitForExistence(timeout: 5), title)
+                let arrow = toggle.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+                    .withOffset(CGVector(dx: 28, dy: 0))
+                arrow.click()
+                let caption = sheet.staticTexts["Illustration · macOS appearance may vary"]
+                let expanded = caption.waitForExistence(timeout: 3)
+                if !expanded {
+                    try await attachSetupExample(sheet, named: "\(title)-after-click")
+                }
+                XCTAssertTrue(expanded, title)
+                if !caption.isHittable {
+                    sheet.scroll(byDeltaX: 0, deltaY: -220)
+                }
+                try await attachSetupExample(sheet, named: title)
+                toggle.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+                    .withOffset(CGVector(dx: 28, dy: 0)).click()
+            }
+            app.terminate()
+        }
+    }
+
+    @MainActor
+    private func attachSetupExample(_ sheet: XCUIElement, named name: String) async throws {
+        let image = try await ownedWindowAttachment(window: sheet)
         image.name = name
         image.lifetime = .keepAlways
         add(image)

@@ -26,14 +26,18 @@ enum MCPClientConfigSnippetBuilder {
         endpointURL: URL,
         appBundleURL: URL = Bundle.main.bundleURL
     ) -> String {
-        let command = "\(cliExecutableWord(appBundleURL)) auth login"
-        guard endpointURL.absoluteString != "http://127.0.0.1:9091/mcp" else { return command }
-        return "\(command) --endpoint \(shellWord(endpointURL.absoluteString))"
+        "\(cliExecutableWord(appBundleURL)) auth login\(cliEndpointOption(endpointURL))"
     }
 
-    static func cliVerificationCommands(appBundleURL: URL = Bundle.main.bundleURL) -> String {
+    static func cliVerificationCommands(endpointURL: URL, appBundleURL: URL = Bundle.main.bundleURL) -> String {
         let executable = cliExecutableWord(appBundleURL)
-        return "\(executable) auth status && \(executable) status"
+        let endpoint = cliEndpointOption(endpointURL)
+        return "\(executable) auth status\(endpoint) && \(executable) status\(endpoint)"
+    }
+
+    private static func cliEndpointOption(_ endpoint: URL) -> String {
+        if endpoint.absoluteString == "http://127.0.0.1:\(NetworkConstants.mcpDefaultPort)\(MCPNetworkConstants.endpointPath)" { return "" }
+        return " --endpoint \(shellWord(endpoint.absoluteString))"
     }
 
     private static func cliExecutableWord(_ bundle: URL) -> String {

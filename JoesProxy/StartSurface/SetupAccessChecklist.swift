@@ -93,13 +93,16 @@ struct SetupAccessChecklist: View {
                                 }
                                 Text("Unlock requests access for this client only. Enter a password only in the macOS dialog; denying access does not revoke enrollment.")
                                 Button("Unlock credential for " + client.displayName) {
-                                    do {
-                                        try controller.unlockClientVerifier(client.id)
-                                        credentialError = nil
-                                    } catch {
-                                        credentialError = "Credential remains locked. Choose Unlock to try again."
+                                    Task {
+                                        do {
+                                            try await controller.unlockClientVerifier(client.id)
+                                            credentialError = nil
+                                        } catch {
+                                            credentialError = "Credential remains locked. Choose Unlock to try again."
+                                        }
                                     }
                                 }
+                                .disabled(controller.unlockingClientIDs.contains(client.id))
                             } else if client.credentialState == .active {
                                 Label { Text("Credential ready") } icon: {
                                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
@@ -116,9 +119,11 @@ struct SetupAccessChecklist: View {
                 if let credentialError { Text(credentialError) }
                 Text("4. Authorize the CLI in Terminal and verify the connection").appFont(.headline, scale: textScale)
                 Text("Run joesproxyctl auth status to check local login, then joesproxyctl status to confirm the service accepts this client.")
-                Button("Copy CLI verification commands") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(MCPClientConfigSnippetBuilder.cliVerificationCommands(), forType: .string)
+                if case .running(_, let endpoint) = controller.state {
+                    Button("Copy CLI verification commands") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(MCPClientConfigSnippetBuilder.cliVerificationCommands(endpointURL: endpoint), forType: .string)
+                    }
                 }
                 Text("5. Review actions when requested").appFont(.headline, scale: textScale)
                 if !controller.pendingApprovals.isEmpty {

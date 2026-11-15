@@ -97,7 +97,7 @@ final class MCPClientRegistryTests: XCTestCase {
         _ = try registry.authenticate(bearerToken: keep.plaintextCredential)
     }
 
-    func testDeniedVerifierIsRetriedOnlyByLocalUnlockAndThenCached() throws {
+    func testDeniedVerifierIsRetriedOnlyByLocalUnlockAndThenCached() async throws {
         let store = MCPCountingCredentialStore()
         let registry = MCPClientRegistry(persistenceURL: temporaryURL(named: "unlock.json"), credentialStore: store)
         try registry.load()
@@ -107,20 +107,51 @@ final class MCPClientRegistryTests: XCTestCase {
         try registry.load()
         XCTAssertEqual(registry.clientsRequiringUnlock, [locked.client.id])
         XCTAssertEqual(try registry.authenticate(bearerToken: available.plaintextCredential).id, available.client.id)
-        XCTAssertThrowsError(try registry.unlockClient(locked.client.id))
+        do {
+            try await registry.unlockClient(locked.client.id)
+            XCTFail("Expected the simulated Keychain denial")
+        } catch let error as CocoaError {
+            XCTAssertEqual(error.code, .userCancelled)
+        }
         for _ in 0..<3 {
             XCTAssertThrowsError(try registry.authenticate(bearerToken: locked.plaintextCredential))
         }
         XCTAssertEqual(store.interactiveReads, 1)
         store.allowUnlock = true
-        try registry.unlockClient(locked.client.id)
-        try registry.unlockClient(locked.client.id)
+        try await registry.unlockClient(locked.client.id)
+        try await registry.unlockClient(locked.client.id)
         XCTAssertEqual(try registry.authenticate(bearerToken: locked.plaintextCredential).id, locked.client.id)
         XCTAssertEqual(store.interactiveReads, 2)
         try registry.revoke(clientID: locked.client.id)
-        try registry.unlockClient(locked.client.id)
+        try await registry.unlockClient(locked.client.id)
         XCTAssertThrowsError(try registry.authenticate(bearerToken: locked.plaintextCredential))
         XCTAssertEqual(store.interactiveReads, 2)
+    }
+
+    func testRevocationWinsWhileKeychainUnlockIsPending() async throws {
+        let store = MCPCountingCredentialStore()
+        let registry = MCPClientRegistry(persistenceURL: temporaryURL(named: "pending-unlock.json"), credentialStore: store)
+        try registry.load()
+        let enrollment = try registry.enroll(displayName: "Pending")
+        let id = enrollment.client.id
+        store.lockedID = id
+        store.allowUnlock = true
+        try registry.load()
+
+        let started = expectation(description: "Keychain has read the verifier")
+        let release = DispatchSemaphore(value: 0)
+        store.beforeReturningVerifier = {
+            started.fulfill()
+            XCTAssertEqual(release.wait(timeout: .now() + 5), .success)
+        }
+        let unlock = Task { try await registry.unlockClient(id) }
+        await fulfillment(of: [started], timeout: 3)
+        try registry.revoke(clientID: id)
+        release.signal()
+        try await unlock.value
+
+        XCTAssertEqual(registry.clients.first?.credentialState, .revoked)
+        XCTAssertThrowsError(try registry.authenticate(bearerToken: enrollment.plaintextCredential))
     }
 
     private func temporaryURL(named: String) -> URL {
@@ -135,6 +166,7 @@ private final class MCPCountingCredentialStore: MCPClientCredentialStoring, @unc
     var lockedID: String?
     var allowUnlock = false
     private(set) var interactiveReads = 0
+    var beforeReturningVerifier: (@Sendable () -> Void)?
 
     func saveVerifier(clientID: String, generation: Int, verifier: Data) throws {
         lock.withLock {
@@ -151,11 +183,13 @@ private final class MCPCountingCredentialStore: MCPClientCredentialStoring, @unc
     }
 
     func unlockVerifier(clientID: String, generation: Int) throws -> Data? {
-        try lock.withLock {
+        let verifier = try lock.withLock {
             interactiveReads += 1
             guard allowUnlock else { throw CocoaError(.userCancelled) }
             return verifiers["\(clientID)#\(generation)"]
         }
+        beforeReturningVerifier?()
+        return verifier
     }
 
     func deleteVerifier(clientID: String, generation: Int) throws {

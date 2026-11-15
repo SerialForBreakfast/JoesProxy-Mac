@@ -2040,7 +2040,12 @@ final class ProxyServerTests: XCTestCase {
             scripted: Dictionary(uniqueKeysWithValues: fixtures.map { ($0.name, $0.wire) }))
         // Both listeners sit below the ephemeral range (49152–65535): over hours, outgoing source
         // ports wrap around, and one equal to a listener's port connects the socket to itself.
-        try await origin.start(preferredPorts: Array(41_000..<41_100))
+        do {
+            try await origin.start(ports: Array(41_000..<41_100))
+        } catch {
+            await origin.stop()
+            throw error
+        }
         func makeProxy(port: UInt16) -> ProxyServer {
             ProxyServer(port: port, bindHost: "127.0.0.1", httpsProxyMode: .intercepting,
                 certificateAuthority: authority, sessionRecorder: recorder, responseOverrideStore: overrides,
@@ -2052,10 +2057,9 @@ final class ProxyServerTests: XCTestCase {
             let candidate = makeProxy(port: port)
             if (try? await candidate.start()) != nil { fixedPortProxy = candidate }
         }
-        let proxy: ProxyServer
-        if let fixedPortProxy { proxy = fixedPortProxy } else {
-            proxy = makeProxy(port: 0)
-            do { try await proxy.start() } catch { await origin.stop(); throw error }
+        guard let proxy = fixedPortProxy else {
+            await origin.stop()
+            throw ProxyError.startFailed(reason: "Rehearsal could not bind a proxy listener in 41100–41199.")
         }
         sink.record("listeners", ["originPort": Int(origin.port), "proxyPort": Int(proxy.port)])
         let sampler = CurrentProcessMetricsSampler()
@@ -2636,7 +2640,7 @@ private final class SimpleHTTPSTestServer {
         return UInt16(port)
     }
 
-    func start(preferredPorts: [Int] = []) async throws {
+    func start(ports: [Int] = [0]) async throws {
         let certificate = try NIOSSLCertificate(bytes: Array(leafCertificate.certificateData), format: .der)
         let privateKey = try NIOSSLPrivateKey(bytes: Array(leafCertificate.privateKeyData), format: .pem)
         let tlsContext = try NIOSSLContext(
@@ -2668,13 +2672,14 @@ private final class SimpleHTTPSTestServer {
 
         // Long soaks pass a fixed range below the ephemeral range (49152–65535) so a wrapped-around
         // outgoing source port can never equal the origin's own port.
-        for port in preferredPorts {
+        for port in ports.dropLast() {
             if let bound = try? await bootstrap.bind(host: "127.0.0.1", port: port).get() {
                 channel = bound
                 return
             }
         }
-        channel = try await bootstrap.bind(host: "127.0.0.1", port: 0).get()
+        let lastPort = try XCTUnwrap(ports.last, "At least one listener port is required")
+        channel = try await bootstrap.bind(host: "127.0.0.1", port: lastPort).get()
     }
 
     func stop() async {

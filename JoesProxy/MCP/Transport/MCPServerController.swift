@@ -18,6 +18,7 @@ final class MCPServerController: ObservableObject {
     @Published private(set) var recentReadActivityAt: Date?
     @Published private(set) var connectedClientCount: Int = 0
     @Published private(set) var enrolledClients: [MCPClientRecord] = []
+    @Published private(set) var unlockingClientIDs: Set<String> = []
     @Published private(set) var operationState: MCPOperationState = .idle
     @Published var isCLIAutomationStartEnabled: Bool {
         didSet {
@@ -775,8 +776,10 @@ final class MCPServerController: ObservableObject {
         client.credentialState != .revoked && clientRegistry.clientsRequiringUnlock.contains(client.id)
     }
 
-    func unlockClientVerifier(_ id: String) throws {
-        try clientRegistry.unlockClient(id)
+    func unlockClientVerifier(_ id: String) async throws {
+        guard unlockingClientIDs.insert(id).inserted else { return }
+        defer { unlockingClientIDs.remove(id) }
+        try await clientRegistry.unlockClient(id)
         refreshClients()
     }
 

@@ -18,10 +18,11 @@ wastes turns rediscovering this sequence one error at a time.
    manifest digest, skill version, and an explicit compatibility result. Treat an incompatible
    result as a hard restaging signal: use the bounded recommended actions instead of inferring that
    a stored credential or a recently modified file belongs to the running app.
-3. For a stored credential rejected by the server, check the endpoint first. When the current
-   Keychain verifier becomes available again, retry a read after 30 seconds. Check enrollment
-   in MCP Management if rejection persists. A revoked or permanently lost credential needs
-   human enrollment or rotation and `joesproxyctl auth login`.
+3. For a rejected stored credential, verify the running app's endpoint and enrolled client.
+   If Setup & Repair or MCP Management shows a locked credential, ask the operator to choose
+   **Unlock credential** for that client and complete the Keychain prompt. Retry the server
+   check with `joesproxyctl doctor --json`. A revoked or lost credential needs human
+   enrollment or rotation followed by `joesproxyctl auth login` against the same endpoint.
 4. **The client's disclosure profile must be Shareable (not the default Metadata Only), with no
    Always-Deny runtime-control rule, before runtime-control tools even exist as callable tools at
    all** — this is a hard gate, not merely an approval step. On Metadata Only, calling

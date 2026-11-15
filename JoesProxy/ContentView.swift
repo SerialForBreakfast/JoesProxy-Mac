@@ -202,6 +202,9 @@ struct ContentView: View {
                     }
                 )
             }
+            #if DEBUG
+            .background(UITestPrimaryScreenWindowConfigurator().frame(width: 0, height: 0))
+            #endif
             .sheet(item: $presentationState.guidedSetupContext) { context in
                 GuidedSetupRepairView(
                     isPresented: Binding(

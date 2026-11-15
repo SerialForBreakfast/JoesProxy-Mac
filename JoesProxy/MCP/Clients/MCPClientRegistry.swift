@@ -257,11 +257,19 @@ final class MCPClientRegistry {
     }
 
     /// Only the local Clients panel calls this interactive read, for the selected generation.
-    func unlockClient(_ id: String) throws {
+    func unlockClient(_ id: String) async throws {
         guard clientsRequiringUnlock.contains(id),
-              let index = clients.firstIndex(where: { $0.id == id && $0.credentialState != .revoked })
+              let client = clients.first(where: { $0.id == id && $0.credentialState != .revoked })
         else { return }
-        let verifier = try credentialStore.unlockVerifier(clientID: id, generation: clients[index].credentialGeneration)
+        let generation = client.credentialGeneration
+        let verifier = try await Task.detached(priority: .userInitiated) { [credentialStore] in
+            try credentialStore.unlockVerifier(clientID: id, generation: generation)
+        }.value
+        guard clientsRequiringUnlock.contains(id),
+              let index = clients.firstIndex(where: {
+                  $0.id == id && $0.credentialGeneration == generation && $0.credentialState != .revoked
+              })
+        else { return }
         if let verifier {
             clientIDByVerifier[verifier] = id
             clients[index].credentialState = .active

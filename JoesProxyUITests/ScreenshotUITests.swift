@@ -471,9 +471,13 @@ final class ScreenshotUITests: XCTestCase {
         XCTAssertFalse(owned.isEmpty, "The target app must have an on-screen window before capture")
     }
 
+}
+
+extension XCTestCase {
     /// Capture the identified window itself, not a desktop crop that may contain another app.
     @MainActor
-    private func ownedWindowAttachment(window: XCUIElement) async throws -> XCTAttachment {
+    func ownedWindowAttachment(window: XCUIElement) async throws -> XCTAttachment {
+        guard CGPreflightScreenCaptureAccess() else { throw CaptureFailure.accessUnavailable }
         let targets = NSRunningApplication.runningApplications(withBundleIdentifier: "com.ShowBlender.JoesProxy")
         guard targets.count == 1, let target = targets.first else { throw CaptureFailure.ambiguousTarget }
         let frame = window.frame
@@ -497,5 +501,6 @@ final class ScreenshotUITests: XCTestCase {
         return XCTAttachment(data: png, uniformTypeIdentifier: "public.png")
     }
 
-    private enum CaptureFailure: Error { case accessUnavailable, ambiguousTarget, encodingFailed }
 }
+
+private enum CaptureFailure: Error { case accessUnavailable, ambiguousTarget, encodingFailed }
