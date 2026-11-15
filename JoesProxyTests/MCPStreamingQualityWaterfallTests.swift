@@ -53,7 +53,7 @@ final class MCPStreamingQualityWaterfallTests: XCTestCase {
         store.append(seg1)
         store.append(seg2)
 
-        let dto = try service.streamingWaterfall(
+        let dto = try await service.streamingWaterfall(
             sessionID: manifestSession.id,
             policyRevision: .initial
         )

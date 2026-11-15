@@ -26,6 +26,7 @@ enum StreamingWaterfallEngine {
             manifestSession: manifestSession,
             allSessions: allSessions
         )
+        guard !Task.isCancelled else { return .empty }
 
         guard !segmentSessions.isEmpty else {
             return StreamingQualityWaterfallReport(
@@ -54,6 +55,7 @@ enum StreamingWaterfallEngine {
         var totalCacheTracked = 0
 
         for (index, session) in segmentSessions.enumerated() {
+            guard !Task.isCancelled else { return .empty }
             let path = session.request.path.lowercased()
             let mediaType: StreamingSegmentMediaType
             if path.contains("init") || (session.request.path.contains(".mp4") && (session.response?.bodyData?.count ?? 0) < 5000) {
@@ -231,12 +233,29 @@ enum StreamingWaterfallEngine {
         target: SessionRecord,
         allSessions: [SessionRecord]
     ) -> (manifestSession: SessionRecord?, ladder: [StreamingBitrateVariant], kind: String, targetDuration: Double) {
+        if let manifest = parseManifest(target) {
+            return (target, manifest.ladder, manifest.kind, manifest.targetDuration)
+        }
+        // A capture can contain playlist requests whose response was never retained.
+        // Only the outer lookup scans candidates; parsing one cannot restart that scan.
+        for candidate in allSessions where candidate.id != target.id {
+            if Task.isCancelled { break }
+            if let manifest = parseManifest(candidate), !manifest.ladder.isEmpty {
+                return (candidate, manifest.ladder, manifest.kind, manifest.targetDuration)
+            }
+        }
+        return (nil, [], "Unknown Stream", 6.0)
+    }
+
+    private static func parseManifest(
+        _ target: SessionRecord
+    ) -> (ladder: [StreamingBitrateVariant], kind: String, targetDuration: Double)? {
         let mediaType = MediaDetector.mediaType(for: target)
 
         // Case A: Target is an HLS manifest
         if mediaType == .hls || mediaType == .hlsDiscovery || target.request.path.contains(".m3u8") {
-            let manifestText = target.response?.bodyData.flatMap { String(data: $0, encoding: .utf8) }
-            if let text = manifestText {
+            let manifestText = target.response.flatMap(MediaDetector.decodedResponseBody).flatMap { String(data: $0, encoding: .utf8) }
+            if let text = manifestText, text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("#EXTM3U") {
                 let baseURL = URL(string: "\(target.request.scheme.rawValue)://\(target.request.host)\(target.request.path)")
                 let manifest = HLSParser.parse(text, baseURL: baseURL)
                 let variants: [StreamingBitrateVariant] = manifest.variants.map { v in
@@ -251,13 +270,13 @@ enum StreamingWaterfallEngine {
                 }.sorted(by: { $0.bandwidth < $1.bandwidth })
 
                 let kind = manifest.isMasterPlaylist ? "HLS Master Playlist" : "HLS Media Playlist"
-                return (target, variants, kind, manifest.targetDuration ?? 6.0)
+                return (variants, kind, manifest.targetDuration ?? 6.0)
             }
         }
 
         // Case B: Target is a DASH manifest
         if mediaType == .dash || target.request.path.contains(".mpd") {
-            let manifestText = target.response?.bodyData.flatMap { String(data: $0, encoding: .utf8) }
+            let manifestText = target.response.flatMap(MediaDetector.decodedResponseBody).flatMap { String(data: $0, encoding: .utf8) }
             if let text = manifestText, let manifest = DASHParser.parse(text) {
                 var variants: [StreamingBitrateVariant] = []
                 for period in manifest.periods {
@@ -283,24 +302,11 @@ enum StreamingWaterfallEngine {
                     }
                 }
                 variants.sort(by: { $0.bandwidth < $1.bandwidth })
-                return (target, variants, "DASH MPD Manifest", 6.0)
+                return (variants, "DASH MPD Manifest", 6.0)
             }
         }
 
-        // Case C: Target is a media segment; find related manifest session
-        let manifests = allSessions.filter {
-            let t = MediaDetector.mediaType(for: $0)
-            return t == .hls || t == .dash || $0.request.path.contains(".m3u8") || $0.request.path.contains(".mpd")
-        }
-
-        for m in manifests {
-            let res = resolveManifestAndLadder(target: m, allSessions: allSessions)
-            if !res.ladder.isEmpty {
-                return (m, res.ladder, res.kind, res.targetDuration)
-            }
-        }
-
-        return (nil, [], "Unknown Stream", 6.0)
+        return nil
     }
 
     private static func resolveRelatedSegmentSessions(
@@ -311,6 +317,7 @@ enum StreamingWaterfallEngine {
         let host = manifestSession?.request.host ?? target.request.host
 
         return allSessions.filter { session in
+            guard !Task.isCancelled else { return false }
             // Exclude manifests themselves from the segment list
             if session.id == manifestSession?.id || session.request.path.contains(".m3u8") || session.request.path.contains(".mpd") {
                 return false

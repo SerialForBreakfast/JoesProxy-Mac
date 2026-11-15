@@ -40,6 +40,36 @@ final class StreamingWaterfallEngineTests: XCTestCase {
         XCTAssertEqual(report.bitrateLadder[2].resolution, "1920x1080")
     }
 
+    func testWaterfallResolvesGzippedFixtureMasterAfterUnretainedPlaylist() throws {
+        let fixture = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/HLS/sdr-six-second-positive-v1")
+        let masterBytes = try Data(contentsOf: fixture.appendingPathComponent("master.m3u8"))
+        let master = createSession(
+            path: "/master.m3u8",
+            body: try XCTUnwrap(LiveResponseTransformation.gzipCompress(masterBytes)),
+            contentType: "application/vnd.apple.mpegurl",
+            headers: [HTTPHeaderField(name: "Content-Encoding", value: "gzip")]
+        )
+        var unretained = createSession(path: "/video-720/stream.m3u8", body: Data(), contentType: "application/vnd.apple.mpegurl")
+        unretained.response = nil
+        let segment = createSession(
+            path: "/video-720/seg-000.ts",
+            body: try Data(contentsOf: fixture.appendingPathComponent("video-720/seg-000.ts")),
+            contentType: "video/mp2t"
+        )
+        let sessions = [unretained, master, segment]
+        for target in [master, segment] {
+            let report = StreamingWaterfallEngine.analyze(target: target, allSessions: sessions)
+            XCTAssertEqual(report.manifestSessionID, master.id)
+            XCTAssertEqual(report.bitrateLadder.map(\.bandwidth), [249082, 310996, 374666])
+            XCTAssertEqual(report.segments.map(\.sessionID), [segment.id])
+        }
+        let partial = StreamingWaterfallEngine.analyze(target: segment, allSessions: [unretained, segment])
+        XCTAssertNil(partial.manifestSessionID)
+        XCTAssertTrue(partial.bitrateLadder.isEmpty)
+    }
+
     func testSegmentDownloadAndSlowSegmentDetection() {
         let now = Date()
         let manifestSession = createSession(

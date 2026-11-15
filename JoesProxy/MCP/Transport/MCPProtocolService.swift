@@ -4492,7 +4492,16 @@ final class MCPProtocolService {
                 return toolStructuredResult(id: id, payload: try encodedObject(dto))
             case "streaming_waterfall_inspection":
                 let sessionID = try requiredUUID(arguments["sessionID"], name: "sessionID")
-                let dto = try mediaInspectionService.streamingWaterfall(sessionID: sessionID, policyRevision: policyStore.policyRevision)
+                let revision = policyStore.policyRevision
+                let dto = try await mediaInspectionService.streamingWaterfall(sessionID: sessionID, policyRevision: revision)
+                guard !Task.isCancelled, revision == policyStore.policyRevision,
+                      let currentClient = clientRegistry.client(id: client.id),
+                      currentClient.credentialState == .active,
+                      currentClient.credentialGeneration == client.credentialGeneration,
+                      currentClient.assignedProfileID == client.assignedProfileID,
+                      policyAvailableProductionTools(for: currentClient).contains(where: { $0.name == name }) else {
+                    throw MCPStructuredError(code: .policyDenied, message: "Waterfall inspection cancelled or authority changed.")
+                }
                 return toolStructuredResult(id: id, payload: try encodedObject(dto))
             case "visual_asset_inspection":
                 let sessionID = try requiredUUID(arguments["sessionID"], name: "sessionID")
