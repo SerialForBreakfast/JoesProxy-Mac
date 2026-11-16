@@ -1,0 +1,30 @@
+Uninstall JoesProxy on macOS
+
+Complete these steps while the app and its bundled CLI are still available.
+
+1. Save any recording you want to keep to a folder you control. Stop capture.
+   If JoesProxy manages the Mac's system proxy, choose “Disable and Restore
+   Previous Settings”. In System Settings > Network, check the active service's
+   proxy settings against your previous configuration. With the JoesProxy
+   listener stopped, confirm an ordinary site loads. On phones, TVs, simulators
+   and other clients, restore any proxy settings you changed separately.
+
+2. If retiring the inspection identity, open Certificate Setup > Diagnostics.
+   Compare the displayed root fingerprint with the root you intended to retire.
+   “Remove Installed Certificate” removes the installed certificate. To retire
+   the local signing material as well, use “Reset Certificate State”, review
+   the confirmation, then refresh status. If several certificates have the
+   same label, resolve their identities before resetting. Check Keychain Access
+   for the retired root. On other devices, remove the matching certificate or
+   configuration profile where you installed it. Coordinate with other users
+   before retiring a shared root.
+
+3. In MCP Management, revoke clients being retired and stop MCP. On each
+   enrolled CLI installation, run “joesproxyctl auth logout” for its configured
+   endpoint. Remove any JoesProxy connector configuration or diagnostic skill
+   folder you installed in an agent.
+
+4. Quit JoesProxy and move the app from Applications to Trash. Keep saved
+   recordings and exports unless you explicitly want to delete them. If
+   networking or certificate cleanup still needs attention, retain the app
+   until you have verified the previous settings and the retired identity.

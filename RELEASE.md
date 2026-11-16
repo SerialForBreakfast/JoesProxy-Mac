@@ -1,6 +1,6 @@
 # Release workflow
 
-Current as of November 14, 2026. The public release is 1.9.0 (23). The signed and notarized 1.9.1 (25) installer is in private acceptance. Use the [candidate record](docs/releases/1.9.1-build25.md) and [checksum manifest](Releases/SHA256SUMS) for this build.
+Current as of November 15, 2026. The public release is 1.9.0 (23). Private candidate 1.9.1 (26) was signed, notarized, stapled and handed off for second-Mac acceptance. See the [build 26 verification record](docs/releases/1.9.1-build26.md) and [checksum manifest](Releases/SHA256SUMS).
 
 Config/Version.xcconfig defines the marketing version and monotonically increasing build number. The version helper updates configuration, changelog and checked-in diagnostic skill metadata together. Review its changes before validation.
 
@@ -16,9 +16,11 @@ Keep compiler outputs and test results under build/. Release artifacts belong in
 
 Publishing, installation and host UI acceptance are separate operator actions. The prepared snapshot has no public publication approval. Fresh-install and manual-upgrade testing remain required for a distributable installer. Automated updates require a configured and verified signing key and feed.
 
-Future images also include the portable `joesproxy-mcp-diagnostics` folder beside the app. Install the entire folder in the agent's skills directory so its references resolve. The release Policy tests compare the staged source files with the app's skill export.
+Build 26 includes the portable `joesproxy-mcp-diagnostics` folder beside the app. Install the entire folder in the agent's skills directory so its references resolve. The release Policy tests compare the staged source files with the app's skill export.
+
+The DMG includes [Uninstall JoesProxy.txt](docs/Uninstall%20JoesProxy.txt). Verify the guide is readable on the mounted image. Use a disposable test identity for uninstall acceptance and preserve the upgrade account’s CA, enrollment and saved recordings.
 
 ## 1.9.1 build 25
 
 
-The current private installer is `Releases/JoesProxy-1.9.1-build25.dmg`. Verify it against `Releases/SHA256SUMS` before transfer. The [candidate record](docs/releases/1.9.1-build25.md) identifies the accepted image and manual checks. Second-Mac acceptance and maintainer authorization for publication are pending.
+The previous private installer was `Releases/JoesProxy-1.9.1-build25.dmg`. Its [candidate record](docs/releases/1.9.1-build25.md) identifies the image and manual checks.
