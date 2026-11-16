@@ -18,8 +18,9 @@ final class SetupVerificationUITests: XCTestCase {
     func testInjectedInspectedVerificationStateShowsSuccessCard() throws {
         let app = launchVerificationApp(verificationState: "inspected")
 
-        XCTAssertTrue(identifiedElement("certificateSetupSheet", in: app).waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Verify Capture"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.buttons["guidedSetupRunLiveChecks"].label, "Run HTTP & HTTPS checks")
+        XCTAssertTrue(identifiedElement("guidedSetupRepairView", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["testYourSetupButton"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["HTTPS traffic was inspected successfully"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["JoesProxy has observed at least one inspected HTTPS session, so certificate trust and routing are working together."].waitForExistence(timeout: 2))
     }
@@ -28,7 +29,7 @@ final class SetupVerificationUITests: XCTestCase {
     func testInjectedTunneledVerificationStateShowsPartialSuccessCard() throws {
         let app = launchVerificationApp(verificationState: "tunneled")
 
-        XCTAssertTrue(identifiedElement("certificateSetupSheet", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(identifiedElement("guidedSetupRepairView", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Traffic is routing through JoesProxy, but HTTPS is still tunneled"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["Traffic is reaching JoesProxy, but HTTPS decryption is still unavailable or intentionally bypassed for the observed host."].waitForExistence(timeout: 2))
     }
@@ -37,7 +38,7 @@ final class SetupVerificationUITests: XCTestCase {
     func testInjectedTunneledVerificationStateTrafficHelpLinkOpensFocusedHelpHub() throws {
         let app = launchVerificationApp(verificationState: "tunneled")
 
-        XCTAssertTrue(identifiedElement("certificateSetupSheet", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(identifiedElement("guidedSetupRepairView", in: app).waitForExistence(timeout: 5))
 
         let helpButton = identifiedElement("setupVerificationTrafficHelpButton", in: app)
         XCTAssertTrue(helpButton.waitForExistence(timeout: 2))
@@ -53,7 +54,7 @@ final class SetupVerificationUITests: XCTestCase {
     func testInjectedNoTrafficObservedVerificationStateShowsRoutingGuidance() throws {
         let app = launchVerificationApp(verificationState: "noTrafficObserved")
 
-        XCTAssertTrue(identifiedElement("certificateSetupSheet", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(identifiedElement("guidedSetupRepairView", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Certificate: Ready for HTTPS inspection"].exists)
         XCTAssertTrue(app.staticTexts["No test traffic was observed yet"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["No routed session observed yet. Verify proxy host, port, browser or device proxy settings, and network reachability."].waitForExistence(timeout: 2))
@@ -66,7 +67,7 @@ final class SetupVerificationUITests: XCTestCase {
     func testInjectedProxyStoppedVerificationStateShowsStartProxyGuidance() throws {
         let app = launchVerificationApp(verificationState: "proxyStopped")
 
-        XCTAssertTrue(identifiedElement("certificateSetupSheet", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(identifiedElement("guidedSetupRepairView", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Start the proxy before running the test"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["The proxy listener is not running. Start it, then retry the verification flow."].waitForExistence(timeout: 2))
         XCTAssertTrue(identifiedElement("setupVerificationStartProxyButton", in: app).waitForExistence(timeout: 2))
@@ -76,15 +77,28 @@ final class SetupVerificationUITests: XCTestCase {
     private func launchVerificationApp(verificationState: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
+            "--ui-test-primary-screen",
             "\(Self.uiTestFixturePrefix)demo-sessions",
             "\(Self.uiTestCertificateStatePrefix)ready",
             "\(Self.uiTestVerificationStatePrefix)\(verificationState)",
             Self.uiTestOpenCertificateSetup
         ]
         app.launchJoesProxyForTesting()
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.staticTexts["Set up HTTPS on this Mac"].waitForExistence(timeout: 5))
+        sheet.buttons["guidedSetupNext"].click()
+        sheet.buttons["guidedSetupNext"].click()
         let history = app.disclosureTriangles["Earlier capture activity"].firstMatch
         XCTAssertTrue(history.waitForExistence(timeout: 5))
-        history.click()
+        let viewport = app.sheets.firstMatch.scrollViews.firstMatch
+        for _ in 0..<8 {
+            let label = history.frame
+            if viewport.frame.insetBy(dx: 0, dy: 8).contains(CGPoint(x: label.minX + 28, y: label.midY)) { break }
+            viewport.scroll(byDeltaX: 0, deltaY: viewport.frame.midY - label.midY)
+        }
+        history.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 28, dy: 0)).click()
+        XCTAssertTrue(app.buttons["testYourSetupButton"].waitForExistence(timeout: 3))
         return app
     }
 

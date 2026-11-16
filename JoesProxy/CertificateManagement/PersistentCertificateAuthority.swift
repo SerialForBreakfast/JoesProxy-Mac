@@ -403,7 +403,7 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
                 return .trustRequired(reason: "Open HTTPS Setup to unlock the existing Certificate Authority.")
             }
             logger.error("Trust flow: installed certificate(s) exist but no persisted root CA material exists for label '\(label, privacy: .public)'")
-            return .invalid(reason: "A '\(label)' certificate is installed, but JoesProxy has no matching persisted CA material. Reset Certificate State before creating a new root CA.")
+            return .invalid(reason: "A '\(label)' certificate is installed, but JoesProxy has no matching persisted CA material. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         }
 
         let matchingCertificates = installedCertificates.filter {
@@ -415,12 +415,12 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
 
         if matchingCertificates.isEmpty {
             logger.error("Trust flow: installed certificate(s) do not match persisted root CA for label '\(label, privacy: .public)'")
-            return .invalid(reason: "Installed '\(label)' certificates do not match the current JoesProxy root CA. Reset Certificate State to clean up stale certificates.")
+            return .invalid(reason: "Installed '\(label)' certificates do not match the current JoesProxy root CA. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         }
 
         if matchingCertificates.count > 1 || !staleCertificates.isEmpty {
             logger.error("Trust flow: duplicate or stale certificates detected for label '\(label, privacy: .public)' matching=\(matchingCertificates.count) stale=\(staleCertificates.count)")
-            return .invalid(reason: "Multiple '\(label)' certificates are installed. Reset Certificate State to remove stale or duplicate certificates.")
+            return .invalid(reason: "Multiple '\(label)' certificates are installed. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         }
 
         let status = trustEvaluator.installationStatus(for: matchingCertificates[0])
@@ -479,7 +479,7 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         guard exactMatches.count == 1, staleCertificates.isEmpty else {
             logger.error("Trust flow: readback certificate mismatch or duplicates after install for label '\(identity.label, privacy: .public)' matches=\(exactMatches.count) stale=\(staleCertificates.count)")
             throw CertificateAuthorityError.trustInstallationFailed(
-                "Installed certificates for '\(identity.label)' do not uniquely match the current JoesProxy root CA. Reset Certificate State to clear stale or duplicate certificates."
+                "Installed certificates for '\(identity.label)' do not uniquely match the current JoesProxy root CA. Compare the certificate fingerprints in Keychain Access before choosing which root to retire."
             )
         }
 
@@ -494,26 +494,14 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
             return
         }
 
-        logger.info("Trust flow: deleting \(installedCertificates.count) installed certificate(s) for label '\(label, privacy: .public)'")
-        for certificate in installedCertificates {
-            try keychainHelper.deleteCertificate(certificate, label: label)
+        guard let identity = try certificateStore.readRootBeforeCreation(label: label) else {
+            throw CertificateAuthorityError.trustRemovalFailed("Cannot identify the installed root. Compare fingerprints in Keychain Access before removing anything.")
         }
-        logger.info("Trust flow: keychain delete completed for label '\(label, privacy: .public)', verifying removal")
-
-        if !(try keychainHelper.retrieveCertificates(withLabel: label)).isEmpty {
-            logger.error("Trust flow: certificate still visible after removal for label '\(label, privacy: .public)'")
-            throw CertificateAuthorityError.trustRemovalFailed(
-                "One or more '\(label)' certificates still appear in the keychain after removal was requested."
-            )
-        }
-
-        logger.info("Trust flow: removal verification succeeded for label '\(label, privacy: .public)'")
+        let fingerprint = CertificateIdentityExtraction.sha256Fingerprint(from: identity.certificateData)
+        try removeInstalledCertificate(matchingFingerprint: fingerprint, label: label)
     }
 
-    /// Removes only installed trust certificates whose DER SHA-256 matches `fingerprint`.
-    ///
-    /// Unlike ``removeCertificate(label:)``, this never deletes unrelated certificates that share
-    /// the generic JoesProxy label (e.g. another Mac's still-valid root).
+    /// Removes only installed trust certificates whose DER SHA-256 matches the supplied fingerprint.
     @discardableResult
     func removeInstalledCertificate(matchingFingerprint fingerprint: String, label: String) throws -> Int {
         let normalized = fingerprint.replacingOccurrences(of: ":", with: "").lowercased()

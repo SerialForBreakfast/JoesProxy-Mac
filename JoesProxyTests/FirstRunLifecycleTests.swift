@@ -10,6 +10,8 @@ final class FirstRunLifecycleTests: XCTestCase {
 
         presentationState.presentFirstRunPathChoiceIfNeeded()
         presentationState.chooseStartFirstCapture()
+        presentationState.presentPendingSetupAfterDismissal()
+        XCTAssertEqual(presentationState.guidedSetupContext, GuidedSetupContext(section: .proxy, mode: .firstRun))
 
         XCTAssertEqual(configuration.onboardingProgressRecord.lifecycle, .inProgress)
         XCTAssertEqual(configuration.preferredWorkingView, .inspector)
@@ -17,6 +19,18 @@ final class FirstRunLifecycleTests: XCTestCase {
         XCTAssertTrue(presentationState.showsFirstRunSetupChip)
         XCTAssertFalse(configuration.hasCompletedInitialGuidedSetupPresentation)
         XCTAssertFalse(presentationState.isFirstRunPathChoicePresented)
+    }
+
+    func testFirstRunCertificateShortcutReturnsToPathChoiceWithoutCompletingOnboarding() {
+        let state = AppPresentationState(configuration: makeConfiguration())
+        state.presentFirstRunPathChoiceIfNeeded()
+        state.openSetupFromFirstRun(section: .certificate)
+        state.presentPendingSetupAfterDismissal()
+        XCTAssertEqual(state.guidedSetupContext, GuidedSetupContext(section: .certificate, mode: .firstRun))
+        state.closeGuidedSetup()
+        state.guidedSetupDidDismiss()
+        XCTAssertTrue(state.isFirstRunPathChoicePresented)
+        XCTAssertEqual(state.onboardingLifecycle, .notStarted)
     }
 
     func testConnectAnAgentWritesInProgressAndCompactPreference() {

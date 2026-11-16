@@ -443,7 +443,8 @@ struct JoesProxyApp: App {
                 )
                     .environment(\.appTextScale, viewModel.appTextSize.fontScale)
             }
-            .sheet(isPresented: $presentationState.isFirstRunPathChoicePresented) {
+            .sheet(isPresented: $presentationState.isFirstRunPathChoicePresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 FirstRunPathChoiceView(
                     viewModel: viewModel,
                     accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: coordinator.selfValidationCoordinator),
@@ -1175,7 +1176,7 @@ struct JoesProxyApp: App {
     /// are both requested, ``LaunchInterruptionArbitrator`` keeps a single primary surface (BA-2).
     @MainActor
     private func applyUITestPresentationStateIfNeeded(using configuration: UITestLaunchConfiguration) {
-        if configuration.opensCertificateSetup, !presentationState.isCertificateSetupPresented {
+        if configuration.opensCertificateSetup, presentationState.guidedSetupContext == nil {
             presentationState.presentCertificateSetup()
         }
 

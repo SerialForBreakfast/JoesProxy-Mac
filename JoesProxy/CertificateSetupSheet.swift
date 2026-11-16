@@ -72,251 +72,22 @@ struct KeychainSetupExample: View {
     }
 }
 
-struct CertificateSetupSheet: View {
-    @EnvironmentObject private var presentationState: AppPresentationState
-
+struct SetupCaptureHistory: View {
     @ObservedObject var viewModel: ProxyViewModel
-    @Binding var isPresented: Bool
-    @State private var isDiagnosticsExpanded = false
-    @State private var renewalVerificationFingerprint = ""
+    let openHelpTopic: (MainWindowHelpTopic) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-            Text(viewModel.certificateSetupSheetTitle)
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            Text(viewModel.certificateSectionTitle)
-                .font(.headline)
-
-            Text(viewModel.certificateSetupSheetMessage)
-                .foregroundStyle(.secondary)
-
-            if viewModel.certificateRenewalNeedsUnlock {
-                Text("Pending certificate renewal").font(.headline)
-                Text(viewModel.certificateUnlockWarning)
-            }
-            if viewModel.certificateAuthorityNeedsUnlock || viewModel.certificateRenewalNeedsUnlock {
-                KeychainSetupExample(step: .unlock)
-                Button("Unlock Certificate Authority", action: viewModel.unlockCertificateAuthority)
-                    .disabled(viewModel.isUnlockingCertificateAuthority)
-                if let message = viewModel.certificateUnlockMessage { Text(message) }
-            }
-
-            CertificateIdentityCard(
-                needsUnlock: viewModel.certificateAuthorityNeedsUnlock,
-                metadata: viewModel.certificateIdentity,
-                identityStatus: viewModel.certificateIdentityStatus,
-                fingerprint: viewModel.currentCertificateFingerprint,
-                serialNumber: viewModel.certificateIdentity?.certificateSerialNumber
-                    ?? viewModel.rootCertificate.flatMap {
-                        CertificateIdentityExtraction.serialNumber(from: $0.certificateData)
-                    },
-                notBefore: viewModel.certificateIdentity?.notBefore
-                    ?? viewModel.rootCertificate.flatMap {
-                        CertificateIdentityExtraction.notBefore(from: $0.certificateData)
-                    },
-                notAfter: viewModel.certificateIdentity?.notAfter
-                    ?? viewModel.rootCertificate.flatMap {
-                        CertificateIdentityExtraction.notAfter(from: $0.certificateData)
-                    },
-                appTextScale: 1.0,
-                onCopyFingerprint: { viewModel.copyCertificateFingerprint() },
-                onCopyShortCode: { viewModel.copyCertificateShortCode() },
-                onAdoptLegacy: viewModel.certificateIdentityStatus == .legacyIdentityUnknown
-                    ? { viewModel.adoptLegacyCertificateIdentity() }
-                    : nil,
-                onNicknameChange: viewModel.certificateIdentity != nil
-                    ? { viewModel.updateCertificateIdentityNickname($0) }
-                    : nil
-            )
-
-            if !viewModel.certificateAuthorityNeedsUnlock, let actionTitle = viewModel.certificatePrimaryActionTitle {
-                Button(actionTitle) {
-                    viewModel.performPrimaryCertificateAction()
-                }
-
-                Text(viewModel.certificatePrimaryActionDetail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if viewModel.shouldShowTrustInstructions {
-                GroupBox("Trust In Keychain Access") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        OpenKeychainAccessButton()
-                        ForEach(Array(viewModel.certificateTrustInstructions.enumerated()), id: \.offset) { index, step in
-                            Text("\(index + 1). \(step)")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-
-                        Text(viewModel.certificateTrustSuccessText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        KeychainSetupExample(step: .findCertificate)
-                        KeychainSetupExample(step: .trustCertificate)
-
-                        Text(viewModel.certificateRefreshHelpText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Button("Why trust is required") {
-                            openHelpTopic(.certificateSetup)
-                        }
-                        .buttonStyle(.link)
-
-                        if viewModel.certificateWorkflowState == .installedTrustRequired {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text("Waiting for macOS to report the trust change.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.top, 4)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        DisclosureGroup("Earlier capture activity") {
+            VStack(alignment: .leading, spacing: 10) {
+                Button("Review captured traffic", action: viewModel.runSetupVerification)
+                    .accessibilityIdentifier("testYourSetupButton")
+                if let state = viewModel.setupVerificationState {
+                    setupVerificationCard(for: state)
+                    setupVerificationActions(for: state)
+                    setupVerificationHelpLink(for: state)
                 }
             }
-
-            if viewModel.shouldShowSetupVerificationSection {
-                GroupBox("Verify Capture") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SetupLiveChecks(model: viewModel)
-                        DisclosureGroup("Earlier capture activity") {
-
-                        Button(viewModel.setupVerificationButtonTitle) {
-                            viewModel.runSetupVerification()
-                        }
-                        .accessibilityIdentifier("testYourSetupButton")
-
-                        if let setupVerificationState = viewModel.setupVerificationState {
-                            setupVerificationCard(for: setupVerificationState)
-                            setupVerificationActions(for: setupVerificationState)
-                            setupVerificationHelpLink(for: setupVerificationState)
-                        }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-
-            DisclosureGroup("Diagnostics", isExpanded: $isDiagnosticsExpanded) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(viewModel.certificateDiagnosticsText)
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Divider()
-
-                    HStack {
-                        Button("Refresh Status") {
-                            viewModel.refreshCertificateStatus()
-                        }
-
-                        Button("Remove Installed Certificate") {
-                            viewModel.removeRootCertificate()
-                        }
-                    }
-
-                    if viewModel.canResetCertificateState && viewModel.certificateWorkflowState != .needsCleanup {
-                        Button("Reset Certificate State") {
-                            viewModel.confirmResetCertificateState()
-                        }
-                        .foregroundStyle(.red)
-                    }
-
-                    Divider()
-
-                    Text("Renewal & shared root")
-                        .font(.caption.weight(.semibold))
-
-                    if let pending = viewModel.pendingCertificateRenewal {
-                        Text("Pending renewal: \(pending.shortCode) — \(pending.certificateSHA256Fingerprint.prefix(16))…")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .accessibilityIdentifier("certificatePendingRenewalSummary")
-
-                        TextField("Verification fingerprint (pending root)", text: $renewalVerificationFingerprint)
-                            .textFieldStyle(.roundedBorder)
-                            .accessibilityIdentifier("certificateRenewalVerificationField")
-
-                        HStack {
-                            Button("Promote Renewal") {
-                                promoteRenewal(pendingFingerprint: pending.certificateSHA256Fingerprint)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(renewalVerificationFingerprint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .accessibilityIdentifier("certificatePromoteRenewalButton")
-
-                            Button("Cancel Pending Renewal") {
-                                do {
-                                    try viewModel.cancelCertificateRenewal()
-                                    renewalVerificationFingerprint = ""
-                                } catch {
-                                    viewModel.presentCertificateIdentityError(
-                                        title: "Could Not Cancel Renewal",
-                                        message: error.localizedDescription
-                                    )
-                                }
-                            }
-                            .accessibilityIdentifier("certificateCancelRenewalButton")
-                        }
-                    }
-
-                    HStack {
-                        Button("Prepare Renewal Root") {
-                            do {
-                                _ = try viewModel.prepareCertificateRenewal()
-                            } catch {
-                                viewModel.presentCertificateIdentityError(
-                                    title: "Could Not Prepare Renewal",
-                                    message: error.localizedDescription
-                                )
-                            }
-                        }
-                        .disabled(viewModel.pendingCertificateRenewal != nil)
-                        .accessibilityIdentifier("certificatePrepareRenewalButton")
-
-                        Button("Export Shared Root…") {
-                            exportSharedRoot()
-                        }
-
-                        Button("Import Shared Root…") {
-                            importSharedRoot()
-                        }
-                    }
-                }
-                .padding(.top, 4)
-            }
-
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Divider()
-
-            HStack {
-                Spacer()
-
-                Button("Close") {
-                    isPresented = false
-                }
-                .keyboardShortcut(.cancelAction)
-            }
-            .padding(20)
         }
-        .frame(minWidth: 520, maxWidth: .infinity, minHeight: 420, maxHeight: .infinity)
-        .joesProxyResizableWorkspaceSheet(minWidth: 520, minHeight: 420)
-        .accessibilityIdentifier("certificateSetupSheet")
-        .certificateTrustAlert(viewModel)
     }
 
     private func setupVerificationCard(for state: ProxyViewModel.SetupVerificationState) -> some View {
@@ -420,14 +191,134 @@ struct CertificateSetupSheet: View {
         }
     }
 
-    private func openHelpTopic(_ topic: MainWindowHelpTopic) {
-        isPresented = false
-        presentationState.presentHelpHub(topic: topic)
-    }
-
     private func copyTextToPasteboard(_ value: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
+    }
+
+}
+
+struct AdvancedCertificateControls: View {
+    @ObservedObject var viewModel: ProxyViewModel
+    @Environment(\.appTextScale) private var appTextScale
+    @State private var renewalVerificationFingerprint = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            CertificateIdentityCard(
+                needsUnlock: viewModel.certificateAuthorityNeedsUnlock,
+                metadata: viewModel.certificateIdentity,
+                identityStatus: viewModel.certificateIdentityStatus,
+                fingerprint: viewModel.currentCertificateFingerprint,
+                serialNumber: viewModel.certificateIdentity?.certificateSerialNumber
+                    ?? viewModel.rootCertificate.flatMap {
+                        CertificateIdentityExtraction.serialNumber(from: $0.certificateData)
+                    },
+                notBefore: viewModel.certificateIdentity?.notBefore
+                    ?? viewModel.rootCertificate.flatMap {
+                        CertificateIdentityExtraction.notBefore(from: $0.certificateData)
+                    },
+                notAfter: viewModel.certificateIdentity?.notAfter
+                    ?? viewModel.rootCertificate.flatMap {
+                        CertificateIdentityExtraction.notAfter(from: $0.certificateData)
+                    },
+                appTextScale: appTextScale,
+                onCopyFingerprint: { viewModel.copyCertificateFingerprint() },
+                onCopyShortCode: { viewModel.copyCertificateShortCode() },
+                onAdoptLegacy: viewModel.certificateIdentityStatus == .legacyIdentityUnknown
+                    ? { viewModel.adoptLegacyCertificateIdentity() }
+                    : nil,
+                onNicknameChange: viewModel.certificateIdentity != nil
+                    ? { viewModel.updateCertificateIdentityNickname($0) }
+                    : nil
+            )
+
+            Text(viewModel.certificateDiagnosticsText)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+
+            HStack {
+                Button("Refresh Status") {
+                    viewModel.refreshCertificateStatus()
+                }
+
+                Button("Remove Installed Certificate") {
+                    viewModel.removeRootCertificate()
+                }
+            }
+
+            if viewModel.canResetCertificateState && viewModel.certificateWorkflowState != .needsCleanup {
+                Button("Reset Certificate State") {
+                    viewModel.confirmResetCertificateState()
+                }
+                .foregroundStyle(.red)
+            }
+
+            Divider()
+
+            Text("Renewal & shared root")
+                .font(.caption.weight(.semibold))
+
+            if let pending = viewModel.pendingCertificateRenewal {
+                Text("Pending renewal: \(pending.shortCode) — \(pending.certificateSHA256Fingerprint.prefix(16))…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("certificatePendingRenewalSummary")
+
+                TextField("Verification fingerprint (pending root)", text: $renewalVerificationFingerprint)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("certificateRenewalVerificationField")
+
+                HStack {
+                    Button("Promote Renewal") {
+                        promoteRenewal(pendingFingerprint: pending.certificateSHA256Fingerprint)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(renewalVerificationFingerprint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("certificatePromoteRenewalButton")
+
+                    Button("Cancel Pending Renewal") {
+                        do {
+                            try viewModel.cancelCertificateRenewal()
+                            renewalVerificationFingerprint = ""
+                        } catch {
+                            viewModel.presentCertificateIdentityError(
+                                title: "Could Not Cancel Renewal",
+                                message: error.localizedDescription
+                            )
+                        }
+                    }
+                    .accessibilityIdentifier("certificateCancelRenewalButton")
+                }
+            }
+
+            HStack {
+                Button("Prepare Renewal Root") {
+                    do {
+                        _ = try viewModel.prepareCertificateRenewal()
+                    } catch {
+                        viewModel.presentCertificateIdentityError(
+                            title: "Could Not Prepare Renewal",
+                            message: error.localizedDescription
+                        )
+                    }
+                }
+                .disabled(viewModel.pendingCertificateRenewal != nil)
+                .accessibilityIdentifier("certificatePrepareRenewalButton")
+
+                Button("Export Shared Root…") {
+                    exportSharedRoot()
+                }
+
+                Button("Import Shared Root…") {
+                    importSharedRoot()
+                }
+            }
+        }
     }
 
     private func promoteRenewal(pendingFingerprint: String) {
@@ -604,14 +495,7 @@ struct CertificateApprovalChecklist: View {
     }
 
     private func step(_ title: String, done: Bool) -> some View {
-        Label {
-            Text(title)
-        } icon: {
-            Image(systemName: done ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .foregroundStyle(done ? Color.green : .red)
-        }
-            .font(.headline)
-            .accessibilityValue(done ? "Complete" : "Not verified")
+        SetupStep(title, done ? .complete : .needsAttention)
     }
 }
 

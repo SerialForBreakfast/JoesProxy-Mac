@@ -155,7 +155,7 @@ final class PersistentTrustInstallerIsolatedIntegrationTests: XCTestCase {
 
         XCTAssertEqual(
             installer.installationStatus(for: label),
-            .invalid(reason: "Installed '\(label)' certificates do not match the current JoesProxy root CA. Reset Certificate State to clean up stale certificates.")
+            .invalid(reason: "Installed '\(label)' certificates do not match the current JoesProxy root CA. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         )
     }
 }

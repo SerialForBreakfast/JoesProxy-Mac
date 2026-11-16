@@ -1487,13 +1487,14 @@ final class ProxyViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testTransitionFromGuidedSetupPresentsCertificateSetup() {
+    func testHelpCertificateShortcutOpensGuidedCertificatePage() {
         let presentationState = AppPresentationState()
-        presentationState.presentGuidedSetup(section: .certificate, mode: .replay)
+        presentationState.presentHelpHub()
 
-        presentationState.transitionFromGuidedSetup(to: .certificateSetup)
+        presentationState.transitionFromHelpHub(to: .certificateSetup)
 
         XCTAssertNil(presentationState.guidedSetupContext)
+        XCTAssertFalse(presentationState.isHelpHubPresented)
 
         let expectation = expectation(description: "Guided setup transition completes")
         DispatchQueue.main.async {
@@ -1501,7 +1502,7 @@ final class ProxyViewModelTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 5)
 
-        XCTAssertTrue(presentationState.isCertificateSetupPresented)
+        XCTAssertEqual(presentationState.guidedSetupContext, GuidedSetupContext(section: .certificate, mode: .replay))
     }
 
     @MainActor
@@ -4100,7 +4101,7 @@ final class ProxyViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testResetCertificateStateReportsPartialCleanupWhenManualWorkRemains() throws {
+    func testResetCertificateStateRetainsSigningIdentityWhenRemovalFails() throws {
         let identity = try makeRootIdentity(label: "State-Reset")
         let certificateAuthority = FakeCertificateAuthority(currentIdentity: identity, createdIdentity: identity)
         let certificateStore = MutableCertificateStore(identity: identity)
@@ -4116,9 +4117,9 @@ final class ProxyViewModelTests: XCTestCase {
 
         viewModel.resetCertificateState()
 
-        XCTAssertEqual(viewModel.trustAlertContext?.title, "Manual Cleanup Still Required")
-        XCTAssertTrue(viewModel.lastErrorMessage?.contains("manual cleanup still required") == true)
-        XCTAssertTrue(viewModel.lastErrorMessage?.contains("Installed certificate cleanup: Keychain removal failed") == true)
+        XCTAssertEqual(viewModel.trustAlertContext?.title, "Reset Incomplete")
+        XCTAssertTrue(viewModel.lastErrorMessage?.contains("Keychain removal failed") == true)
+        XCTAssertEqual(certificateStore.identity?.certificateData, identity.certificateData)
     }
 
     @MainActor

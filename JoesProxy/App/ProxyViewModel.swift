@@ -323,14 +323,14 @@ final class ProxyViewModel: ObservableObject {
     @Published private(set) var setupCheckResults: [SetupTrafficProbe.Kind: SetupTrafficProbe.Outcome] = [:]
     @Published private(set) var runningSetupChecks = false
 
-    func runLiveSetupChecks() {
+    func runLiveSetupChecks(includeHTTPS: Bool) {
         guard !runningSetupChecks, case .running(let port) = proxyState else { return }
         runningSetupChecks = true
         setupCheckResults = [:]
         let nonce = UUID()
         Task {
             defer { runningSetupChecks = false }
-            for kind in SetupTrafficProbe.Kind.allCases {
+            for kind in includeHTTPS ? SetupTrafficProbe.Kind.allCases : [.http] {
                 guard proxyState == .running(port: port) else {
                     setupCheckResults[kind] = .failed("Listener stopped or changed. Run again.")
                     continue
@@ -1206,36 +1206,6 @@ final class ProxyViewModel: ObservableObject {
         httpsProxyMode == .intercepting ? "HTTPS Setup" : "Certificate Setup"
     }
 
-    var certificateSetupSheetTitle: String {
-        if certificateAuthorityNeedsUnlock { return "Unlock Certificate Authority" }
-        switch certificateWorkflowState {
-        case .notSetUp:
-            return "Set Up HTTPS Inspection"
-        case .installedTrustRequired:
-            return "Finish HTTPS Trust Setup"
-        case .ready:
-            return "HTTPS Setup Complete"
-        case .needsCleanup:
-            return "Recover Certificate Setup"
-        }
-    }
-
-    var certificateSetupSheetMessage: String {
-        if certificateAuthorityNeedsUnlock { return certificateUnlockWarning }
-        switch certificateWorkflowState {
-        case .notSetUp:
-            if rootCertificate == nil {
-                return "JoesProxy needs its own root certificate before it can inspect HTTPS traffic."
-            }
-            return "The JoesProxy root certificate is ready. Install it in your login keychain to continue."
-        case .installedTrustRequired:
-            return "The JoesProxy root certificate is installed. Trust it in Keychain Access, then come back and check again."
-        case .ready:
-            return "JoesProxy is ready to inspect HTTPS traffic on this Mac."
-        case .needsCleanup:
-            return "The current certificate state is stale or incomplete. Reset Certificate State before trying setup again."
-        }
-    }
 
     var certificatePrimaryActionTitle: String? {
         if certificateAuthorityNeedsUnlock { return "Unlock Certificate Authority" }
@@ -1268,21 +1238,6 @@ final class ProxyViewModel: ObservableObject {
         }
     }
 
-    var shouldShowTrustInstructions: Bool {
-        certificateWorkflowState == .installedTrustRequired || certificateWorkflowState == .ready
-    }
-
-    var shouldShowSetupVerificationSection: Bool {
-        certificateWorkflowState == .ready || setupVerificationState != nil
-    }
-
-    var setupVerificationIntroText: String {
-        "Use Verify Capture after routing a client or diagnostic command through the proxy to confirm whether HTTPS traffic is inspected, tunneled, or not observed yet."
-    }
-
-    var setupVerificationButtonTitle: String {
-        "Verify Capture"
-    }
 
     var setupVerificationStateTint: String {
         switch setupVerificationState {
@@ -4160,7 +4115,7 @@ final class ProxyViewModel: ObservableObject {
             logger.error("Trust flow: install root CA failed for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
             presentTrustFailure(
                 title: "Install Failed",
-                message: "\(error.localizedDescription)\n\nReset Certificate State to clear JoesProxy's stored CA material and remove any conflicting JoesProxy root certificates.",
+                message: "\(error.localizedDescription)\n\nReset Certificate State retires the saved identity and its matching installed root.",
                 suggestsReset: true
             )
             refreshCertificateStatus()
@@ -4178,7 +4133,7 @@ final class ProxyViewModel: ObservableObject {
             logger.error("Trust flow: remove root CA failed for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
             presentTrustFailure(
                 title: "Certificate Removal Failed",
-                message: "\(error.localizedDescription)\n\nReset Certificate State if you want JoesProxy to clear stored CA material too. If the certificate still appears in Keychain Access, remove it manually.",
+                message: "\(error.localizedDescription)\n\nRefresh status and compare the root fingerprint in Keychain Access before retrying.",
                 suggestsReset: true
             )
             refreshCertificateStatus()

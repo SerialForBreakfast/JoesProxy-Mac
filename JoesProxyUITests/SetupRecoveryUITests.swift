@@ -143,6 +143,46 @@ final class SetupRecoveryUITests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureGuidedSetupPages() async throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-primary-screen", "--ui-test-capture-setup-pages",
+                               "\(Self.uiTestCertificateStatePrefix)ready", "--ui-test-verification-state=inspected",
+                               "\(Self.uiTestGuidedSetupSectionPrefix)certificate", "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+        for (title, heading, name) in [
+            ("Certificate", "Set up HTTPS on this Mac", "certificate"),
+            ("Proxy", "Start the proxy", "proxy"),
+            ("Verify Capture", "Verify a live request", "verifyCapture"),
+            ("Devices", "Connect a device (optional)", "devices"),
+            ("MCP/CLI", "Connect a command-line client (optional)", "mcpCLI")
+        ] {
+            if name == "mcpCLI" {
+                // macOS fits the sheet when it opens. Give the longer client checklist its own opening size.
+                app.terminate()
+                app.launchArguments.removeAll { $0.hasPrefix(Self.uiTestGuidedSetupSectionPrefix) }
+                app.launchArguments.append("\(Self.uiTestGuidedSetupSectionPrefix)mcpCLI")
+                app.launchArguments.append("--ui-test-mcp-status=running-clean")
+                app.launch()
+            } else if title != "Certificate" {
+                let menu = sheet.popUpButtons["guidedSetupSectionPicker"]
+                if menu.exists {
+                    menu.click()
+                    app.menuItems[title].click()
+                } else {
+                    sheet.radioButtons[title].click()
+                }
+            }
+            XCTAssertTrue(sheet.staticTexts[heading].waitForExistence(timeout: 3))
+            XCTAssertTrue(sheet.buttons["guidedSetupClose"].isHittable)
+            let receipt = identifiedElement("setupScreenshotReceipt-\(name)", in: app)
+            XCTAssertTrue(receipt.waitForExistence(timeout: 5), "Screenshot \(name)")
+        }
+    }
+
+    @MainActor
     func testCompactSetupKeepsCloseReachableOnEveryPage() throws {
         let app = XCUIApplication()
         app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-compact-setup-sheet",
@@ -264,9 +304,31 @@ final class SetupRecoveryUITests: XCTestCase {
     }
 
     @MainActor
+    func testCertificateShortcutExposesAdvancedManagementInGuidedSetup() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-primary-screen",
+                               "\(Self.uiTestCertificateStatePrefix)ready", "--ui-test-open-certificate-setup"]
+        app.launchJoesProxyForTesting()
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.staticTexts["Set up HTTPS on this Mac"].waitForExistence(timeout: 5))
+        let advanced = sheet.disclosureTriangles["Advanced certificate settings"]
+        XCTAssertTrue(advanced.exists)
+        XCTAssertFalse(sheet.buttons["certificatePrepareRenewalButton"].exists)
+        advanced.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 28, dy: 0)).click()
+        XCTAssertTrue(sheet.buttons["certificatePrepareRenewalButton"].waitForExistence(timeout: 3))
+        XCTAssertTrue(sheet.buttons["Export Shared Root…"].exists)
+        XCTAssertTrue(sheet.buttons["Import Shared Root…"].exists)
+        XCTAssertTrue(sheet.buttons["Remove Installed Certificate"].exists)
+    }
+
+    @MainActor
     func testFirstRunPathChoiceThenStartFirstCaptureShowsInspectorCompanion() throws {
         let app = XCUIApplication()
         app.launchArguments = [
+            "--ui-test-primary-screen",
+            "--ui-test-certificate-state=notSetUp",
+            "--ui-test-verification-state=noTrafficObserved",
             "\(Self.uiTestFixturePrefix)demo-sessions",
             "\(Self.uiTestGuidedSetupModePrefix)first-run"
         ]
@@ -280,6 +342,13 @@ final class SetupRecoveryUITests: XCTestCase {
         XCTAssertFalse(identifiedElement("guidedSetupRepairView", in: app).exists)
 
         identifiedElement("startFirstCaptureButton", in: app).click()
+
+        let setupSheet = app.sheets.firstMatch
+        XCTAssertTrue(setupSheet.staticTexts["Start the proxy"].waitForExistence(timeout: 5))
+        setupSheet.buttons["guidedSetupNext"].click()
+        XCTAssertTrue(setupSheet.staticTexts["Verify a live request"].waitForExistence(timeout: 3))
+        XCTAssertEqual(setupSheet.buttons["guidedSetupRunLiveChecks"].label, "Run HTTP check")
+        setupSheet.buttons["guidedSetupFinish"].click()
 
         XCTAssertTrue(app.textFields["sessionSearchField"].waitForExistence(timeout: 5))
         let setupSummary = app.buttons["workspaceSetupSummary"]

@@ -16,6 +16,18 @@ Use [the workspace](workspace.png) for the joesproxy.com landing page: it shows 
 
 ## Source and scope
 
-The six product images are the original, reviewed October 28 synthetic UI-test captures. The three Setup & Repair images are sheet-only screenshots from the final November 14 Maximum-mini approval-fixture run (`SetupRecoveryUITests`). The fingerprint in the trust example belongs to the test fixture; it is not a value users should copy or expect to match.
+### Guided Setup & Repair
+
+These November 15 screenshots show the consolidated flow in the isolated macOS app, in dark appearance at standard text size. The proxy and certificate states come from synthetic fixtures. Verify Capture shows the controls before a live check has run.
+
+| Page | What to look for |
+| --- | --- |
+| [Certificate](setup-certificate.png) | Signing identity, key access, installation, and macOS trust are ready. Advanced certificate settings are collapsed. |
+| [Proxy](setup-proxy.png) | The fixture listener uses port 9090. System routing is unchecked. |
+| [Verify Capture](setup-verify-capture.png) | HTTP routing and HTTPS inspection have separate results. Users can finish setup here. |
+| [Devices](setup-devices.png) | The iOS instructions show the example host and port, certificate guide, and traffic checks. |
+| [MCP/CLI](setup-mcp-cli.png) | The optional client setup covers service startup, enrollment, credential access, verification, and approval requests. |
+
+The five page screenshots come from `SetupRecoveryUITests/testCaptureGuidedSetupPages`. The six workspace and feature images are the original October 28 synthetic UI-test captures. The Create, Unlock, and Trust examples come from the November 14 Maximum-mini approval-fixture run. The fingerprint in the Trust example belongs to that fixture.
 
 These are illustrations, not production traffic, playback evidence, or performance benchmarks. Keep one canonical file per view or distinct workflow state; link to it rather than copying it into another gallery. Staging these assets does not publish the website or approve the release.

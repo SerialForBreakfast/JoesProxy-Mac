@@ -205,13 +205,13 @@ struct ContentView: View {
             #if DEBUG
             .background(UITestPrimaryScreenWindowConfigurator().frame(width: 0, height: 0))
             #endif
-            .sheet(item: $presentationState.guidedSetupContext) { context in
+            .sheet(item: $presentationState.guidedSetupContext, onDismiss: presentationState.guidedSetupDidDismiss) { context in
                 GuidedSetupRepairView(
                     isPresented: Binding(
                         get: { presentationState.guidedSetupContext != nil },
                         set: { isPresented in
                             if !isPresented {
-                                presentationState.dismissGuidedSetup()
+                                presentationState.closeGuidedSetup()
                             }
                         }
                     ),
@@ -219,10 +219,6 @@ struct ContentView: View {
                     certificateModel: viewModel,
                     accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: selfValidationCoordinator),
                     setupChecklistItems: viewModel.guidedSetupChecklistItems,
-                    certificateSetupTitle: viewModel.certificateSetupEntryPointTitle,
-                    openCertificateSetup: {
-                        presentationState.transitionFromGuidedSetup(to: .certificateSetup)
-                    },
                     openMacOSGuide: {
                         presentationState.transitionFromGuidedSetup(to: .macOSSetup)
                     },
@@ -294,25 +290,22 @@ struct ContentView: View {
                     }
                 )
             }
-            .sheet(isPresented: $presentationState.isCertificateSetupPresented) {
-                CertificateSetupSheet(
-                    viewModel: viewModel,
-                    isPresented: $presentationState.isCertificateSetupPresented
-                )
-            }
-            .sheet(isPresented: $presentationState.isIOSSetupWalkthroughPresented) {
+            .sheet(isPresented: $presentationState.isIOSSetupWalkthroughPresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 iOSSetupWalkthroughView(
                     isPresented: $presentationState.isIOSSetupWalkthroughPresented,
                     viewModel: viewModel
                 )
             }
-            .sheet(isPresented: $presentationState.isMacOSSetupWalkthroughPresented) {
+            .sheet(isPresented: $presentationState.isMacOSSetupWalkthroughPresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 macOSSetupWalkthroughView(
                     isPresented: $presentationState.isMacOSSetupWalkthroughPresented,
                     viewModel: viewModel
                 )
             }
-            .sheet(isPresented: $presentationState.isTVOSSetupWalkthroughPresented) {
+            .sheet(isPresented: $presentationState.isTVOSSetupWalkthroughPresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 TVOSSetupWalkthroughView(
                     isPresented: $presentationState.isTVOSSetupWalkthroughPresented,
                     viewModel: viewModel
@@ -599,7 +592,7 @@ struct ContentView: View {
                     )
                 }
             }
-            .certificateTrustAlert(viewModel, active: !presentationState.isCertificateSetupPresented && !presentationState.isMacOSSetupWalkthroughPresented && presentationState.guidedSetupContext == nil)
+            .certificateTrustAlert(viewModel, active: !presentationState.isMacOSSetupWalkthroughPresented && presentationState.guidedSetupContext == nil)
             .background {
                 Color.clear.alert(item: $exportAlert) { context in
                     Alert(title: Text(context.title), message: Text(context.message), dismissButton: .default(Text("OK")))
@@ -650,9 +643,6 @@ struct ContentView: View {
                 if newValue == .active {
                     viewModel.scheduleCertificateStatusRefresh()
                 }
-            }
-            .onChange(of: presentationState.isCertificateSetupPresented) { _, isPresented in
-                log("Certificate setup sheet presented = \(isPresented)")
             }
             .onChange(of: presentationState.isHelpHubPresented) { _, isPresented in
                 log("Help hub presented = \(isPresented)")

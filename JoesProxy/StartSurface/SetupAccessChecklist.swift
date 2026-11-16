@@ -64,7 +64,7 @@ struct SetupAccessChecklist: View {
             if let preferenceMessage { Text(preferenceMessage) }
             if scope != .proxy {
                 Divider()
-                Text("1. Start the MCP service").appFont(.headline, scale: textScale)
+                SetupStep("1. Start the MCP service", serviceStatus)
                 switch controller.state {
                 case .stopped:
                     Button("Start MCP on this Mac") {
@@ -72,20 +72,18 @@ struct SetupAccessChecklist: View {
                         Task { await controller.start() }
                     }
                 case .starting: Text("Starting MCP…")
-                case .running(let port, _): Label { Text("MCP listening on port \(String(port))") } icon: {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                }
+                case .running(let port, _): Text("MCP listening on port \(String(port))")
                 case .failed(let message), .degraded(let message):
                     Label { Text(message) } icon: {
                         Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
                     }
                     Button("Open MCP Management to repair…") { managementDestination = .overview }
                 }
-                Text("2. Enroll your client").appFont(.headline, scale: textScale)
+                SetupStep("2. Enroll your client", enrolled.isEmpty ? .pending : .complete)
                 Text("For Terminal, choose JoesProxy CLI. Enter its credential only at the local login prompt.")
-                if controller.enrolledClients.isEmpty { Label("No clients enrolled", systemImage: "circle") }
+                if enrolled.isEmpty { Text("No active client enrollment") }
                 Button("Enroll or manage an MCP / CLI client…") { managementDestination = .clients }
-                Text("3. Allow access to this client’s saved credential").appFont(.headline, scale: textScale)
+                SetupStep("3. Allow access to the enrolled clients’ credentials", credentialStatus)
                 if controller.enrolledClients.isEmpty { Text("Enroll a client first. Each locked verifier has its own Unlock button.") }
                 ForEach(controller.enrolledClients) { client in
                     GroupBox(client.displayName) {
@@ -120,7 +118,7 @@ struct SetupAccessChecklist: View {
                     }
                 }
                 if let credentialError { Text(credentialError) }
-                Text("4. Authorize the CLI in Terminal and verify the connection").appFont(.headline, scale: textScale)
+                SetupStep("4. Authorize the CLI in Terminal and verify the connection", .manual)
                 Text("Run joesproxyctl auth status to check local login, then joesproxyctl status to confirm the service accepts this client.")
                 if case .running(_, let endpoint) = controller.state {
                     Button("Copy CLI verification commands") {
@@ -128,7 +126,7 @@ struct SetupAccessChecklist: View {
                         NSPasteboard.general.setString(MCPClientConfigSnippetBuilder.cliVerificationCommands(endpointURL: endpoint), forType: .string)
                     }
                 }
-                Text("5. Review actions when requested").appFont(.headline, scale: textScale)
+                SetupStep("5. Review actions when requested", controller.pendingApprovals.isEmpty ? .manual : .needsAttention)
                 if !controller.pendingApprovals.isEmpty {
                     Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
                 }
@@ -141,6 +139,25 @@ struct SetupAccessChecklist: View {
             MCPManagementView(controller: controller, selfValidationCoordinator: selfValidationCoordinator,
                               textScale: textScale, initialDestination: managementDestination ?? .clients)
         }
+    }
+
+    private var serviceStatus: SetupStep.Status {
+        switch controller.state {
+        case .running: .complete
+        case .starting: .working
+        case .stopped: .pending
+        case .failed, .degraded: .needsAttention
+        }
+    }
+
+    private var enrolled: [MCPClientRecord] {
+        controller.enrolledClients.filter { $0.credentialState != .revoked }
+    }
+
+    private var credentialStatus: SetupStep.Status {
+        guard !enrolled.isEmpty else { return .pending }
+        return enrolled.allSatisfy { $0.credentialState == .active && !controller.requiresVerifierUnlock($0) }
+            ? .complete : .needsAttention
     }
 
     /// Untouched fields mirror the live configuration even if another window edits it.

@@ -5,21 +5,21 @@ struct SetupLiveChecks: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Certificate: \(model.certificateReadinessSummary)").font(.headline)
+            SetupStep("Certificate: \(model.certificateReadinessSummary)", model.certificateWorkflowState == .ready ? .complete : .pending)
             Divider()
             Text("Latest live check").font(.headline)
             ForEach(SetupTrafficProbe.Kind.allCases, id: \.self) { kind in
                 let result = model.setupCheckResults[kind] ?? .waiting
-                LabeledContent(kind == .http ? "HTTP routing" : "HTTPS inspection") {
-                    switch result {
-                    case .waiting, .checking: Text(result.message).foregroundStyle(.secondary)
-                    case .passed: Label(result.message, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
-                    case .failed: Label(result.message, systemImage: "exclamationmark.circle.fill").foregroundStyle(.red)
-                    }
+                HStack(alignment: .firstTextBaseline) {
+                    SetupStep(kind == .http ? "HTTP routing" : "HTTPS inspection", status(for: result))
+                    Text(result.message).foregroundStyle(.secondary)
                 }
             }
             if case .running = model.proxyState {
-                Button(model.runningSetupChecks ? "Checking…" : "Run HTTP & HTTPS checks", action: model.runLiveSetupChecks)
+                let includeHTTPS = model.certificateWorkflowState == .ready
+                Button(model.runningSetupChecks ? "Checking…" : (includeHTTPS ? "Run HTTP & HTTPS checks" : "Run HTTP check")) {
+                    model.runLiveSetupChecks(includeHTTPS: includeHTTPS)
+                }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.runningSetupChecks)
                     .accessibilityIdentifier("guidedSetupRunLiveChecks")
@@ -33,6 +33,15 @@ struct SetupLiveChecks: View {
                     Text(model.httpsCaptureExampleCommand)
                 }.font(.caption.monospaced()).textSelection(.enabled)
             }
+        }
+    }
+
+    private func status(for result: SetupTrafficProbe.Outcome) -> SetupStep.Status {
+        switch result {
+        case .waiting: .pending
+        case .checking: .working
+        case .passed: .complete
+        case .failed: .needsAttention
         }
     }
 }

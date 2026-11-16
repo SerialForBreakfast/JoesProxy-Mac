@@ -6,7 +6,7 @@ struct FirstRunPathChoiceView: View {
     @Environment(\.appTextScale) private var appTextScale
     @ObservedObject var viewModel: ProxyViewModel
     let accessChecklist: SetupAccessChecklist
-    @State private var showCertificateSetup = false
+    @EnvironmentObject private var presentationState: AppPresentationState
 
     let onStartFirstCapture: () -> Void
     let onConnectAnAgent: () -> Void
@@ -31,9 +31,6 @@ struct FirstRunPathChoiceView: View {
             .background(.regularMaterial)
         }
         .frame(minWidth: 560, idealWidth: 640, minHeight: 440, idealHeight: 640)
-        .sheet(isPresented: $showCertificateSetup) {
-            CertificateSetupSheet(viewModel: viewModel, isPresented: $showCertificateSetup)
-        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("firstRunPathChoiceView")
     }
@@ -56,7 +53,9 @@ struct FirstRunPathChoiceView: View {
             if let trust = viewModel.guidedSetupChecklistItems.first(where: { $0.id == "certificate" }) {
                 Label("HTTPS certificate trust", systemImage: trust.state == .complete ? "checkmark.circle.fill" : "circle")
                 Text(trust.detail)
-                Button(viewModel.certificateSetupEntryPointTitle) { showCertificateSetup = true }
+                Button(viewModel.certificateSetupEntryPointTitle) {
+                    presentationState.openSetupFromFirstRun(section: .certificate)
+                }
             }
         }
     }

@@ -447,8 +447,7 @@ final class ScreenshotUITests: XCTestCase {
     @MainActor
     private func recordCaptureDiagnostics(app: XCUIApplication, window: XCUIElement) throws {
         let allowed = CGPreflightScreenCaptureAccess()
-        let targets = NSRunningApplication.runningApplications(withBundleIdentifier: "com.ShowBlender.JoesProxy")
-        guard targets.count == 1, let target = targets.first else {
+        guard let target = screenshotTarget() else {
             XCTFail("Expected exactly one running JoesProxy for screenshot attribution")
             throw CaptureFailure.ambiguousTarget
         }
@@ -474,12 +473,23 @@ final class ScreenshotUITests: XCTestCase {
 }
 
 extension XCTestCase {
+    /// Use the app beside this test runner, including when a separate installed proxy is running.
+    @MainActor
+    fileprivate func screenshotTarget() -> NSRunningApplication? {
+        let product = Bundle.main.bundleURL.deletingLastPathComponent()
+            .appendingPathComponent("JoesProxy.app").resolvingSymlinksInPath().standardizedFileURL
+        guard let identifier = Bundle(url: product)?.bundleIdentifier else { return nil }
+        let matches = NSRunningApplication.runningApplications(withBundleIdentifier: identifier).filter {
+            $0.bundleURL?.resolvingSymlinksInPath().standardizedFileURL.path == product.path
+        }
+        return matches.count == 1 ? matches.first : nil
+    }
+
     /// Capture the identified window itself, not a desktop crop that may contain another app.
     @MainActor
     func ownedWindowAttachment(window: XCUIElement) async throws -> XCTAttachment {
         guard CGPreflightScreenCaptureAccess() else { throw CaptureFailure.accessUnavailable }
-        let targets = NSRunningApplication.runningApplications(withBundleIdentifier: "com.ShowBlender.JoesProxy")
-        guard targets.count == 1, let target = targets.first else { throw CaptureFailure.ambiguousTarget }
+        guard let target = screenshotTarget() else { throw CaptureFailure.ambiguousTarget }
         let frame = window.frame
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         let matches = content.windows.filter {

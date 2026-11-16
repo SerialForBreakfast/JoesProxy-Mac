@@ -189,7 +189,6 @@ struct macOSSetupWalkthroughView: View {
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                     Button(viewModel.certificateSetupEntryPointTitle) {
-                        isPresented = false
                         presentationState.presentCertificateSetup()
                     }
                     .buttonStyle(.borderedProminent)
@@ -227,7 +226,6 @@ struct macOSSetupWalkthroughView: View {
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                     Button(viewModel.certificateSetupEntryPointTitle) {
-                        isPresented = false
                         presentationState.presentCertificateSetup()
                     }
                     .buttonStyle(.borderedProminent)

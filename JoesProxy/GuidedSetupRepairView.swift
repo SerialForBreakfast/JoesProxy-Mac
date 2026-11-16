@@ -1,8 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Repair and Help-menu replay for HTTPS setup. First-run no longer uses this sheet (BA-3);
-/// use ``FirstRunPathChoiceView`` and ``InspectorSetupCompanionView`` instead.
+/// Common setup destination for capture, certificate repair, devices and agent connections.
 struct GuidedSetupRepairView: View {
     @Environment(\.appTextScale) private var appTextScale
     @Binding var isPresented: Bool
@@ -10,8 +9,6 @@ struct GuidedSetupRepairView: View {
     @ObservedObject var certificateModel: ProxyViewModel
     let accessChecklist: SetupAccessChecklist
     let setupChecklistItems: [ProxyViewModel.GuidedSetupChecklistItem]
-    let certificateSetupTitle: String
-    let openCertificateSetup: () -> Void
     let openMacOSGuide: () -> Void
     let openIOSGuide: () -> Void
     let openTVOSGuide: () -> Void
@@ -51,8 +48,6 @@ struct GuidedSetupRepairView: View {
         certificateModel: ProxyViewModel,
         accessChecklist: SetupAccessChecklist,
         setupChecklistItems: [ProxyViewModel.GuidedSetupChecklistItem],
-        certificateSetupTitle: String,
-        openCertificateSetup: @escaping () -> Void,
         openMacOSGuide: @escaping () -> Void,
         openIOSGuide: @escaping () -> Void,
         openTVOSGuide: @escaping () -> Void,
@@ -86,8 +81,6 @@ struct GuidedSetupRepairView: View {
         self.certificateModel = certificateModel
         self.accessChecklist = accessChecklist
         self.setupChecklistItems = setupChecklistItems
-        self.certificateSetupTitle = certificateSetupTitle
-        self.openCertificateSetup = openCertificateSetup
         self.openMacOSGuide = openMacOSGuide
         self.openIOSGuide = openIOSGuide
         self.openTVOSGuide = openTVOSGuide
@@ -150,11 +143,20 @@ struct GuidedSetupRepairView: View {
                minHeight: 300, idealHeight: openingSize.height, maxHeight: .infinity)
         #if DEBUG
         .frame(width: compactFixture ? 400 : nil, height: compactFixture ? 320 : nil)
+        .frame(width: SetupPageScreenshotFixture.isEnabled ? 800 : nil,
+               height: SetupPageScreenshotFixture.isEnabled ? (context.section == .mcpCLI ? 720 : 560) : nil)
         #endif
         .joesProxyResizableWorkspaceSheet(minWidth: 360, minHeight: 300)
         .presentationSizing(.fitted)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("guidedSetupRepairView")
+        #if DEBUG
+        .background {
+            if SetupPageScreenshotFixture.isEnabled {
+                SetupPageScreenshotFixture(section: selectedSection)
+            }
+        }
+        #endif
         .onAppear(perform: captureSetupNetworkSnapshot)
         .certificateTrustAlert(certificateModel)
     }
@@ -214,6 +216,9 @@ struct GuidedSetupRepairView: View {
             sectionCard(title: "Set up HTTPS on this Mac", summary: "For HTTP only, continue to Proxy.") {
                 CertificateApprovalChecklist(model: certificateModel)
                 if case .repair(let state) = context.mode { repairStatusCard(for: state) }
+                DisclosureGroup("Advanced certificate settings") {
+                    AdvancedCertificateControls(viewModel: certificateModel)
+                }
                 DisclosureGroup("Diagnostics & repair") {
                     setupChecklist
                 }
@@ -222,16 +227,18 @@ struct GuidedSetupRepairView: View {
             sectionCard(title: "Start the proxy", summary: "Choose a port, save any changes, then start listening.") {
                 accessChecklist.scoped(to: .proxy)
                 Divider()
+                SetupStep("Start the listener", listenerStatus)
                 if case .running(let port) = certificateModel.proxyState {
-                    Label("Listening on port \(String(port))", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text("Listening on port \(String(port))")
                 } else {
                     Button("Start proxy", action: startProxy).buttonStyle(.borderedProminent)
                         .disabled(!certificateModel.canStartProxy)
                 }
             }
         case .verifyCapture:
-            sectionCard(title: "Verify a live request", summary: "Send two test requests to example.org through this proxy. No system routing change is needed.") {
+            sectionCard(title: "Verify a live request", summary: "Send a test request to example.org through this proxy. A trusted certificate also enables the HTTPS inspection check.") {
                 SetupLiveChecks(model: certificateModel)
+                SetupCaptureHistory(viewModel: certificateModel, openHelpTopic: openHelpTopic)
                 Divider()
                 Text("Finished on this Mac? Choose Finish setup. Devices and MCP/CLI are optional.").font(.callout)
                 Button("Connect a device instead") { selectedSection = .devices }
@@ -241,14 +248,19 @@ struct GuidedSetupRepairView: View {
                 Picker("Platform", selection: $devicePlatform) {
                     ForEach(["iOS", "macOS", "Apple TV"], id: \.self) { Text($0) }
                 }.pickerStyle(.segmented)
-                Text("1. Set the device proxy").font(.headline)
+                SetupStep("Proxy listener on this Mac", listenerStatus)
+                SetupStep("1. Set the device proxy", .manual)
                 LabeledContent("Host", value: profileHostResolution.host)
                 LabeledContent("Port", value: String(currentProxyPort))
-                Text("2. Install and trust the root on the device").font(.headline)
+                SetupStep("2. Install and trust the root on the device", .manual)
                 actionButton("\(devicePlatform) Setup Guide") {
                     performChecklistAction(devicePlatform == "iOS" ? .openIOSGuide : devicePlatform == "macOS" ? .openMacOSGuide : .openTVOSGuide)
                 }
-                DisclosureGroup("3. Check device traffic") { setupChecklist }
+                DisclosureGroup {
+                    setupChecklist
+                } label: {
+                    SetupStep("3. Check device traffic", .manual)
+                }
                 DisclosureGroup("Profiles and connection details") { profileMaintenanceCard }
             }
         case .mcpCLI:
@@ -285,16 +297,10 @@ struct GuidedSetupRepairView: View {
     @ViewBuilder
     private func repairActions(for blockingState: GuidedSetupBlockingState) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            actionButton(certificateSetupTitle, action: {
-                isPresented = false
-                openCertificateSetup()
-            })
-
             actionButton("Retry Status Check", action: retryStatusValidation)
 
             if blockingState == .needsCleanup {
                 Button("Reset Certificate State…", action: {
-                    isPresented = false
                     resetCertificateState()
                 })
                 .buttonStyle(.borderedProminent)
@@ -306,6 +312,15 @@ struct GuidedSetupRepairView: View {
             }
             .buttonStyle(.link)
             .accessibilityIdentifier("guidedSetupRepairTrustHelpButton")
+        }
+    }
+
+    private var listenerStatus: SetupStep.Status {
+        switch certificateModel.proxyState {
+        case .running: .complete
+        case .starting, .stopping: .working
+        case .stopped: .pending
+        case .failed: .needsAttention
         }
     }
 
@@ -404,8 +419,7 @@ struct GuidedSetupRepairView: View {
                 .buttonStyle(.bordered)
 
                 Button("Repair Certificate…") {
-                    isPresented = false
-                    openCertificateSetup()
+                    selectedSection = .certificate
                 }
                 .buttonStyle(.bordered)
             }
@@ -658,8 +672,7 @@ struct GuidedSetupRepairView: View {
     private func performChecklistAction(_ action: ProxyViewModel.GuidedSetupChecklistItem.Action) {
         switch action {
         case .openCertificateSetup:
-            isPresented = false
-            openCertificateSetup()
+            selectedSection = .certificate
         case .openMacOSGuide:
             isPresented = false
             captureSetupNetworkSnapshot()
@@ -683,7 +696,6 @@ struct GuidedSetupRepairView: View {
         case .retryStatusValidation:
             retryStatusValidation()
         case .resetCertificateState:
-            isPresented = false
             resetCertificateState()
         }
     }
