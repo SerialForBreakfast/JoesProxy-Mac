@@ -12,7 +12,6 @@ struct SetupAccessChecklist: View {
     @State private var listener: String?
     @State private var destinations: String?
     @State private var routing: Bool?
-    @State private var sdk: Bool?
     @State private var localServers: Bool?
     @State private var cliStartup: Bool?
     @State private var preferenceMessage: String?
@@ -42,7 +41,6 @@ struct SetupAccessChecklist: View {
                 Toggle("Route this Mac’s traffic when I manually start the proxy", isOn: draft($routing, current: settings.isSystemProxyManagementEnabled))
                 if routing == true { Text(settings.systemProxyConsentMessage) }
                 DisclosureGroup("Advanced capture settings") {
-                Toggle("Allow SDK clients to connect while capturing", isOn: draft($sdk, current: settings.sdkEventServerEnabled))
                 Toggle("Allow Map Remote rules to reach local Mac servers", isOn: draft($localServers, current: settings.isLoopbackMapRemoteEnabled))
                 if localServers ?? settings.isLoopbackMapRemoteEnabled {
                     Text("Enter the destination ports these rules may reach, separated by commas. Removing a port closes matching streams and disables their rules.")
@@ -60,7 +58,7 @@ struct SetupAccessChecklist: View {
                 }
             }
             Button("Save Preferences", action: savePreferences)
-                .disabled(listener == nil && destinations == nil && routing == nil && sdk == nil && localServers == nil && cliStartup == nil)
+                .disabled(listener == nil && destinations == nil && routing == nil && localServers == nil && cliStartup == nil)
             if let preferenceMessage { Text(preferenceMessage) }
             if scope != .proxy {
                 Divider()
@@ -178,13 +176,11 @@ struct SetupAccessChecklist: View {
         if let routing {
             if routing { settings.confirmRoutingConsent() } else { settings.isSystemProxyManagementEnabled = false }
         }
-        if let sdk { settings.sdkEventServerEnabled = sdk }
         if let localServers { settings.isLoopbackMapRemoteEnabled = localServers }
         if let cliStartup { controller.isCLIAutomationStartEnabled = cliStartup }
         listener = nil
         destinations = nil
         routing = nil
-        sdk = nil
         localServers = nil
         cliStartup = nil
         preferenceMessage = "Preferences saved for future launches."

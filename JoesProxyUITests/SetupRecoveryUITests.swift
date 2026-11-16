@@ -16,6 +16,44 @@ final class SetupRecoveryUITests: XCTestCase {
     }
 
     @MainActor
+    func testSetupAndAppleTVGuideHideSDKControls() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "\(Self.uiTestGuidedSetupSectionPrefix)proxy",
+                               "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        let sheet = app.sheets.firstMatch
+        let advanced = sheet.descendants(matching: .any)["Advanced capture settings"].firstMatch
+        XCTAssertTrue(advanced.waitForExistence(timeout: 5))
+        advanced.click()
+        XCTAssertTrue(sheet.checkBoxes["Allow Map Remote rules to reach local Mac servers"].waitForExistence(timeout: 3))
+        XCTAssertFalse(sheet.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] 'SDK'")).firstMatch.exists)
+        sheet.radioButtons["Devices"].click()
+        sheet.radioButtons["Apple TV"].click()
+        sheet.buttons["Apple TV Setup Guide"].click()
+        XCTAssertTrue(app.staticTexts["Set Up JoesProxy"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'SDK'")).firstMatch.exists)
+    }
+
+    @MainActor
+    func testProxySettingsHideSDKControls() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        app.typeKey(",", modifierFlags: .command)
+        let settings = app.windows.containing(.any, identifier: "settingsTextSizePicker").firstMatch
+        if !app.identifiedElement("settingsProxyPortField").exists {
+            settings.descendants(matching: .any)["Proxy"].firstMatch.click()
+        }
+        XCTAssertTrue(app.identifiedElement("settingsProxyPortField").waitForExistence(timeout: 5))
+        let pane = app.windows.containing(.any, identifier: "settingsProxyPortField").firstMatch
+        XCTAssertFalse(pane.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] 'SDK' OR identifier BEGINSWITH 'settingsSDK'")).firstMatch.exists)
+    }
+
+    @MainActor
     func testGuidedSetupReopensFromHelpKeyboardShortcut() throws {
         let app = XCUIApplication()
         app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions"]

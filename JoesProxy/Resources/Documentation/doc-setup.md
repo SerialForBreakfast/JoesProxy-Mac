@@ -4,7 +4,7 @@
 
 JoesProxy works without an AI client, CLI enrollment, or MCP. Use this core path first:
 
-1. Review the first-run checkboxes and choose **Save Preferences**. You can change the proxy listening port, Mac routing, SDK connections, allowed local destination ports, and CLI startup later in **Help → Guided Setup & Repair**.
+1. Review the first-run checkboxes and choose **Save Preferences**. You can change the proxy listening port, Mac routing, allowed local destination ports, and CLI startup later in **Help → Guided Setup & Repair**.
    For HTTPS inspection, open certificate setup to create or trust the local JoesProxy CA. Plain HTTP capture can start immediately.
 2. Start the proxy and note the displayed port.
 3. Choose the target platform in Guided Setup.

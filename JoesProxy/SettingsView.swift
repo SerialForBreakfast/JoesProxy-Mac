@@ -268,62 +268,6 @@ struct SettingsView: View {
                 }
             }
 
-            Section("SDK Connections") {
-                Toggle("Allow SDK clients to connect to JoesProxy", isOn: $viewModel.sdkEventServerEnabled)
-                    .accessibilityLabel("Allow SDK clients to connect to JoesProxy")
-                    .accessibilityHint("Controls whether JoesProxy opens a local SDK event server while the proxy is running.")
-                    .accessibilityIdentifier("settingsSDKEventServerToggle")
-
-                LabeledContent("SDK Event Server", value: viewModel.sdkEventServerStatusDescription)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("SDK event server")
-                    .accessibilityValue(viewModel.sdkEventServerStatusDescription)
-                    .accessibilityIdentifier("settingsSDKEventServerStatus")
-
-                LabeledContent("SDK Event Port", value: viewModel.sdkEventServerPortDescription)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("SDK event port")
-                    .accessibilityValue(viewModel.sdkEventServerPortDescription)
-
-                LabeledContent("Connected Clients", value: viewModel.sdkEventServerClientCountDescription)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Connected SDK clients")
-                    .accessibilityValue(viewModel.sdkEventServerClientCountDescription)
-                    .accessibilityIdentifier("settingsSDKEventServerClientCount")
-
-                if viewModel.shouldShowSDKEventServerPairingToken {
-                    LabeledContent("Pairing Token") {
-                        HStack(spacing: 8) {
-                            Text(viewModel.sdkEventServerPairingTokenDescription)
-                                .font(.system(.caption, design: .monospaced))
-                                .textSelection(.enabled)
-                                .lineLimit(1)
-
-                            Button("Copy") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(
-                                    viewModel.sdkEventServerPairingTokenDescription,
-                                    forType: .string
-                                )
-                            }
-                            .accessibilityLabel("Copy SDK pairing token")
-                            .accessibilityHint("Copies the current SDK pairing token to the clipboard.")
-                            .accessibilityIdentifier("settingsSDKEventServerCopyPairingTokenButton")
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("SDK pairing token")
-                    .accessibilityValue(viewModel.sdkEventServerPairingTokenDescription)
-                    .accessibilityIdentifier("settingsSDKEventServerPairingToken")
-                }
-
-                Text("When enabled and the proxy is running, JoesProxy opens a local-network SDK event server for apps using the JoesProxy SDK. Keep this off unless you are testing an app that supports SDK connections.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .task {
-                await viewModel.refreshSDKEventServerStatus()
-            }
 
             Section("System Proxy") {
                 Toggle("Automatically set macOS system proxy while capturing", isOn: $viewModel.isSystemProxyManagementEnabled)
