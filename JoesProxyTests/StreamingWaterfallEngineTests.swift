@@ -160,6 +160,50 @@ final class StreamingWaterfallEngineTests: XCTestCase {
         XCTAssertEqual(report.switchingEvents[1].toBandwidth, 800_000)
     }
 
+    func testRelatedPlaylistWinsAcrossTwoStreamsAndCDNHosts() {
+        let playlistType = "application/vnd.apple.mpegurl"
+        func master(_ name: String, bandwidth: Int) -> SessionRecord {
+            createSession(path: "/catalog/\(name).m3u8", body: Data("""
+                #EXTM3U
+                #EXT-X-STREAM-INF:BANDWIDTH=\(bandwidth)
+                /media/\(name).m3u8
+                """.utf8), contentType: playlistType)
+        }
+        func playlist(_ name: String) -> SessionRecord {
+            createSession(path: "/media/\(name).m3u8", body: Data("""
+                #EXTM3U
+                #EXTINF:6,
+                https://cdn.example.test/shared/\(name).ts
+                """.utf8), contentType: playlistType)
+        }
+        let a = master("a", bandwidth: 100), b = master("b", bandwidth: 500)
+        let first = createSession(path: "/shared/a.ts", body: Data(), contentType: "video/mp2t", host: "cdn.example.test")
+        let second = createSession(path: "/shared/b.ts", body: Data(), contentType: "video/mp2t", host: "cdn.example.test")
+        let unrelated = createSession(path: "/media/orphan.ts", body: Data(), contentType: "video/mp2t")
+        let lookalike = createSession(path: "/catalog/orphan.ts", body: Data(), contentType: "video/mp2t", host: "other.video.example.com")
+        let sessions = [a, b, playlist("a"), playlist("b"), first, second, unrelated, lookalike]
+        for target in [second, b] {
+            let report = StreamingWaterfallEngine.analyze(target: target, allSessions: sessions)
+            XCTAssertEqual(report.manifestSessionID, b.id)
+            XCTAssertEqual(report.bitrateLadder.map(\.bandwidth), [500])
+            XCTAssertEqual(report.segments.map(\.sessionID), [second.id])
+        }
+        for target in [unrelated, lookalike] {
+            let report = StreamingWaterfallEngine.analyze(target: target, allSessions: sessions)
+            XCTAssertNil(report.manifestSessionID)
+            XCTAssertEqual(report.segments.map(\.sessionID), [target.id])
+        }
+    }
+
+    func testCaptureWideCandidateClassificationUsesOnlyMetadata() throws {
+        let bytes = try XCTUnwrap(LiveResponseTransformation.gzipCompress(Data(masterHLS.utf8)))
+        let opaque = createSession(path: "/ordinary.json", body: bytes, contentType: "application/json",
+                                   headers: [HTTPHeaderField(name: "Content-Encoding", value: "gzip")])
+        XCTAssertEqual(MediaDetector.waterfallMediaType(for: opaque), .none)
+        let segment = createSession(path: "/ordinary.ts", body: Data(), contentType: "video/mp2t")
+        XCTAssertNil(StreamingWaterfallEngine.analyze(target: segment, allSessions: [opaque, segment]).manifestSessionID)
+    }
+
     // MARK: - Helper
 
     private func createSession(
@@ -168,7 +212,8 @@ final class StreamingWaterfallEngineTests: XCTestCase {
         contentType: String,
         startedAt: Date = Date(),
         duration: TimeInterval = 0.5,
-        headers: [HTTPHeaderField] = []
+        headers: [HTTPHeaderField] = [],
+        host: String = "video.example.com"
     ) -> SessionRecord {
         var allHeaders = headers
         allHeaders.append(HTTPHeaderField(name: "Content-Type", value: contentType))
@@ -177,7 +222,7 @@ final class StreamingWaterfallEngineTests: XCTestCase {
         let request = CapturedRequest(
             method: "GET",
             scheme: .https,
-            host: "video.example.com",
+            host: host,
             port: 443,
             path: path,
             headers: [],

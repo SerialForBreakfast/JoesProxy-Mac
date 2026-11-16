@@ -71,7 +71,23 @@ final class MCPStreamingQualityWaterfallTests: XCTestCase {
         XCTAssertEqual(dto.switchingEvents[0].switchType, "stepUp")
     }
 
-    // MARK: - Helper
+    func testCaptureReplacementDuringWaterfallIsRetryable() async throws {
+        let store = InMemorySessionStore()
+        let snapshot = MCPSessionSnapshotService(sessionStore: store)
+        let service = MCPMediaInspectionService(sessionStore: store, snapshotService: snapshot)
+        let master = createSession(path: "/master.m3u8", body: Data(masterHLS.utf8),
+                                   contentType: "application/vnd.apple.mpegurl")
+        store.append(master)
+        // The main actor can clear the capture once the waterfall yields to its worker.
+        let clear = Task { @MainActor in store.clear() }
+        do {
+            _ = try await service.streamingWaterfall(sessionID: master.id, policyRevision: .initial)
+            XCTFail("A report from the previous capture was delivered")
+        } catch let failure as ArtifactAnalysisFailure {
+            XCTAssertEqual(failure, .sourceChanged)
+        }
+        await clear.value
+    }
 
     func testBuild26AcceptanceRecordingFromMasterAndSegment() async throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()

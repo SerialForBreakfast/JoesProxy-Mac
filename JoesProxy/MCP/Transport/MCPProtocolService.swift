@@ -4493,7 +4493,12 @@ final class MCPProtocolService {
             case "streaming_waterfall_inspection":
                 let sessionID = try requiredUUID(arguments["sessionID"], name: "sessionID")
                 let revision = policyStore.policyRevision
-                let dto = try await mediaInspectionService.streamingWaterfall(sessionID: sessionID, policyRevision: revision)
+                let dto: MCPStreamingQualityWaterfallDTO
+                do {
+                    dto = try await mediaInspectionService.streamingWaterfall(sessionID: sessionID, policyRevision: revision)
+                } catch ArtifactAnalysisFailure.sourceChanged {
+                    return artifactAnalysisError(id: id, error: ArtifactAnalysisFailure.sourceChanged)
+                }
                 guard !Task.isCancelled, revision == policyStore.policyRevision,
                       let currentClient = clientRegistry.client(id: client.id),
                       currentClient.credentialState == .active,

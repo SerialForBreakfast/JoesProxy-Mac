@@ -64,6 +64,22 @@ final class SetupRecoveryUITests: XCTestCase {
     }
 
     @MainActor
+    func testSetupMenusOpenUnifiedCertificatePage() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions"]
+        app.launchJoesProxyForTesting()
+
+        for title in ["JoesProxy", "Certificate", "Help"] {
+            let menu = app.menuBars.menuBarItems[title]
+            menu.click()
+            menu.menuItems["Setup & Repair…"].click()
+            let sheet = app.sheets.firstMatch
+            XCTAssertTrue(sheet.staticTexts["Set up HTTPS on this Mac"].waitForExistence(timeout: 5), title)
+            sheet.buttons["guidedSetupClose"].click()
+        }
+    }
+
+    @MainActor
     func testGuidedSetupReopensFromHelpKeyboardShortcut() throws {
         let app = XCUIApplication()
         app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions"]

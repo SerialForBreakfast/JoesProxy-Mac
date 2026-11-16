@@ -74,6 +74,18 @@ enum MediaDetector {
         return .none
     }
 
+    /// Metadata-only classifier for capture-wide waterfall scans. A segment body can be
+    /// large and compressed; deciding whether it is a playlist must not require inflation.
+    static func waterfallMediaType(for session: SessionRecord) -> MediaType {
+        let mime = session.response?.headers.first { $0.name.lowercased() == "content-type" }?
+            .value.lowercased().components(separatedBy: ";").first?.trimmingCharacters(in: .whitespaces)
+        let pathType = detectFromRequest(session.request)
+        if pathType == .hls || mime.map(hlsMimeTypes.contains) == true { return .hls }
+        if pathType == .dash || mime == dashMimeType { return .dash }
+        if let mime, mime.hasPrefix(videoMimePrefix) { return .video(mimeType: mime) }
+        return pathType ?? .none
+    }
+
     static func hlsDiscovery(for session: SessionRecord) -> HLSStreamDiscovery? {
         guard let response = session.response,
               isPlausibleJSONResponse(response),

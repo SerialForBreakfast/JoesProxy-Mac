@@ -36,9 +36,12 @@ struct SystemProxyMenuBarView: View {
     @ObservedObject var compactModeController: CompactModeController
     @ObservedObject var mcpServerController: MCPServerController
     @ObservedObject var presentationState: AppPresentationState
+    let openSetupAndRepair: () -> Void
 
     var body: some View {
         Text(statusLine)
+
+        Button("Setup & Repair…", action: openSetupAndRepair)
 
         Divider()
 

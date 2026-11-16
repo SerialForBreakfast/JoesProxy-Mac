@@ -9,7 +9,8 @@ Complete these steps while the app and its bundled CLI are still available.
    listener stopped, confirm an ordinary site loads. On phones, TVs, simulators
    and other clients, restore any proxy settings you changed separately.
 
-2. If retiring the inspection identity, open Certificate Setup > Diagnostics.
+2. If retiring the inspection identity, open Setup & Repair > Certificate >
+   Advanced certificate settings.
    Compare the displayed root fingerprint with the root you intended to retire.
    “Remove Installed Certificate” removes the installed certificate. To retire
    the local signing material as well, use “Reset Certificate State”, review
