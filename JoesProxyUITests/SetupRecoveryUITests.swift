@@ -16,20 +16,30 @@ final class SetupRecoveryUITests: XCTestCase {
     }
 
     @MainActor
-    func testSetupAndAppleTVGuideHideSDKControls() throws {
+    func testSetupHidesSDKControls() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "\(Self.uiTestGuidedSetupSectionPrefix)proxy",
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-primary-screen", "\(Self.uiTestGuidedSetupSectionPrefix)proxy",
                                "\(Self.uiTestGuidedSetupModePrefix)replay"]
         app.launchJoesProxyForTesting()
         defer { app.terminate() }
         let sheet = app.sheets.firstMatch
-        let advanced = sheet.descendants(matching: .any)["Advanced capture settings"].firstMatch
+        let advanced = sheet.disclosureTriangles["Advanced capture settings"]
         XCTAssertTrue(advanced.waitForExistence(timeout: 5))
-        advanced.click()
+        advanced.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 28, dy: 0)).click()
         XCTAssertTrue(sheet.checkBoxes["Allow Map Remote rules to reach local Mac servers"].waitForExistence(timeout: 3))
         XCTAssertFalse(sheet.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] 'SDK'")).firstMatch.exists)
-        sheet.radioButtons["Devices"].click()
+    }
+
+    @MainActor
+    func testAppleTVGuideHidesSDKControls() {
+        let app = XCUIApplication()
+        app.launchArguments = ["\(Self.uiTestFixturePrefix)demo-sessions", "--ui-test-primary-screen",
+                               "\(Self.uiTestGuidedSetupSectionPrefix)devices", "\(Self.uiTestGuidedSetupModePrefix)replay"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        let sheet = app.sheets.firstMatch
         sheet.radioButtons["Apple TV"].click()
         sheet.buttons["Apple TV Setup Guide"].click()
         XCTAssertTrue(app.staticTexts["Set Up JoesProxy"].waitForExistence(timeout: 5))
