@@ -313,3 +313,37 @@ including an intentionally wrong answer and missing usage. The worker trial comp
 ordinary and compact structured pages in 16 serial calls per model. It measures
 interpretation accuracy and provider tokens per exact answer, including incorrect
 attempts in total token cost. Real-model execution remains assigned to BigDog.
+
+### BigDog return and future provider choice — November 17, 2026
+
+The maintainer selected AGY for future model evaluations.
+BigDog's Qwen run completed all 16 first attempts with zero exact answers.
+Every attempt consumed the configured 512 output tokens in thinking without
+producing final JSON. Token cost per exact answer is unavailable. This establishes
+a completion-budget failure for that configuration; reading accuracy remains
+unmeasured in that run.
+
+BigDog subsequently completed an owner-approved AGY Flash Low follow-up using
+the same pages, question and alternating order with normal completion settings.
+The return archive SHA-256 was verified as
+`1298395d7ec70e960a07d3d1df2c85929764df13b8280182aa3102dd77d95c12`.
+
+| Format | Original strict JSON grade | Content grade after outer fence removal | Input tokens | Output tokens | Total tokens | Tokens per content-exact answer |
+|---|---:|---:|---:|---:|---:|---:|
+| Ordinary | 0/8 | 8/8 | 28,677 | 740 | 29,417 | 3,677.125 |
+| Compact | 0/8 | 8/8 | 26,298 | 1,551 | 27,849 | 3,481.125 |
+
+Content grading is a separate post-run analysis. Strict grades remain frozen and
+strict tokens per exact answer remain unavailable. Total tokens fell 5.3% over all
+content-exact answers. Each 50-row pair fell from 7,685 to 6,560 tokens (14.6%).
+Small-page results varied, including increases. These are reported AGY harness
+tokens, including session context and reported reasoning. They do not establish a
+general saving for every page size.
+
+The worker reported client 1.5.5, requested alias `gemini-3.8-flash-low` and
+response alias `gemini-3.8-flash-n`. No immutable backend revision was claimed.
+Reports and original evidence reside under the local SharedStatusFile directory
+in `joe-big-dog/joesproxy-compact-rows-r39-agy-results.md` and
+`joe-big-dog/joesproxy-compact-rows-r39-agy-return.zip`.
+Before the next AGY trial, specify whether the intended consumer accepts fenced
+JSON and freeze that rubric. Retain original outputs and all attempts.

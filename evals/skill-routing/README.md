@@ -1,4 +1,20 @@
-# BigDog request — JoesProxy 1.9.1 (24) skill routing
+# BigDog evaluation guidance
+
+For future JoesProxy accuracy, routing and token-efficiency comparisons, use AGY.
+The maintainer selected AGY after the November 17 compact-row return. Keep the
+installed client version, requested model, response alias, effort and completion
+settings in each receipt. Use normal completion settings and retain all first
+attempts, provider usage and failed answers. Agree on strict JSON versus
+fence-tolerant grading before the next trial and preserve both grades if reported.
+
+The compact-row Qwen run spent its entire 512-token output allowance on thinking
+in all 16 attempts and produced no final JSON. That run did not establish reading
+accuracy. The AGY follow-up recovered correct content in every case but returned
+Markdown fences. See the acceptance ledger for its separate strict and content
+grades. The existing Ollama configurations below and the hashed revision-39 packet
+document the original trials. Prepare the next worker request for AGY.
+
+## Original 1.9.1 (24) routing handoff
 
 **Execution owner:** BigDog coordinator. Run the supplied cases on the existing Qwen model.
 If available, delegate the same packet to maxmini for Gemma. Return separate results per model.
