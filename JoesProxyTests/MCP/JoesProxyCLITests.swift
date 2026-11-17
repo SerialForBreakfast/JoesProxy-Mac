@@ -4702,7 +4702,7 @@ final class JoesProxyCLITests: XCTestCase {
             "sessions", "search",
             "--status-code", "401", "--status-class", "4xx", "--min-duration-ms", "150",
             "--has-override-hit", "--no-body-available", "--deduplicate-by", "endpoint",
-            "--include-auth-chain", "--quiet"
+            "--include-auth-chain", "--compact-rows", "--quiet"
         ])
         XCTAssertEqual(rSearch, .success)
 
@@ -4748,18 +4748,30 @@ final class JoesProxyCLITests: XCTestCase {
 
         let interval = await app.run(arguments: ["capture", "digest", "--interval", "start", "--quiet"])
         XCTAssertEqual(interval, .success)
+        let identity = await app.run(arguments: ["cache", "audit", "--request-identity", "--quiet"])
+        XCTAssertEqual(identity, .success)
+        let variants = await app.run(arguments: ["cache", "audit", "--response-variants-for", sid1, "--compact-variants", "--quiet"])
+        XCTAssertEqual(variants, .success)
+        let errors = await app.run(arguments: ["cache", "audit", "--error-clusters", "--quiet"])
+        XCTAssertEqual(errors, .success)
 
         let requests = try MockCLIURLProtocol.state.recordedRequests().map {
             try $0.bodyData().jsonObject()["params"] as? [String: Any] ?? [:]
         }
-        XCTAssertEqual(requests.count, 7)
-        XCTAssertEqual(requests.last?["name"] as? String, "capture_digest")
-        XCTAssertEqual(requests.last?["arguments"] as? [String: String], ["interval": "start"])
+        XCTAssertEqual(requests.count, 10)
+        XCTAssertEqual(requests[6]["name"] as? String, "capture_digest")
+        XCTAssertEqual(requests[6]["arguments"] as? [String: String], ["interval": "start"])
+        XCTAssertEqual(requests[7]["arguments"] as? [String: Bool], ["includeRequestIdentity": true])
+        XCTAssertEqual(requests[9]["arguments"] as? [String: Bool], ["errorClusters": true])
+        let variantArgs = try XCTUnwrap(requests[8]["arguments"] as? [String: Any])
+        XCTAssertEqual(variantArgs["responseVariantsForSessionID"] as? String, sid1)
+        XCTAssertEqual(variantArgs["compactVariants"] as? Bool, true)
 
         XCTAssertEqual(requests[0]["name"] as? String, "sessions_search")
         let searchArgs = try XCTUnwrap(requests[0]["arguments"] as? [String: Any])
         XCTAssertEqual(searchArgs["statusCode"] as? Int, 401)
         XCTAssertEqual(searchArgs["statusClass"] as? String, "4xx")
+        XCTAssertEqual(searchArgs["compactRows"] as? Bool, true)
         XCTAssertEqual(searchArgs["minDurationMs"] as? Double, 150)
         XCTAssertEqual(searchArgs["hasOverrideHit"] as? Bool, true)
         XCTAssertEqual(searchArgs["bodyAvailable"] as? Bool, false)

@@ -77,10 +77,10 @@ Class is `exact` or `heuristic`. Status is `shipped`, `in progress` or `planned`
 
 | ID | Task | Class | Status |
 | --- | --- | --- | --- |
-| C1 | Duplicate requests by method, URL and body hash: counts, wasted bytes, identical-response rate | exact | Planned |
+| C1 | Duplicate requests by method, URL and body hash | exact | Candidate revision 36 adds approved request identity groups to the cache audit and CLI. Reports repeated request bytes, comparable response counts and repeated status/body bytes. Avoidability requires separate cache-policy evidence. |
 | C2 | Patterns: N+1 sequences, polling loops with interval, retry storms, redirect chains | exact rules | Planned |
-| C3 | Response clustering by body hash and JSON shape | exact | Planned |
-| C4 | Error clusters by status and normalized error body | exact | Planned |
+| C3 | Response clustering by body hash and JSON shape | exact | Candidate revision 37 adds endpoint-scoped byte and shape counts, representative sessions, HTTP error priority and explicit coverage to the cache audit and CLI. |
+| C4 | Error clusters by status and normalized error body | exact | Implemented for retained HTTP failures, with byte fallback and explicit coverage. |
 
 ### Tranche 4 — LLM and agent-app traffic
 
@@ -95,7 +95,7 @@ Class is `exact` or `heuristic`. Status is `shipped`, `in progress` or `planned`
 | ID | Task | Class | Status |
 | --- | --- | --- | --- |
 | A5 | `capture_wait`: return when N matching requests arrive or a timeout passes | exact | Implemented for future admissions, distinct IDs, cancellation and capture reset; live soak pending |
-| A7 | Optional columnar or TSV rows for list results | exact | Planned |
+| A7 | Optional tabular rows for list results | exact | Implemented for endpoint variants and minimal search pages. Wider projections remain planned. |
 | A8 | Result handles: refine, page or re-aggregate a stored query result | exact | Planned |
 | A9 | Interval reports and delta reads | exact | Candidate revision 35 adds rolling failure, retention and admission intervals to `capture_digest` and the CLI. Rehearsal assertions reconcile the report with the store before clear and at periodic checkpoints. Generalizing delta reads to other tools remains planned. |
 

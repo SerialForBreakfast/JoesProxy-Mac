@@ -82,7 +82,7 @@ enum MCPCapabilitiesManifestBuilder {
         ProductionTool(name: "sessions_search", description: "Find individual matching requests in pages. For totals or a status histogram over a time window, use capture_calculate.", capability: .sessionSearch),
         ProductionTool(name: "capture_digest", description: "Compact capture state for conditional follow-up reads.", capability: .captureResource),
         ProductionTool(name: "capture_wait", description: "Wait for new matching requests without polling.", capability: .sessionSearch),
-        ProductionTool(name: "audit_cache_efficiency", description: "Audits captured sessions for caching inefficiencies, duplicate un-cached requests, conflicting headers, and bandwidth waste.", capability: .captureResource),
+        ProductionTool(name: "audit_cache_efficiency", description: "Audit cache policy, duplicate requests by payload, or identical image content.", capability: .captureResource),
         ProductionTool(name: "investigation_snapshot", description: "Bounded recent traffic decision surface with client-scoped evidence references.", capability: .captureResource),
         ProductionTool(name: "evidence_get", description: "Resolve one unexpired client-scoped evidence reference without expanding its original disclosure.", capability: .sessionSummary),
         ProductionTool(name: "read_batch", description: "Run up to eight bounded read-only tools and return structured results in one response.", capability: .captureResource),

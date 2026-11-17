@@ -291,7 +291,18 @@ final class CLIApplication {
             args["statusClass"] = invocation.options["status-class"]
             return success(commandName, try await runTool(client, name: "capture_wait", arguments: args, invocation: invocation))
         case ["cache", "audit"]:
-            let arguments: [String: Any] = invocation.flags.contains("image-identity") ? ["includeImageIdentity": true] : [:]
+            var arguments: [String: Any] = [:]
+            if invocation.flags.contains("image-identity") { arguments["includeImageIdentity"] = true }
+            if invocation.flags.contains("request-identity") { arguments["includeRequestIdentity"] = true }
+            if invocation.flags.contains("error-clusters") { arguments["errorClusters"] = true }
+            arguments["responseVariantsForSessionID"] = invocation.options["response-variants-for"]
+            guard arguments.count <= 1 else { throw CLIError.invalidArguments("Choose one identity audit per call.") }
+            if invocation.flags.contains("compact-variants") {
+                guard arguments["responseVariantsForSessionID"] != nil else {
+                    throw CLIError.invalidArguments("--compact-variants requires --response-variants-for.")
+                }
+                arguments["compactVariants"] = true
+            }
             return success(commandName, try await runTool(client, name: "audit_cache_efficiency", arguments: arguments, invocation: invocation))
         case ["investigate", "snapshot"]:
             var arguments: [String: Any] = [:]
@@ -3565,6 +3576,7 @@ final class CLIApplication {
             arguments["endpointExample"] = example
         }
         if invocation.flags.contains("endpoint-statistics") { arguments["includeEndpointStatistics"] = true }
+        if invocation.flags.contains("compact-rows") { arguments["compactRows"] = true }
         if invocation.flags.contains("include-auth-chain") {
             arguments["includeAuthChain"] = true
         }
@@ -3753,7 +3765,7 @@ final class CLIApplication {
       joesproxyctl https rules set --host media.example.test --mode tunnel|inspect|remove --expected-revision <revision> --scope host_and_subdomains_all_clients [--recovery-id <uuid>] [--wait-for-approval]
       joesproxyctl https rules restore --host media.example.test --recovery-id <uuid> --expected-revision <revision> --scope host_and_subdomains_all_clients [--wait-for-approval]
       joesproxyctl capture resume [--wait-for-approval]
-      joesproxyctl cache audit [--image-identity] [--wait-for-approval]
+      joesproxyctl cache audit [--error-clusters|--image-identity|--request-identity|--response-variants-for <session-id> [--compact-variants]] [--wait-for-approval]
       joesproxyctl investigate snapshot [--limit <1...25>] [--since-sequence <n>] [--if-state-token <token>]
       joesproxyctl evidence get <evidence-ref>
       joesproxyctl read batch --file <requests.json>
@@ -3762,6 +3774,7 @@ final class CLIApplication {
       joesproxyctl capture marker --name <marker-name> [--detail <text>] [--label <text>]
       joesproxyctl capture activity (--since-marker <session-id> | --since-sequence <n>) [--rule <override-id>] [--limit <n>]
       joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--endpoint-example first|latest|slowest] [--include-auth-chain]
+        For minimal search pages, add --compact-rows to request a smaller table.
       joesproxyctl device list
       joesproxyctl device alias <ip-address> (--name <friendly-name> | --clear)
       joesproxyctl session show <session-id>

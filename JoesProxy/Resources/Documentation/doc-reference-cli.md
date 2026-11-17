@@ -303,7 +303,7 @@ joesproxyctl capture resume [--wait-for-approval]
 ## Command 22 {#command-7611a081785f62f5}
 
 ```text
-joesproxyctl cache audit [--image-identity] [--wait-for-approval]
+joesproxyctl cache audit [--error-clusters|--image-identity|--request-identity|--response-variants-for <session-id> [--compact-variants]] [--wait-for-approval]
 ```
 
 ## Command 23 {#command-2ea08d0f9f1813d5}
@@ -349,6 +349,8 @@ joesproxyctl capture activity (--since-marker <session-id> | --since-sequence <n
 ```
 
 ## Command 30 {#command-b47b63e47b882fc7}
+
+For minimal search pages, use `joesproxyctl sessions search --compact-rows --json`.
 
 ```text
 joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--endpoint-example first|latest|slowest] [--include-auth-chain]

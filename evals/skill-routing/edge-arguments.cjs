@@ -2,6 +2,26 @@
 const base = require('./promptfooconfig.cjs');
 const questions = [
   {
+    question: 'List the first page of matching sessions in the smallest row format, keeping individual session IDs and ordering.',
+    tool: 'sessions_search', args: {compactRows: true},
+  },
+  {
+    question: 'Which distinct HTTP errors occurred across this capture? Count each and give me one representative session per distinct error body.',
+    tool: 'audit_cache_efficiency', args: {errorClusters: true},
+  },
+  {
+    question: 'Compare response variants at the endpoint from session 00000000-0000-4000-8000-000000000149. Use the smallest representation that keeps all the counts and example IDs.',
+    tool: 'audit_cache_efficiency', args: {responseVariantsForSessionID: '00000000-0000-4000-8000-000000000149', compactVariants: true},
+  },
+  {
+    question: 'For the endpoint in session 00000000-0000-4000-8000-000000000149, how many distinct response bodies and JSON shapes were returned? Give me a representative session for each.',
+    tool: 'audit_cache_efficiency', args: {responseVariantsForSessionID: '00000000-0000-4000-8000-000000000149'},
+  },
+  {
+    question: 'Which identical requests including POST payloads did this client send repeatedly, and how often were the returned bodies the same?',
+    tool: 'audit_cache_efficiency', args: {includeRequestIdentity: true},
+  },
+  {
     question: 'Begin measuring failure transitions, retained body peaks and session removals for my next fifteen-minute checkpoint.',
     tool: 'capture_digest', args: {interval: 'start'},
   },

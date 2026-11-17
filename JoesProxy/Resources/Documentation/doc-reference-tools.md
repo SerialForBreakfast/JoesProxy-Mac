@@ -2,6 +2,54 @@
 
 ## Scope {#safety}
 
+For minimal `sessions_search` results, `compactRows: true` allows a shared `columns`
+array and positional `rows` in structured content. Null cells mean the ordinary row
+omitted that field. Empty, single-row and unchanged pages keep `items`. Follow the
+usual cursor and read the capture warning in either format.
+
+For capture-wide HTTP failure clusters, set `errorClusters: true` on
+`audit_cache_efficiency`. The approved read counts retained HTTP 400–599 sessions.
+Each group has a status, occurrence count and representative session ID. Complete JSON
+objects are insensitive to member order and whitespace. Scalar values, number spellings
+and array order are significant. Non-JSON, unsupported encodings and unparseable JSON
+use exact captured bytes, with counts by fallback reason. Incomplete bodies appear in
+`skippedBodies`. The scan has the same 4,096-match, 32 MiB and three-second limits
+as endpoint variants. Up to 16 examples are returned. When truncated, a slot is reserved
+for a least-frequent cluster if needed. Check `omitted` before claiming full coverage.
+Transport failures without an HTTP error status are outside this report.
+
+For response variants at one endpoint, pass a representative session ID as
+`responseVariantsForSessionID` to `audit_cache_efficiency`, or run
+`joesproxyctl cache audit --response-variants-for <session-id> --json`. This body-approved
+read matches the method, scheme, host, effective port and exact target including query.
+Each status code is grouped separately. Byte variants compare complete captured entity bytes.
+For JSON shapes, the Mac decodes supported HTTP encodings and compares field names, nesting
+and scalar types. Object order and scalar values are ignored. Arrays compare the set of
+distinct element shapes, so length and order are ignored and an empty array has its own shape.
+Each grouping returns a distinct count, omitted count and up to 16 representative sessions;
+HTTP errors sort first. Check skipped bodies and skipped shapes before drawing conclusions.
+Clients that read MCP `structuredContent` can set `compactVariants: true` to request
+the smaller encoding. The text block carries a summary when a table is selected.
+When the report includes
+`columns`, zip those names with each array in `bodyVariants.rows` and `jsonShapes.rows`.
+Otherwise read the ordinary `examples` objects. Both formats retain every returned
+representative ID, the group order, and the same coverage and omission counts.
+A malformed JSON response can still contribute an exact byte variant. The scan budgets
+are 4,096 endpoint matches and 32 MiB. JSON parsing is limited to 256 KiB and 4,096 tokens per body.
+
+For repeated requests, call `audit_cache_efficiency` with `includeRequestIdentity: true`
+or use `joesproxyctl cache audit --request-identity --json`. This body-approved mode groups
+completed HTTP requests by method, scheme, host, effective port, exact captured target
+(including query), and SHA-256 of complete captured request bytes. Headers are outside this
+identity. A legacy missing request body of unknown size contributes to skipped coverage.
+Groups expose a representative session ID, counts and the first HTTP error session ID when
+one was observed, including errors whose bodies are unavailable. Among comparable responses in each
+group, `repeatedResponses` counts occurrences whose status and captured entity bytes
+match any earlier comparable response. Divide by `comparableResponses` for that fraction.
+Repeated body bytes describe observed redundancy. Cacheability and avoidable network
+traffic require separate evidence. Check skipped counts and omitted groups. Limits are
+4,096 inspected requests, a 64 MiB shared input budget and 16 returned groups.
+
 For periodic capture checks, call `capture_digest` with `interval: "start"`, then pass the
 returned `checkpoint` as the next `interval`. Use the newest checkpoint every time.
 Each successful interval counts new session admissions and transitions into HTTP status ≥400
@@ -248,7 +296,7 @@ Capability category: captureResource.
 
 ## audit_cache_efficiency {#audit-cache-efficiency}
 
-Audits captured sessions for caching inefficiencies, duplicate un-cached requests, conflicting headers, and bandwidth waste.
+Audit cache policy, duplicate requests by payload, or identical image content.
 
 Capability category: captureResource.
 

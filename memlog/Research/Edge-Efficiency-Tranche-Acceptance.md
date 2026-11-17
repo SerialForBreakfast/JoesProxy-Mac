@@ -157,3 +157,159 @@ existing API on the candidate dispatcher. Model tokens and live-run savings rema
 Serial Policy passed 3,113 tests with 17 skipped and zero failures. The Debug app built
 successfully. The rehearsal now records rolling interval receipts and reconciles retention
 and admissions with the store across clears. Its opt-in timed run remains pending.
+
+### Revision 36 — request identity audit
+
+The candidate adds a request identity mode to the existing cache audit. The mixed fixture
+contains repeated POSTs with the same entity, a different entity at the same URL, a different
+query, a different port, and an unknown legacy body. The expected group has four requests,
+three comparable responses, two distinct status/body combinations, and one repeated response.
+The lone 503 has its own session reference. One incomplete response contributes to request
+occurrences while being excluded from response comparisons.
+
+The paired receipt uses 128 identical, empty GETs with uncached responses. Both audit
+modes can answer the occurrence count for this controlled fixture. The ordinary cache
+audit cannot establish POST body identity in the mixed fixture. Both calls use an
+initialized client on the candidate dispatcher. The body grant is already in place.
+
+| Audit for the shared 128-GET question | Calls | Request bytes | Response bytes | Elapsed in one focused run |
+|---|---:|---:|---:|---:|
+| Ordinary URL cache audit | 1 | 105 | 5,391 | 2.56 ms |
+| Exact request identity | 1 | 134 | 920 | 7.69 ms |
+
+Both returned 128 occurrences. The identity audit returned one representative, 127
+repeated response bodies and 127 repeated body bytes. It used 80.8% fewer total RPC
+bytes and took longer locally on this fixture. No model-token measurement was made.
+The 47 focused tests passed, including capture replacement, grant revocation, unknown
+request bodies, output limits and retention of the example 503.
+
+The full serial Policy run passed 3,117 tests with 17 skipped and zero failures.
+The Debug app build succeeded.
+
+### Revision 37 — endpoint response variants
+
+Five synthetic responses from one endpoint contain four distinct captured bodies and
+three status/JSON-shape combinations. The control reads one approved response brief per
+known session and groups the source digests. The candidate takes one representative
+session ID. Both recovered the same four byte variants and representative IDs. Only the
+candidate returned the shape groups in this comparison. The fixture uses JSON served
+without content encoding and a single 503 with a unique body.
+
+| Workflow | Calls | Request bytes | Response bytes | Elapsed in the focused run |
+|---|---:|---:|---:|---:|
+| Per-session briefs | 5 | 890 | 6,891 | 5.17 ms |
+| Endpoint response variants | 1 | 174 | 1,107 | 1.50 ms |
+
+Total RPC bytes fell from 7,781 to 1,281 (83.5%). Both arms used the candidate dispatcher,
+an initialized client and an existing body grant. Model tokens and live-capture latency
+remain unmeasured. Additional fixtures verified gzip shape equivalence, partial and
+malformed input coverage, explicit output limits, and retention of the rare HTTP error
+in a report with more variants than display slots. All 41 focused tests passed.
+
+Full serial Policy passed 3,119 tests with 17 skipped and zero failures. The Debug build succeeded.
+
+### Revision 38 — compact response variants
+
+The revision 37 five-response fixture also compares the ordinary and compact variants
+of the same approved MCP call. Expanding both tables by their shared column names
+reproduced the entire ordinary report, including all seven ordered example rows,
+the rare 503, and the coverage fields. An empty report with a skipped body retained
+the smaller ordinary encoding.
+
+| Initialized MCP workflow | Calls | Request bytes | Response bytes | Total bytes | Focused-run elapsed |
+|---|---:|---:|---:|---:|---:|
+| Endpoint variants | 1 | 174 | 1,107 | 1,281 | 1.01 ms |
+| Endpoint variants with compact rows | 1 | 197 | 793 | 990 | 0.66 ms |
+
+The compact request added 23 bytes and saved 314 response bytes, reducing total RPC
+bytes by 22.7%. The initial table implementation crossed the 768-byte text fallback
+threshold and returned a second copy of the table. The regression test compares the
+complete RPC bodies so it detects that duplication. A table now uses a short text
+summary and retains the evidence in structured content. Latency is a single local
+sample. Provider token usage and model interpretation remain unmeasured.
+
+All 25 focused checks passed, including CLI argument mapping and discovery byte budgets.
+Full serial Policy reported 3,120 passed, 17 skipped and zero failures. The Debug build succeeded.
+
+### Revision 39 — search pages, wait rehearsal and HTTP error clusters
+
+Paired local, initialized MCP dispatcher calls. Sizes count serialized JSON-RPC
+request/response bodies. Timings below are individual Debug samples. No provider ran.
+
+| Workflow | Control calls | Candidate calls | Control request / response bytes | Candidate request / response bytes |
+|---|---:|---:|---:|---:|
+| Empty minimal search | 1 | 1 | 108 / 718 | 127 / 718 |
+| One retained row | 1 | 1 | 108 / 1,422 | 127 / 1,422 |
+| First 50 rows of 54 | 1 | 1 | 108 / 15,856 | 127 / 9,056 |
+| Remaining 4 rows via cursor | 1 | 1 | 156 / 2,055 | 175 / 1,506 |
+| Poll or wait, with start and end interval reads | 6 | 3 | 769 / 4,230 | 387 / 1,166 |
+| Distinct HTTP errors and one example per group | 4 | 1 | 620 / 8,622 | 125 / 904 |
+
+**Search.** Each arm followed its own opaque cursor. Expanding columns and dropping
+absent cells reproduced the ordinary rows, ordered IDs, metadata and retention warning
+on both pages. The 50-row pair took 4.43 / 4.64 ms. A client asking for compact rows
+pays 19 extra request bytes on an empty or one-row result.
+
+**Wait.** Both observers saw the same published 503 and used the same two checkpoint
+boundaries. The fixture took three quiet polls and one positive poll, compared with
+one subscribed wait. There were zero retries. With the fixture's 20 ms polling cadence,
+detection after publication took 22.38 / 0.35 ms. The shared interval reported one
+failure transition, two removed bodies and one removed session. These numbers depend
+on the event schedule. The rehearsal also emits this isolated fixture as
+`synthetic_wait_vs_poll`, separately from the long capture's own interval reports.
+
+**Errors.** One search and three approved body excerpts provided the control. Independent
+JSON decoding identified two 503 groups with counts two and one, identical to the
+single audit's counts and examples. The common body varied in JSON formatting and
+key order. The rare body differed in a string value. The pair took 4.03 / 1.21 ms.
+An additional 18-group fixture retained the only singleton within the 16-example limit
+and reported two omitted groups. Separate cases cover invalid JSON, text, a truncated
+body and equal raw bodies with different status codes.
+
+The six focused workflow, CLI and catalog checks passed. After reconciling CLI help
+with the governed reference, full serial Policy passed with 3,124 passed, 17 skipped
+and zero failures. The Debug app build succeeded. The short polling comparison ran
+locally. The 60-minute rehearsal and provider-token evaluation remain pending.
+
+### Revision 39 rehearsal — November 17, 2026
+
+The optimized, uninstrumented synthetic loopback rehearsal completed from approximately
+09:06 to 10:06 Pacific, with 3,605.22 seconds in the timed loop and 415 cycles.
+XCTest passed with zero failures and zero runtime warnings.
+
+The rehearsal now registers a wait before every fourth cycle's block-rule traffic.
+All 103 registered waits returned `matched`, observing one new HTTP failure during
+each four-response burst. The origin independently confirmed 412 delivered 503s.
+All 415 baseline/candidate status-count comparisons were correct.
+
+Every tenth cycle strips bodies, then removes whole sessions, reads an interval
+checkpoint and clears history. All 41 exercises preserved session count during
+body stripping and subsequently removed sessions. Across 42 interval reports the
+ledger reconciled 412 failure transitions, 5,726 body removals and 10,310 whole-session
+removals. Clear All invalidated the old checkpoint in every exercised cycle.
+There were zero invariant failures. The final cycle finished beyond the nominal
+hour so its measurements and final interval were retained.
+
+Checkpoint physical footprint peaked at 96.63 MiB. The origin served 10,615 requests.
+Rate-limit pacing accumulated 2,602.44 seconds, about 72.2% of the timed run.
+Traffic arrived in repeated concurrent bursts with pacing between investigations.
+This validates repeated waits and retention accounting under that workload; a
+continuous unpaced forwarding load and a literal 15-minute untouched interval
+remain separate cases. Clear/retention exercises close intervals more frequently.
+
+Local evidence is `build/Soak/2026-11-17T170633Z/metrics.jsonl`,
+`build/WaitRetentionRehearsal.log` and `build/WaitRetentionRehearsal.xcresult`.
+The independent ledger check is
+`node evals/edge-release/check-rehearsal.cjs build/Soak/2026-11-17T170633Z/metrics.jsonl`.
+The reused build tree is 4.7 GiB and the result bundle 5.3 MiB. Free disk space after
+the run was approximately 98 GiB.
+
+The focused dispatcher export `testExportCompactRowModelTrial` passed. BigDog's
+packet is `build/BigDog-compact-rows-r39.tar.gz`, SHA-256
+`28fdf4c0ea857a43e71848c0dd8b0b522e9a2f5916e52e85bb88b3f26840109f`.
+Versioned inputs and commands are in `evals/edge-release/compact-rows/`.
+Offline verification passed all four paired page oracles and the grading controls,
+including an intentionally wrong answer and missing usage. The worker trial compares
+ordinary and compact structured pages in 16 serial calls per model. It measures
+interpretation accuracy and provider tokens per exact answer, including incorrect
+attempts in total token cost. Real-model execution remains assigned to BigDog.

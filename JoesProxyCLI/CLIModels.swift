@@ -2,7 +2,7 @@ import Foundation
 
 enum CLIRuntimeIdentity {
     /// Kept equal to `MCPCapabilitiesRevision.current`; an app-target test prevents drift.
-    static let capabilitiesRevision = 35
+    static let capabilitiesRevision = 39
 
     static func expectation(bundle: Bundle = .main) -> [String: Any] {
         let marketingVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -107,7 +107,7 @@ struct CLIInvocation {
             "query", "target-url", "collection-keypath", "bound-asset-kind", "custom-asset-url",
             "client-scope", "position", "plan-id",
             "since-marker", "rule", "field",
-            "status-class", "min-duration-ms", "deduplicate-by", "endpoint-example", "view-json",
+            "status-class", "min-duration-ms", "deduplicate-by", "endpoint-example", "view-json", "response-variants-for",
             "where-pointer", "where-op", "where-value", "operations-json",
             "field-pointers", "row-limit", "ignore-pointers",
             "remote-host", "remote-port", "remote-scheme", "remote-path",
@@ -122,8 +122,8 @@ struct CLIInvocation {
             "evidence-matches", "error-detected", "client-crashed", "no-preserve-urls",
             "no-preserve-ids", "integrations",
             "has-override-hit", "no-override-hit", "body-available", "no-body-available",
-            "include-auth-chain", "include-value-diff", "auth-chain", "image-identity", "endpoint-statistics",
-            "allow-loopback", "preserve-host"
+            "include-auth-chain", "include-value-diff", "auth-chain", "image-identity", "request-identity", "endpoint-statistics",
+            "allow-loopback", "preserve-host", "compact-variants", "compact-rows", "error-clusters"
         ]
 
         while index < arguments.count {

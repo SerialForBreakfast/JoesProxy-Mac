@@ -1,5 +1,24 @@
 ## Efficiency conventions (apply to every tool below)
 
+- For rows from a minimal search page, set `sessions_search.compactRows` to true.
+  Read `columns` and `rows` when present. Null cells denote absent fields. Otherwise read `items`.
+
+- For distinct HTTP failures across the capture, request `audit_cache_efficiency` with
+  `errorClusters: true`. Read group counts, representative session IDs, omitted clusters,
+  skipped bodies and raw-body fallbacks. A body-read approval is required.
+
+- To watch for a new HTTP failure, start an interval with `capture_digest`, then use
+  `capture_wait` with `statusClass: "error"`. Read the interval checkpoint after waking
+  or timing out to include earlier updates and retention loss. A wait observes new admissions.
+
+- For the distinct responses returned by one captured endpoint, pass its session ID to
+  `audit_cache_efficiency.responseVariantsForSessionID`. Inspect counts and representative
+  IDs for byte variants or JSON shapes, plus skipped coverage. Set `compactVariants: true`;
+  use the shared `columns` to interpret rows when present, otherwise read `examples`.
+
+- For repeated requests including POST payloads, use `audit_cache_efficiency` with
+  `includeRequestIdentity: true`. Check comparable responses and skipped inputs.
+
 - For periodic failure, retention loss and peak usage reports, call `capture_digest` with
   `interval: "start"`, then pass each returned checkpoint as `interval`. On `restart_required`,
   mark the gap and start again.

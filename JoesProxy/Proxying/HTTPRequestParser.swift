@@ -46,7 +46,10 @@ struct HTTPProxyRequest: Sendable {
 
     func capturedBody(using limiter: CaptureBodyLimiter) -> CapturedBody {
         let retained = limiter.retainedBody(from: body)
-        guard let originalBodySize else { return retained }
+        guard let originalBodySize else {
+            // The parser has observed the entire unspooled request, including an empty one.
+            return CapturedBody(data: retained.data, size: body.count, truncated: retained.truncated)
+        }
         return CapturedBody(data: retained.data, size: originalBodySize,
                             truncated: originalBodySize > (retained.data?.count ?? 0))
     }

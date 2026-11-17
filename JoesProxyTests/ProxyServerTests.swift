@@ -2064,6 +2064,8 @@ final class ProxyServerTests: XCTestCase {
         let seededFault = environment["JOESPROXY_SOAK_SEEDED_FAULT"] == "1"
 
         let mcp = MCPResponseDisclosureIntegrationTests()
+        let waitComparison = try await mcp.pollingComparison()
+        sink.record("synthetic_wait_vs_poll", waitComparison)
         let stack = try await mcp.makeStack()
         _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
         let store = stack.sessionStore
@@ -2150,8 +2152,7 @@ final class ProxyServerTests: XCTestCase {
             }
             return (statuses, times)
         }
-        func tool(_ name: String, _ arguments: [String: Any]) async throws
-            -> (payload: [String: Any]?, bytes: Int, ms: Double, error: String?) {
+        func reserveToolCall() async throws {
             // Stay inside the per-client request limit, as a well-behaved agent must.
             let limit = MCPServerLimits.requestRatePerClientPerMinute - 5
             var now = ProcessInfo.processInfo.systemUptime
@@ -2164,6 +2165,10 @@ final class ProxyServerTests: XCTestCase {
                 callTimes.removeAll { now - $0 >= 61 }
             }
             callTimes.append(now)
+        }
+        func tool(_ name: String, _ arguments: [String: Any]) async throws
+            -> (payload: [String: Any]?, bytes: Int, ms: Double, error: String?) {
+            try await reserveToolCall()
             let started = ContinuousClock.now
             let response = try await mcp.callSessionSummary(stack: stack, toolName: name, toolArguments: arguments)
             let elapsed = started.duration(to: .now)
@@ -2252,11 +2257,28 @@ final class ProxyServerTests: XCTestCase {
                    let sample = store.sessions.last(where: { $0.request.path == "/seed17/api" }) {
                     let forwardedBefore = origin.scriptedCounter.requests
                     let rule = try await overrides.addBlockRule(from: sample.request, statusCode: 503, label: "soak-\(cycle)")
+                    try await reserveToolCall()
+                    async let waiting = mcp.callSessionSummary(stack: stack, toolName: "capture_wait",
+                        toolArguments: ["method": "GET", "statusClass": "5xx", "seconds": 5])
+                    let registrationDeadline = ContinuousClock.now.advanced(by: .seconds(2))
+                    while stack.snapshotService.activeWaits == 0 && ContinuousClock.now < registrationDeadline {
+                        await Task.yield()
+                    }
+                    let subscribed = stack.snapshotService.activeWaits > 0
                     var blocked = 0
                     for _ in 0..<4 {
                         if try await blockedStatus() == 503 { blocked += 1 }
                     }
                     if blocked != 4 { sink.fail("rule_not_applied", "blocked \(blocked) of 4", cycle: cycle) }
+                    let wake = try await waiting
+                    let notice = try mcp.summaryPayload(from: wake)
+                    let matched = notice["matched"] as? Int ?? -1
+                    let outcome = notice["outcome"] as? String ?? "missing"
+                    sink.record("traffic_wait", ["cycle": cycle, "registered": subscribed, "matched": matched,
+                        "outcome": outcome, "delivered503": blocked, "rpcBytes": wake.requestBytes + wake.wireBytes])
+                    if !subscribed || outcome != "matched" || matched != 1 {
+                        sink.fail("traffic_wait", "subscribed=\(subscribed) outcome=\(outcome) matched=\(matched)", cycle: cycle)
+                    }
                     if origin.scriptedCounter.requests != forwardedBefore {
                         sink.fail("blocked_request_forwarded", "origin saw \(origin.scriptedCounter.requests - forwardedBefore)", cycle: cycle)
                     }
@@ -2364,6 +2386,19 @@ final class ProxyServerTests: XCTestCase {
 
                 // 5. User clears history: an earlier window must not read as a measured zero.
                 if cycle.isMultiple(of: 10) {
+                    let previousPolicy = store.retentionPolicy
+                    let beforeBodies = store.evictedBodyCount
+                    let beforeDrops = store.droppedSessionCount
+                    store.retentionPolicy = .keepLastBodyBytes(0)
+                    let bodyOnly = store.droppedSessionCount == beforeDrops && store.evictedBodyCount > beforeBodies
+                    store.retentionPolicy = .keepLastSessions(1)
+                    let removedSessions = store.droppedSessionCount - beforeDrops
+                    store.retentionPolicy = previousPolicy
+                    sink.record("retention_exercise", ["cycle": cycle, "bodyOnly": bodyOnly,
+                        "removedBodies": store.evictedBodyCount - beforeBodies, "removedSessions": removedSessions])
+                    if !bodyOnly || removedSessions <= 0 {
+                        sink.fail("retention_exercise", "bodyOnly=\(bodyOnly) removedSessions=\(removedSessions)", cycle: cycle)
+                    }
                     try await recordInterval()
                     store.clear()
                     let invalid = try await tool("capture_digest", ["interval": intervalToken])

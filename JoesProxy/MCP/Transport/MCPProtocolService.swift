@@ -1304,8 +1304,24 @@ final class MCPProtocolService {
                 return structuredErrorJSONRPC(id: id, error: MCPStructuredError(code: .internalFailure, message: "Documentation is unavailable."))
             }
         case "audit_cache_efficiency":
-            if arguments["includeImageIdentity"] as? Bool == true {
-                return await repeatedImageAudit(id: id, arguments: arguments, client: client, context: context)
+            for name in ["includeImageIdentity", "includeRequestIdentity", "compactVariants", "errorClusters"] where arguments[name] != nil {
+                guard let value = arguments[name] as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() else {
+                    return structuredErrorJSONRPC(id: id, error: .malformedRequest(message: "\(name) must be a boolean."))
+                }
+            }
+            let requests = arguments["includeRequestIdentity"] as? Bool == true
+            let images = arguments["includeImageIdentity"] as? Bool == true
+            let variants = arguments["responseVariantsForSessionID"] != nil
+            if arguments["compactVariants"] != nil && !variants {
+                return structuredErrorJSONRPC(id: id, error: .malformedRequest(message: "compactVariants requires responseVariantsForSessionID."))
+            }
+            let errors = arguments["errorClusters"] as? Bool == true
+            if [requests, images, variants, errors].filter({ $0 }).count > 1 {
+                return structuredErrorJSONRPC(id: id, error: .malformedRequest(message: "Choose one identity audit per call."))
+            }
+            if requests || images || variants || errors {
+                let mode: IdentityMode = errors ? .errors : variants ? .variants : (requests ? .requests : .images)
+                return await identityAudit(id: id, arguments: arguments, client: client, context: context, mode: mode)
             }
             return auditCacheEfficiencyTool(id: id)
         case "investigation_snapshot":
@@ -1611,6 +1627,14 @@ final class MCPProtocolService {
             let requestedLimit = disclosureSerializer.normalizedPageSize(arguments["limit"] as? Int)
             let cursor = try decodeCursor(arguments["cursor"])
             let projection = try responseProjection(from: arguments)
+            var compactRows = false
+            if let raw = arguments["compactRows"] {
+                guard queryDigest != "sessions_list", projection == .minimal,
+                      let flag = raw as? NSNumber, CFGetTypeID(flag) == CFBooleanGetTypeID() else {
+                    throw MCPStructuredError.malformedRequest(message: "compactRows requires a boolean and minimal search projection.")
+                }
+                compactRows = flag.boolValue
+            }
             let sinceSequence = try normalizedUInt64(arguments["sinceSequence"], fieldName: "sinceSequence")
             let stateToken = captureStateToken()
             let capacity = captureStatusProvider?()
@@ -1730,6 +1754,7 @@ final class MCPProtocolService {
             var limit = requestedLimit
             var truncatedByBudget = false
             var encodedData = Data()
+            var tabular = false
 
             while true {
                 // Cooperative cancellation checkpoint: if the per-request timeout in
@@ -1771,6 +1796,22 @@ final class MCPProtocolService {
                     authChain: authChain
                 )
                 encodedData = try encoder.encode(MCPDTOEnvelope(payload: pageDTO))
+                tabular = false
+                if compactRows, items.count > 1 {
+                    var envelope = try jsonObject(from: encodedData)
+                    if var payload = envelope["payload"] as? [String: Any],
+                       let objects = payload.removeValue(forKey: "items") as? [[String: Any]] {
+                        let columns = Set(objects.flatMap(\.keys)).sorted()
+                        payload["columns"] = columns
+                        payload["rows"] = objects.map { object in columns.map { object[$0] ?? NSNull() } }
+                        envelope["payload"] = payload
+                        let table = try JSONSerialization.data(withJSONObject: envelope)
+                        if table.count < encodedData.count {
+                            encodedData = table
+                            tabular = true
+                        }
+                    }
+                }
 
                 if encodedData.count <= responseBudget {
                     break
@@ -1790,7 +1831,7 @@ final class MCPProtocolService {
                 truncatedByBudget = true
             }
 
-            return toolStructuredResult(id: id, payload: try jsonObject(from: encodedData))
+            return toolStructuredResult(id: id, payload: try jsonObject(from: encodedData), summarizeText: tabular)
         } catch let error as MCPStructuredError {
             return structuredErrorJSONRPC(id: id, error: error)
         } catch {
@@ -2012,30 +2053,65 @@ final class MCPProtocolService {
         }
     }
 
-    private func repeatedImageAudit(id: Any?, arguments: [String: Any], client: MCPClientRecord, context: RequestContext) async -> [String: Any] {
+    private enum IdentityMode: String {
+        case requests = "requestIdentity", images = "imageIdentity", variants = "responseVariants", errors = "errorClusters"
+    }
+
+    private func identityAudit(id: Any?, arguments: [String: Any], client: MCPClientRecord, context: RequestContext,
+                               mode: IdentityMode) async -> [String: Any] {
         do {
             guard !artifactWorker.busy else { throw ArtifactAnalysisFailure.busy }
+            let anchorID = mode == .variants ? try requiredUUID(arguments["responseVariantsForSessionID"], name: "responseVariantsForSessionID") : nil
+            if mode != .images {
+                let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
+                let fields: Set<MCPPolicyFieldClass> = mode == .errors ? [.statusCode] : [.method, .sanitizedHost, .sanitizedPath, .statusCode]
+                guard fields.isSubset(of: profile.allowedFieldClasses) else {
+                    throw MCPStructuredError(code: .policyDenied, message: "Required identity audit fields are outside this disclosure profile.")
+                }
+            }
+            let reason: String = switch mode {
+            case .requests: "Compare captured request targets and retained request and response bodies."
+            case .images: "Compare complete retained image bodies across capture URLs."
+            case .variants: "Compare retained response bodies and JSON shapes for the selected endpoint."
+            case .errors: "Group HTTP failures across the capture using status and retained response bodies."
+            }
             _ = try resolveSensitiveReadApproval(toolName: "audit_cache_efficiency", arguments: arguments, client: client,
                 capability: .bodyRead, mcpSessionID: context.headers[MCPNetworkConstants.sessionIDHeader.lowercased()],
-                reason: "Compare complete retained image bodies across capture URLs.")
+                reason: reason)
             let revision = snapshotService.stateRevision
             let epoch = snapshotService.captureEpoch
             let policy = policyStore.policyRevision
             let grantID = grantStore.activeGrant(capability: .bodyRead, clientID: client.id)?.id
             let records = snapshotService.sourceSessionStore.sessions
-            let report = try await artifactWorker.perform { try RepeatedImageAudit.inspect(records) }
+            let anchor = anchorID.flatMap { snapshotService.indexedSession(id: $0)?.record }
+            let compact = arguments["compactVariants"] as? Bool == true
+            let report = try await artifactWorker.perform {
+                let encoder = JSONEncoder()
+                switch mode {
+                case .requests: return try encoder.encode(RepeatedRequestAudit.inspect(records))
+                case .images: return try encoder.encode(RepeatedImageAudit.inspect(records))
+                case .errors: return try encoder.encode(ResponseVariantAudit.ErrorReport(records))
+                case .variants:
+                    guard let anchor, anchor.request.inspectionKind != .tunneledTLS, !CaptureMarkerConstants.isMarkerRecord(anchor)
+                        else { throw ArtifactAnalysisFailure.sourceUnavailable }
+                    return try ResponseVariantAudit.inspect(records, endpoint: anchor.request).encoded(compact: compact)
+                }
+            }
             guard policy == policyStore.policyRevision, let current = clientRegistry.client(id: client.id),
                   grantID == grantStore.activeGrant(capability: .bodyRead, clientID: client.id)?.id,
                   current.credentialState == .active, current.credentialGeneration == client.credentialGeneration,
                   current.assignedProfileID == client.assignedProfileID,
+                  !Task.isCancelled, policyEvaluator.effectiveAllows(capability: .captureResource, client: current),
                   policyEvaluator.effectiveAllows(capability: .bodyRead, client: current) else {
                 throw ArtifactAnalysisFailure.sourceUnavailable
             }
             guard revision == snapshotService.stateRevision, epoch == snapshotService.captureEpoch else {
                 throw ArtifactAnalysisFailure.sourceChanged
             }
-            return toolStructuredResult(id: id, payload: ["imageIdentity": try encodedObject(report),
-                "captureEpoch": epoch.rawValue, "stateRevision": revision])
+            let result = try jsonObject(from: report)
+            return toolStructuredResult(id: id, payload: [mode.rawValue: result,
+                "captureEpoch": epoch.rawValue, "stateRevision": revision],
+                summarizeText: compact && result["columns"] != nil)
         } catch let error as MCPStructuredError {
             return structuredErrorJSONRPC(id: id, error: error)
         } catch {
@@ -5729,14 +5805,15 @@ final class MCPProtocolService {
             ]
         case "sessions_search":
             var properties = sessionQueryProperties()
+            properties["compactRows"] = ["type": "boolean", "description": "Tabular minimal rows when smaller."]
             properties["method"] = ["type": "string", "description": "Exact HTTP method."]
             properties["hostCategory"] = [
                 "type": "string",
                 "enum": MCPHostCategory.allCases.map(\.rawValue)
             ]
             properties["sessionIDPrefix"] = ["type": "string", "description": "Opaque session ID prefix."]
-            properties["domain"] = ["type": "string", "description": "Case-insensitive substring match against the disclosed request host."]
-            properties["path"] = ["type": "string", "description": "Case-insensitive substring match against the disclosed request path."]
+            properties["domain"] = ["type": "string", "description": "Disclosed host substring, case-insensitive."]
+            properties["path"] = ["type": "string", "description": "Disclosed path substring, case-insensitive."]
             properties["startedAfter"] = ["type": "string", "format": "date-time", "description": "Inclusive lower bound (ISO 8601)."]
             properties["startedBefore"] = ["type": "string", "format": "date-time", "description": "Inclusive upper bound (ISO 8601)."]
             properties["statusCode"] = ["type": "integer", "minimum": 100, "maximum": 599, "description": "Exact HTTP status code."]
@@ -5744,7 +5821,7 @@ final class MCPProtocolService {
             properties["minDurationMs"] = ["type": "number", "minimum": 0, "description": "Minimum total duration in milliseconds."]
             properties["hasOverrideHit"] = ["type": "boolean", "description": "Filter by whether an active rule/effect matched."]
             properties["bodyAvailable"] = ["type": "boolean", "description": "Filter by whether response body bytes are retained."]
-            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Group all matching sessions in the cursor range. Returns up to 32 endpoint groups and the total aggregateMatchCount."]
+            properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "All cursor-range matches, up to 32 groups, plus aggregateMatchCount."]
             properties["endpointExample"] = ["type": "string", "enum": ["first", "latest", "slowest"], "description": "One matching session ID per endpoint group."]
             properties["includeEndpointStatistics"] = ["type": "boolean", "description": "Nearest-rank p95 duration and response size with sample counts."]
             properties["includeAuthChain"] = ["type": "boolean", "description": "Inspect credential and cookie continuity across all matches in the cursor range. The report counts omitted tokens and anomalies."]
@@ -5773,7 +5850,11 @@ final class MCPProtocolService {
         case "audit_cache_efficiency":
             inputSchema = [
                 "type": "object",
-                "properties": ["includeImageIdentity": ["type": "boolean", "description": "Return cross-URL image content groups. Requires body access."]],
+                "properties": ["includeImageIdentity": ["type": "boolean", "description": "Cross-URL image content groups."],
+                               "includeRequestIdentity": ["type": "boolean", "description": "Group method, URL and body."],
+                               "errorClusters": ["type": "boolean", "description": "Group HTTP errors by status and body."],
+                               "responseVariantsForSessionID": ["type": "string", "format": "uuid", "description": "Group endpoint response bytes and JSON shapes."],
+                               "compactVariants": ["type": "boolean", "description": "Use table rows when smaller."]],
                 "additionalProperties": false
             ]
         case "investigation_snapshot":
@@ -7941,8 +8022,8 @@ final class MCPProtocolService {
         ]
     }
 
-    private func toolStructuredResult(id: Any?, payload: [String: Any]) -> [String: Any] {
-        let textData = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+    private func toolStructuredResult(id: Any?, payload: [String: Any], summarizeText: Bool = false) -> [String: Any] {
+        let textData = summarizeText ? nil : try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
         let text: String
         if let textData, textData.count <= 768 {
             text = String(data: textData, encoding: .utf8) ?? "{}"

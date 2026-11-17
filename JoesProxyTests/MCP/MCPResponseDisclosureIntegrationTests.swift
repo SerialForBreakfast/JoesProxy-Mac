@@ -285,6 +285,216 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(answer["matched"] as? Int, 0)
     }
 
+    func testResponseVariantCoverageKeepsRareErrorAndAccountsForMissingShapes() throws {
+        let endpoint = CapturedRequest(method: "GET", scheme: .https, host: "api.example", port: 443,
+            path: "/products?lang=en", headers: [], bodyData: nil, bodySize: 0)
+        func row(_ data: Data, status: Int = 200, mime: String = "application/json", gzip: Bool = false,
+                 truncated: Bool = false, request: CapturedRequest? = nil) -> SessionRecord {
+            var headers = [HTTPHeaderField(name: "Content-Type", value: mime)]
+            if gzip { headers.append(.init(name: "Content-Encoding", value: "gzip")) }
+            return SessionRecord(request: request ?? endpoint, response: .init(statusCode: status, headers: headers,
+                bodyData: data, bodySize: data.count, bodyTruncated: truncated), state: .completed, timing: .init(startedAt: .distantPast))
+        }
+        let good = (0..<18).map { Data("{\"k\($0)\":0}".utf8) }
+        let error = row(Data(#"{"error":true}"#.utf8), status: 503)
+        let other = CapturedRequest(method: "GET", scheme: .https, host: "api.example", port: 443,
+            path: "/products?lang=fr", headers: [], bodyData: nil, bodySize: 0)
+        var rows = good.map { row($0) }
+        rows += [error, row(try XCTUnwrap(LiveResponseTransformation.gzipCompress(good[0])), gzip: true),
+                 row(Data("invalid".utf8)), row(Data([0xff]), mime: "image/png"),
+                 row(good[0], truncated: true), row(good[0], status: 206), row(good[0], request: other)]
+        let report = try ResponseVariantAudit.inspect(rows, endpoint: endpoint)
+        XCTAssertEqual(report.matchedSessions, 24)
+        XCTAssertEqual(report.bodyVariants.distinct, 22)
+        XCTAssertEqual(report.jsonShapes.distinct, 19)
+        XCTAssertEqual(report.jsonShapes.examples.count, 16)
+        XCTAssertEqual(report.jsonShapes.examples.first?.representativeSessionID, error.id)
+        XCTAssertEqual(report.jsonShapes.examples[1].occurrences, 2)
+        XCTAssertEqual(report.skippedBodies, ["incomplete": 2])
+        XCTAssertEqual(report.skippedShapes, ["not_json": 1, "malformed_source": 1])
+    }
+
+    func testEndpointResponseVariantsMatchPerResponseDigestOracle() async throws {
+        let stack = try await makeStack()
+        let values = [#"{"a":1,"b":[1,true]}"#, #"{"b":[false,2,3],"a":42}"#, #"{"a":1,"b":[1,true]}"#,
+                      #"{"a":null,"b":[]}"#, #"{"error":"fixture"}"#]
+        let rows = values.enumerated().map { i, json in
+            SessionRecord(request: stack.session.request, response: .init(statusCode: i == 4 ? 503 : 200,
+                headers: [.init(name: "Content-Type", value: "application/json")],
+                bodyData: Data(json.utf8), bodySize: json.utf8.count), state: .completed, timing: stack.session.timing)
+        }
+        stack.sessionStore.load(sessions: rows)
+        let args = ["responseVariantsForSessionID": rows[0].id.uuidString]
+        let pending = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: args)
+        XCTAssertNotNil(pending.errorData)
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        var control: [String: [UUID]] = [:]
+        var requestBytes = 0, responseBytes = 0
+        let start = ContinuousClock.now
+        for row in rows {
+            let read = try await callSessionSummary(stack: stack, toolName: "response_evidence_brief",
+                toolArguments: ["sessionID": row.id.uuidString, "selectionPointer": ""])
+            let digest = try XCTUnwrap(try summaryPayload(from: read)["sourceSHA256"] as? String)
+            control[digest, default: []].append(row.id)
+            requestBytes += read.requestBytes
+            responseBytes += read.wireBytes
+        }
+        let middle = ContinuousClock.now
+        let response = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: args)
+        let end = ContinuousClock.now
+        let report = try XCTUnwrap(try summaryPayload(from: response)["responseVariants"] as? [String: Any])
+        let bodies = try XCTUnwrap(report["bodyVariants"] as? [String: Any])
+        let examples = try XCTUnwrap(bodies["examples"] as? [[String: Any]])
+        XCTAssertEqual(control.count, 4)
+        XCTAssertEqual(bodies["distinct"] as? Int, control.count)
+        XCTAssertEqual(examples.compactMap { $0["occurrences"] as? Int }.sorted(), [1,1,1,2])
+        XCTAssertEqual(Set(examples.compactMap { $0["representativeSessionID"] as? String }),
+                       Set(control.values.compactMap { $0.first?.uuidString }))
+        let shapes = try XCTUnwrap(report["jsonShapes"] as? [String: Any])
+        let variants = try XCTUnwrap(shapes["examples"] as? [[String: Any]])
+        XCTAssertEqual(shapes["distinct"] as? Int, 3)
+        XCTAssertEqual(variants.compactMap { $0["occurrences"] as? Int }.sorted(), [1,1,3])
+        XCTAssertEqual(variants.first?["representativeSessionID"] as? String, rows[4].id.uuidString)
+        let compactStart = ContinuousClock.now
+        let compact = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency",
+            toolArguments: ["responseVariantsForSessionID": rows[0].id.uuidString, "compactVariants": true])
+        let compactEnd = ContinuousClock.now
+        let table = try XCTUnwrap(try summaryPayload(from: compact)["responseVariants"] as? [String: Any])
+        let columns = try XCTUnwrap(table["columns"] as? [String])
+        XCTAssertEqual(columns, ["statusCode", "occurrences", "representativeSessionID"])
+        var expanded = table
+        expanded.removeValue(forKey: "columns")
+        for name in ["bodyVariants", "jsonShapes"] {
+            var section = try XCTUnwrap(table[name] as? [String: Any])
+            let rows = try XCTUnwrap(section.removeValue(forKey: "rows") as? [[Any]])
+            section["examples"] = rows.map { Dictionary(uniqueKeysWithValues: zip(columns, $0)) }
+            expanded[name] = section
+        }
+        XCTAssertEqual(expanded as NSDictionary, report as NSDictionary)
+        XCTAssertLessThan(compact.requestBytes + compact.wireBytes, response.requestBytes + response.wireBytes)
+        print("EDGE_COMPACT controlRequest=\(response.requestBytes) controlResponse=\(response.wireBytes) controlLatency=\(middle.duration(to: end)) compactRequest=\(compact.requestBytes) compactResponse=\(compact.wireBytes) compactLatency=\(compactStart.duration(to: compactEnd))")
+        print("EDGE_VARIANTS controlCalls=5 request=\(requestBytes) response=\(responseBytes) latency=\(start.duration(to: middle)) candidateCalls=1 request=\(response.requestBytes) response=\(response.wireBytes) latency=\(middle.duration(to: end))")
+    }
+
+    func testCompactVariantsPreservesEmptyCoverageAndRequiresAnchor() async throws {
+        let empty = ResponseVariantAudit.Groups(distinct: 0, omitted: 0, examples: [])
+        let report = ResponseVariantAudit.Report(matchedSessions: 1, bodyVariants: empty, jsonShapes: empty,
+            skippedBodies: ["incomplete": 1], skippedShapes: [:])
+        let data = try report.encoded(compact: true)
+        let regular = try report.encoded(compact: false)
+        XCTAssertEqual(data.count, regular.count)
+        XCTAssertEqual(try JSONSerialization.jsonObject(with: data) as? NSDictionary,
+                       try JSONSerialization.jsonObject(with: regular) as? NSDictionary)
+        let stack = try await makeStack()
+        for arguments: [String: Any] in [["compactVariants": true],
+            ["responseVariantsForSessionID": stack.session.id.uuidString, "compactVariants": 1]] {
+            let read = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: arguments)
+            XCTAssertNotNil(read.errorData)
+        }
+    }
+
+    func testRequestAuditDiscardsResultsAfterRevocationOrCaptureChange() async throws {
+        for (variants, revoke) in [(false, false), (false, true), (true, false), (true, true)] {
+            let gate = ArtifactTestGate()
+            defer { gate.open() }
+            let stack = try await makeStack(worker: ArtifactAnalysisWorker(beforeWork: { gate.wait() }))
+            let grant = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead,
+                                                     mode: .untilSessionEnd)
+            let args: [String: Any] = variants ? ["responseVariantsForSessionID": stack.session.id.uuidString]
+                : ["includeRequestIdentity": true]
+            let pending = Task { try await self.callSessionSummary(stack: stack, toolName: "audit_cache_efficiency",
+                toolArguments: args) }
+            for _ in 0..<100 where !gate.entered { try await Task.sleep(for: .milliseconds(5)) }
+            XCTAssertTrue(gate.entered)
+            if revoke { try stack.grantStore.removeGrant(id: grant.id) } else { stack.sessionStore.clear() }
+            gate.open()
+            let result = try summaryPayload(from: await pending.value)
+            XCTAssertEqual(result["reason"] as? String, revoke ? "source_unavailable" : "source_changed")
+            XCTAssertNil(result["requestIdentity"])
+            XCTAssertNil(result["responseVariants"])
+        }
+    }
+
+    func testDuplicateRequestCoverageDistinguishesScanAndOutputLimits() throws {
+        let rows = (0..<4100).map { index in
+            SessionRecord(request: .init(method: "GET", scheme: .http, host: "assets.example", port: nil,
+                path: "/item/\(index % 20)", headers: [], bodyData: nil, bodySize: 0),
+                response: .init(statusCode: 304, headers: [], bodyData: nil, bodySize: 0),
+                state: .completed, timing: .init(startedAt: .distantPast))
+        }
+        let report = try RepeatedRequestAudit.inspect(rows)
+        XCTAssertEqual(report.inspectedRequests, 4096)
+        XCTAssertEqual(report.skippedRequests, ["work_limit": 4])
+        XCTAssertEqual(report.skippedResponses, ["incomplete_or_partial_response": 4096])
+        XCTAssertEqual(report.groups.count, 16)
+        XCTAssertEqual(report.omittedGroups, 4)
+        XCTAssertTrue(report.groups.allSatisfy { $0.occurrences == 205 && $0.comparableResponses == 0 })
+    }
+
+    func testRepeatedRequestReceiptAgainstURLAuditForIdenticalEmptyGETs() async throws {
+        let stack = try await makeStack()
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let parsed = try HTTPRequestParser().parse(Data("GET /item HTTP/1.1\r\nHost: assets.example\r\n\r\n".utf8))
+        let observed = parsed.capturedBody(using: .live)
+        let request = CapturedRequest(method: parsed.method, scheme: .http, host: parsed.host, port: parsed.port,
+            path: parsed.path, headers: parsed.headers, bodyData: observed.data, bodySize: observed.size)
+        let records = (0..<128).map { _ in SessionRecord(request: request, response: .init(statusCode: 200,
+            headers: [], bodyData: Data([42]), bodySize: 1), state: .completed, timing: .init(startedAt: Date())) }
+        stack.sessionStore.load(sessions: records)
+        let start = ContinuousClock.now
+        let old = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: [:])
+        let midway = ContinuousClock.now
+        let new = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency",
+            toolArguments: ["includeRequestIdentity": true])
+        let end = ContinuousClock.now
+        let oldGroups = try XCTUnwrap(try summaryPayload(from: old)["uncachedDuplicateRequests"] as? [[String: Any]])
+        let report = try XCTUnwrap(try summaryPayload(from: new)["requestIdentity"] as? [String: Any])
+        let groups = try XCTUnwrap(report["groups"] as? [[String: Any]])
+        XCTAssertEqual(oldGroups.first?["count"] as? Int, 128)
+        XCTAssertEqual(groups.first?["occurrences"] as? Int, 128)
+        XCTAssertEqual(groups.first?["repeatedResponseBodyBytes"] as? Int, 127)
+        print("EDGE_REQUEST_RECEIPT oldRequest=\(old.requestBytes) oldResponse=\(old.wireBytes) oldLatency=\(start.duration(to: midway)) newRequest=\(new.requestBytes) newResponse=\(new.wireBytes) newLatency=\(midway.duration(to: end))")
+    }
+
+    func testDuplicateRequestAuditSeparatesPayloadTargetAndUnobservedEvidence() async throws {
+        let stack = try await makeStack()
+        let args = ["includeRequestIdentity": true]
+        let denied = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: args)
+        XCTAssertNotNil(denied.errorData)
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        func row(_ body: String?, target: String = "/orders?q=private", port: Int? = nil,
+                 status: Int = 200, truncated: Bool = false) -> SessionRecord {
+            let data = body.map { Data($0.utf8) }
+            return SessionRecord(request: .init(method: "POST", scheme: .https, host: "api.example",
+                port: port, path: target, headers: [], bodyData: data, bodySize: data?.count),
+                response: .init(statusCode: status, headers: [], bodyData: Data("ok".utf8), bodySize: 2, bodyTruncated: truncated),
+                state: .completed, timing: .init(startedAt: Date()))
+        }
+        let rows = [row("abc"), row("abc", port: 443), row("abc", status: 503), row("abc", truncated: true),
+                    row("xyz"), row("abc", target: "/orders?q=other"), row("abc", port: 8443), row(nil)]
+        stack.sessionStore.load(sessions: rows)
+        let response = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: args)
+        let payload = try summaryPayload(from: response)
+        let report = try XCTUnwrap(payload["requestIdentity"] as? [String: Any])
+        let groups = try XCTUnwrap(report["groups"] as? [[String: Any]])
+        XCTAssertEqual(groups.count, 1)
+        let group = try XCTUnwrap(groups.first)
+        XCTAssertEqual(group["representativeSessionID"] as? String, rows[0].id.uuidString)
+        XCTAssertEqual(group["occurrences"] as? Int, 4)
+        XCTAssertEqual(group["repeatedRequestBodyBytes"] as? Int, 9)
+        XCTAssertEqual(group["comparableResponses"] as? Int, 3)
+        XCTAssertEqual(group["repeatedResponses"] as? Int, 1)
+        XCTAssertEqual(group["distinctComparableResponses"] as? Int, 2)
+        XCTAssertEqual(group["firstHTTPErrorSessionID"] as? String, rows[2].id.uuidString)
+        XCTAssertEqual(group["repeatedResponseBodyBytes"] as? Int, 2)
+        XCTAssertEqual(report["skippedRequests"] as? [String: Int], ["incomplete_request_body": 1])
+        XCTAssertEqual(report["skippedResponses"] as? [String: Int], ["incomplete_or_partial_response": 1])
+        let encoded = String(decoding: try JSONSerialization.data(withJSONObject: report), as: UTF8.self)
+        XCTAssertFalse(encoded.contains("/orders"))
+        XCTAssertFalse(encoded.contains("abc"))
+        XCTAssertNotNil(payload["stateRevision"])
+    }
+
     func testImageContentAuditRequiresAuthorityAndExcludesPartialResponses() async throws {
         let stack = try await makeStack()
         let args = ["includeImageIdentity": true]
@@ -1208,6 +1418,7 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
     }
 
     struct TestStack {
+        let snapshotService: MCPSessionSnapshotService
         let protocolService: MCPProtocolService
         let grantStore: MCPClientGrantStore
         let enrollment: MCPClientRegistry.EnrollmentResult
@@ -1278,6 +1489,7 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
             bearer: enrollment.plaintextCredential
         )
         return TestStack(
+            snapshotService: snapshotService,
             protocolService: protocolService,
             grantStore: grantStore,
             enrollment: enrollment,

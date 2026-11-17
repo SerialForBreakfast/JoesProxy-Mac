@@ -18,6 +18,7 @@ final class HTTPRequestParserTests: XCTestCase {
         XCTAssertEqual(parsed.host, "example.com")
         XCTAssertEqual(parsed.port, 8080)
         XCTAssertEqual(parsed.path, "/api/items?limit=10")
+        XCTAssertEqual(parsed.capturedBody(using: .live).size, 0)
         XCTAssertEqual(parsed.headers.first?.name, "Host")
     }
 
