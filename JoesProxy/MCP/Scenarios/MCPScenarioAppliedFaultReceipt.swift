@@ -48,6 +48,7 @@ final class MCPScenarioFaultApplicator {
     private let restorer: MCPRecoveryRestorer
     private let throttleConfigurationReader: () -> NetworkThrottleConfiguration
     private let throttleConfigurationWriter: (NetworkThrottleConfiguration) -> Void
+    private let loopbackPolicyReader: () -> LoopbackDestinationPolicy
 
     init(
         responseOverrideStore: ResponseOverrideStore,
@@ -56,7 +57,8 @@ final class MCPScenarioFaultApplicator {
         runningProxyPort: @escaping () -> UInt16? = { nil },
         restorer: MCPRecoveryRestorer,
         throttleConfigurationReader: @escaping () -> NetworkThrottleConfiguration,
-        throttleConfigurationWriter: @escaping (NetworkThrottleConfiguration) -> Void
+        throttleConfigurationWriter: @escaping (NetworkThrottleConfiguration) -> Void,
+        loopbackPolicyReader: @escaping () -> LoopbackDestinationPolicy = { .disabled }
     ) {
         self.responseOverrideStore = responseOverrideStore
         self.bookmarkStore = bookmarkStore
@@ -65,6 +67,7 @@ final class MCPScenarioFaultApplicator {
         self.restorer = restorer
         self.throttleConfigurationReader = throttleConfigurationReader
         self.throttleConfigurationWriter = throttleConfigurationWriter
+        self.loopbackPolicyReader = loopbackPolicyReader
     }
 
     func apply(
@@ -133,10 +136,28 @@ final class MCPScenarioFaultApplicator {
                 faultIndex: faultIndex
             )
 
-        case .mapRemote(let matcher, let remoteHost, let remotePort, let remoteScheme, let remotePath, let remoteQueryPolicy, let remoteQuery):
+        case .mapRemote(let matcher, let remoteHost, let remotePort, let remoteScheme, let remotePath, let remoteQueryPolicy, let remoteQuery, let allowLoopbackDestination, let preserveHostHeader):
+            let allowLoopback = allowLoopbackDestination ?? false
+            let preserveHost = preserveHostHeader ?? false
+            do {
+                try MCPMutationValidator.validateMapRemoteDestination(
+                    host: remoteHost,
+                    port: remotePort,
+                    scheme: remoteScheme,
+                    allowLoopbackDestination: allowLoopback,
+                    policy: loopbackPolicyReader(),
+                    reservedRegistry: .shared
+                )
+            } catch let error as MCPMutationValidationError {
+                throw MCPScenarioFaultApplicatorError.storeWriteFailed(
+                    MCPMutationValidator.structuredError(for: error).message
+                )
+            }
             let ruleID = UUID()
             let resolvedPort = remotePort ?? defaultPort(for: remoteScheme)
-            let description = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(remoteHost):\(resolvedPort)\(remotePath ?? "")"
+            let normalizedHost = LoopbackAddressInspector.stripBracketsAndTrailingDot(remoteHost).host
+            let effectiveHost = normalizedHost.isEmpty ? remoteHost.lowercased() : normalizedHost
+            let description = "\(ResponseOverrideSourceKind.mapRemote.sourceDescription): \(remoteScheme.rawValue)://\(effectiveHost):\(resolvedPort)\(remotePath ?? "")"
             let rule = ResponseOverrideRule(
                 id: ruleID,
                 label: "scenario:\(scenarioID.rawValue)",
@@ -152,12 +173,14 @@ final class MCPScenarioFaultApplicator {
                 headers: [],
                 bodySource: .inline(nil),
                 isEnabled: true,
-                mapRemoteHost: remoteHost.lowercased(),
+                mapRemoteHost: effectiveHost,
                 mapRemotePort: resolvedPort,
                 mapRemoteScheme: remoteScheme,
                 mapRemotePath: remotePath,
                 mapRemoteQueryPolicy: remoteQueryPolicy,
                 mapRemoteQuery: remoteQuery,
+                allowLoopbackDestination: allowLoopback,
+                preserveHostHeader: preserveHost,
                 mcpOrigin: .mcp,
                 mcpProvenance: provenance
             )

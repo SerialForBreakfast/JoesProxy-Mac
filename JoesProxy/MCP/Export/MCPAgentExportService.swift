@@ -185,7 +185,6 @@ enum MCPAgentExportService {
           version: \(Bundle.main.marketingVersionOrDev)
           source: JoesProxy built-in diagnostic prompt (joesproxy_diagnose)
         ---
-
         \(body)
         """
     }

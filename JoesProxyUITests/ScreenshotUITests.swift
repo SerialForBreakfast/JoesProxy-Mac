@@ -32,6 +32,45 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     private static let screenshotDemoLaunchArgument = "--screenshot-demo"
+
+    @MainActor
+    func testRecordingSavePanelInsetsAndFidelityChoices() throws {
+        let app = XCUIApplication()
+        app.launchArguments = [Self.screenshotDemoLaunchArgument, "--screenshot-browser-mode=table"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons["proxyToggleButton"].waitForExistence(timeout: 8))
+        app.typeKey("s", modifierFlags: .command)
+        let panel = app.dialogs["save-panel"]
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        let picker = panel.popUpButtons["Recording Fidelity"]
+        XCTAssertTrue(picker.exists)
+        let save = panel.buttons["SaveButton"]
+        let initialSaveY = save.frame.midY
+        for (title, hint) in [
+            ("Full Recording", "Largest · Best for reopening"),
+            ("Metadata Only", "Smallest · Best for sharing"),
+            ("Text Bodies Only", "Smaller · Best for sharing"),
+            ("Media Focused", "Smaller · Best for streaming/media debugging")
+        ] {
+            if title != "Full Recording" {
+                picker.click()
+                app.menuItems[title].click()
+            }
+            let caption = panel.staticTexts[hint]
+            XCTAssertTrue(caption.waitForExistence(timeout: 3))
+            XCTAssertGreaterThanOrEqual(caption.frame.minX - panel.frame.minX, 16)
+            XCTAssertGreaterThan(save.frame.minY - caption.frame.maxY, 8)
+            XCTAssertEqual(save.frame.midY, initialSaveY, accuracy: 2)
+            if title == "Full Recording" {
+                let screenshot = XCTAttachment(screenshot: panel.screenshot())
+                screenshot.name = "Save Recording fidelity layout"
+                screenshot.lifetime = .keepAlways
+                add(screenshot)
+            }
+        }
+        panel.typeKey(.escape, modifierFlags: [])
+    }
     private static let screenshotBrowserModePrefix = "--screenshot-browser-mode="
     private static let screenshotTextSizePrefix = "--screenshot-text-size="
 
@@ -408,8 +447,7 @@ final class ScreenshotUITests: XCTestCase {
     @MainActor
     private func recordCaptureDiagnostics(app: XCUIApplication, window: XCUIElement) throws {
         let allowed = CGPreflightScreenCaptureAccess()
-        let targets = NSRunningApplication.runningApplications(withBundleIdentifier: "com.ShowBlender.JoesProxy")
-        guard targets.count == 1, let target = targets.first else {
+        guard let target = screenshotTarget() else {
             XCTFail("Expected exactly one running JoesProxy for screenshot attribution")
             throw CaptureFailure.ambiguousTarget
         }
@@ -432,11 +470,26 @@ final class ScreenshotUITests: XCTestCase {
         XCTAssertFalse(owned.isEmpty, "The target app must have an on-screen window before capture")
     }
 
+}
+
+extension XCTestCase {
+    /// Use the app beside this test runner, including when a separate installed proxy is running.
+    @MainActor
+    fileprivate func screenshotTarget() -> NSRunningApplication? {
+        let product = Bundle.main.bundleURL.deletingLastPathComponent()
+            .appendingPathComponent("JoesProxy.app").resolvingSymlinksInPath().standardizedFileURL
+        guard let identifier = Bundle(url: product)?.bundleIdentifier else { return nil }
+        let matches = NSRunningApplication.runningApplications(withBundleIdentifier: identifier).filter {
+            $0.bundleURL?.resolvingSymlinksInPath().standardizedFileURL.path == product.path
+        }
+        return matches.count == 1 ? matches.first : nil
+    }
+
     /// Capture the identified window itself, not a desktop crop that may contain another app.
     @MainActor
-    private func ownedWindowAttachment(window: XCUIElement) async throws -> XCTAttachment {
-        let targets = NSRunningApplication.runningApplications(withBundleIdentifier: "com.ShowBlender.JoesProxy")
-        guard targets.count == 1, let target = targets.first else { throw CaptureFailure.ambiguousTarget }
+    func ownedWindowAttachment(window: XCUIElement) async throws -> XCTAttachment {
+        guard CGPreflightScreenCaptureAccess() else { throw CaptureFailure.accessUnavailable }
+        guard let target = screenshotTarget() else { throw CaptureFailure.ambiguousTarget }
         let frame = window.frame
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         let matches = content.windows.filter {
@@ -458,5 +511,6 @@ final class ScreenshotUITests: XCTestCase {
         return XCTAttachment(data: png, uniformTypeIdentifier: "public.png")
     }
 
-    private enum CaptureFailure: Error { case accessUnavailable, ambiguousTarget, encodingFailed }
 }
+
+private enum CaptureFailure: Error { case accessUnavailable, ambiguousTarget, encodingFailed }

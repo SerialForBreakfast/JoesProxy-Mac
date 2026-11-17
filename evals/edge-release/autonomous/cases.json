@@ -1,0 +1,14 @@
+{
+  "revision":"2026-11-13-autonomous-v1",
+  "model":"gemini-3.8-flash-low",
+  "rounds":3,
+  "prompt":"Two GET requests to /app/status.json captured the same feature settings before and after a reported behavior change. Investigate the two responses in chronological order. Which functional setting changed, if any? Distinguish timestamp noise from functional changes. If the evidence is incomplete, explain what is missing. Cite the two request IDs. Use only the synthetic jpdebug191 MCP server for investigation. Choose whichever available tools you need. Return JSON with fields verdict (changed, no_functional_change, or insufficient_evidence), field, before, after, and requestIDs. Preserve JSON types and use null for unknown values.",
+  "cases":[
+    {"id":"A","before":{"featureEnabled":true},"after":{"featureEnabled":false},"verdict":"changed","field":"featureEnabled","left":true,"right":false},
+    {"id":"B","before":{"featureEnabled":"false"},"after":{"featureEnabled":true},"verdict":"changed","field":"featureEnabled","left":"false","right":true},
+    {"id":"C","before":{"retryLimit":1},"after":{"retryLimit":0},"verdict":"changed","field":"retryLimit","left":1,"right":0},
+    {"id":"D","before":{"featureEnabled":true},"after":{"featureEnabled":true},"verdict":"no_functional_change"},
+    {"id":"E","before":{"featureEnabled":true},"after":null,"verdict":"insufficient_evidence"}
+  ],
+  "grading":"Require two observed request IDs and at least one successful JoesProxy read. For changes require the correct leaf, direction and JSON value types. For controls require the stated verdict with no invented functional change. Model can use any order or number of the five read-only tools available in the version. Grade unrelated tool use separately. All outcomes and retries retain usage. No model retry."
+}

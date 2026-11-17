@@ -926,7 +926,7 @@ final class ProxyViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testViewModelRefreshesTextSizeWhenConfigurationChangesExternally() throws {
+    func testViewModelRefreshesTextSizeWhenConfigurationChangesExternally() async throws {
         let configuration = TestAppConfiguration(certificateLabel: "TextSize-External")
         let viewModel = ProxyViewModel(
             configuration: configuration,
@@ -945,7 +945,7 @@ final class ProxyViewModelTests: XCTestCase {
         )
 
         configuration.appTextSizeRawValue = AppTextSize.large.rawValue
-        waitForMainQueueDrain()
+        try await waitForSettingsUpdate { viewModel.appTextSize == .large }
 
         XCTAssertEqual(viewModel.appTextSize, .large)
     }
@@ -1461,7 +1461,7 @@ final class ProxyViewModelTests: XCTestCase {
         let configuration = TestAppConfiguration(certificateLabel: "GuidedSetup-Dismiss")
         let presentationState = AppPresentationState(configuration: configuration)
 
-        presentationState.presentGuidedSetup(section: .welcome, mode: .firstRun)
+        presentationState.presentGuidedSetup(section: .certificate, mode: .firstRun)
         presentationState.dismissGuidedSetup()
 
         XCTAssertNil(presentationState.guidedSetupContext)
@@ -1479,7 +1479,7 @@ final class ProxyViewModelTests: XCTestCase {
 
             XCTAssertEqual(
                 presentationState.guidedSetupContext,
-                GuidedSetupContext(section: .httpsAndTrust, mode: .repair(blockingState))
+                GuidedSetupContext(section: .certificate, mode: .repair(blockingState))
             )
 
             presentationState.dismissGuidedSetup()
@@ -1487,13 +1487,14 @@ final class ProxyViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testTransitionFromGuidedSetupPresentsCertificateSetup() {
+    func testHelpCertificateShortcutOpensGuidedCertificatePage() {
         let presentationState = AppPresentationState()
-        presentationState.presentGuidedSetup(section: .httpsAndTrust, mode: .replay)
+        presentationState.presentHelpHub()
 
-        presentationState.transitionFromGuidedSetup(to: .certificateSetup)
+        presentationState.transitionFromHelpHub(to: .certificateSetup)
 
         XCTAssertNil(presentationState.guidedSetupContext)
+        XCTAssertFalse(presentationState.isHelpHubPresented)
 
         let expectation = expectation(description: "Guided setup transition completes")
         DispatchQueue.main.async {
@@ -1501,7 +1502,7 @@ final class ProxyViewModelTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 5)
 
-        XCTAssertTrue(presentationState.isCertificateSetupPresented)
+        XCTAssertEqual(presentationState.guidedSetupContext, GuidedSetupContext(section: .certificate, mode: .replay))
     }
 
     @MainActor
@@ -1558,11 +1559,11 @@ final class ProxyViewModelTests: XCTestCase {
     func testAppPresentationStatePresentsReplayGuidedSetupAtRequestedSection() {
         let presentationState = AppPresentationState()
 
-        presentationState.presentGuidedSetup(section: .exploreTraffic)
+        presentationState.presentGuidedSetup(section: .verifyCapture)
 
         XCTAssertEqual(
             presentationState.guidedSetupContext,
-            GuidedSetupContext(section: .exploreTraffic, mode: .replay)
+            GuidedSetupContext(section: .verifyCapture, mode: .replay)
         )
     }
 
@@ -1574,7 +1575,7 @@ final class ProxyViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             presentationState.guidedSetupContext,
-            GuidedSetupContext(section: .httpsAndTrust, mode: .repair(.installedTrustRequired))
+            GuidedSetupContext(section: .certificate, mode: .repair(.installedTrustRequired))
         )
     }
 
@@ -1616,11 +1617,11 @@ final class ProxyViewModelTests: XCTestCase {
         configuration.hasCompletedInitialGuidedSetupPresentation = true
         let presentationState = AppPresentationState(configuration: configuration)
 
-        presentationState.presentGuidedSetup(section: .startCapturing, mode: .replay)
+        presentationState.presentGuidedSetup(section: .proxy, mode: .replay)
 
         XCTAssertEqual(
             presentationState.guidedSetupContext,
-            GuidedSetupContext(section: .startCapturing, mode: .replay)
+            GuidedSetupContext(section: .proxy, mode: .replay)
         )
     }
 
@@ -4100,7 +4101,7 @@ final class ProxyViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testResetCertificateStateReportsPartialCleanupWhenManualWorkRemains() throws {
+    func testResetCertificateStateRetainsSigningIdentityWhenRemovalFails() throws {
         let identity = try makeRootIdentity(label: "State-Reset")
         let certificateAuthority = FakeCertificateAuthority(currentIdentity: identity, createdIdentity: identity)
         let certificateStore = MutableCertificateStore(identity: identity)
@@ -4116,9 +4117,9 @@ final class ProxyViewModelTests: XCTestCase {
 
         viewModel.resetCertificateState()
 
-        XCTAssertEqual(viewModel.trustAlertContext?.title, "Manual Cleanup Still Required")
-        XCTAssertTrue(viewModel.lastErrorMessage?.contains("manual cleanup still required") == true)
-        XCTAssertTrue(viewModel.lastErrorMessage?.contains("Installed certificate cleanup: Keychain removal failed") == true)
+        XCTAssertEqual(viewModel.trustAlertContext?.title, "Reset Incomplete")
+        XCTAssertTrue(viewModel.lastErrorMessage?.contains("Keychain removal failed") == true)
+        XCTAssertEqual(certificateStore.identity?.certificateData, identity.certificateData)
     }
 
     @MainActor
@@ -4179,10 +4180,21 @@ final class ProxyViewModelTests: XCTestCase {
 
         _ = try viewModel.prepareCertificateRenewal()
         XCTAssertNotNil(store.loadRootCertificate(label: pendingLabel))
+        let host = "rotate.example.test"
+        let oldLeaf = try provider.issueLeafCertificate(for: host)
         viewModel.resetCertificateState()
         XCTAssertNil(store.loadRootCertificate(label: pendingLabel))
         XCTAssertNil(store.loadRootCertificate(label: configuration.certificateLabel))
         XCTAssertTrue(metadataStore.pendingRenewalInstances().isEmpty)
+        XCTAssertThrowsError(try provider.issueLeafCertificate(for: host))
+
+        viewModel.createOrLoadRootCertificate()
+        let replacement = try XCTUnwrap(provider.currentRootCertificate())
+        XCTAssertNotEqual(replacement.certificateData, root.certificateData)
+        let newLeaf = try provider.issueLeafCertificate(for: host)
+        XCTAssertNotEqual(newLeaf.certificateData, oldLeaf.certificateData)
+        XCTAssertEqual(newLeaf.issuerCertificateSHA256Fingerprint,
+                       CertificateIdentityExtraction.sha256Fingerprint(from: replacement.certificateData))
     }
 
     @MainActor

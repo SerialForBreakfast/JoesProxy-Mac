@@ -15,6 +15,12 @@ class PublicPreviewSecurityTests < Minitest::Test
     paths.each { |path| assert PublicPreviewSecurity.validate_workflow(YAML.safe_load(File.read(path), aliases: false)) }
   end
 
+  def test_pull_requests_must_target_main
+    document = workflow
+    document["on"]["pull_request"]["branches"] = ["**"]
+    assert_raises(RuntimeError) { PublicPreviewSecurity.validate_workflow(document) }
+  end
+
   def test_rejects_untrusted_pull_request_triggers
     document = workflow
     document["on"]["pull_request_target"] = {}

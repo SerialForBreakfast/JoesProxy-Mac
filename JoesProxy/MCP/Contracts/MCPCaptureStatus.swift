@@ -20,6 +20,7 @@ struct MCPCaptureStatusDTO: Codable, Equatable, Sendable {
     var droppedSessionCount: Int
     var lossCounterScope = "Admission counts since launch; retention removals since clear or load."
     var userActions: [String] = []
+    var firstIncompleteCaptureAt: Date?
     var lastIncompleteCaptureAt: Date?
     var lastBodySkippedAt: Date?
     var admissionDetail: String
@@ -33,6 +34,7 @@ struct MCPCaptureStatusDTO: Codable, Equatable, Sendable {
          perResponseByteLimit: Int, retainedBodyByteLimit: Int?, retainedBodyBytes: Int = 0,
          retainedSessionCount: Int = 0, retainedSessionLimit: Int? = nil,
          evictedBodyCount: Int = 0, droppedSessionCount: Int = 0) {
+        firstIncompleteCaptureAt = admission.firstRejectedAt
         lastIncompleteCaptureAt = admission.lastRejectedAt
         lastBodySkippedAt = admission.lastBodySkippedAt
         inFlightByteLimit = admission.byteLimit

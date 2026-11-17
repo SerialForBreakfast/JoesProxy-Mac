@@ -47,11 +47,8 @@ struct TVOSSetupWalkthroughView: View {
                 proxyHostOverride = networkInfo.lanIP ?? ""
             }
             viewModel.captureSetupNetworkSnapshot()
-            Task {
-                await viewModel.refreshSDKEventServerStatus()
-                if confirmedSteps.isSuperset(of: [1, 2]) {
-                    viewModel.startDeviceVerify()
-                }
+            if confirmedSteps.isSuperset(of: [1, 2]) {
+                viewModel.startDeviceVerify()
             }
         }
         .onDisappear {
@@ -399,7 +396,6 @@ struct TVOSSetupWalkthroughView: View {
         HStack(spacing: 16) {
             statusDot("Proxy", status: proxyPrerequisiteStatus)
             statusDot("Certificate", status: certificatePrerequisiteStatus)
-            statusDot("SDK", status: sdkPrerequisiteStatus)
             Spacer()
         }
         .padding(.horizontal, 16)
@@ -431,15 +427,6 @@ struct TVOSSetupWalkthroughView: View {
 
     private var certificateActionTitle: String? {
         viewModel.certificateWorkflowState == .ready ? nil : "HTTPS Setup"
-    }
-
-    private var sdkPrerequisiteStatus: WalkthroughStepStatus {
-        if !viewModel.sdkEventServerEnabled { return .attention("Off") }
-        if viewModel.sdkEventServerStatus.isRunning { return .done("Advertising") }
-        switch viewModel.proxyState {
-        case .running, .starting: return .inProgress("Starting")
-        case .stopped, .stopping, .failed: return .attention("Proxy stopped")
-        }
     }
 
     private func normalizedHost(_ host: String) -> String {

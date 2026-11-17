@@ -202,23 +202,23 @@ struct ContentView: View {
                     }
                 )
             }
-            .sheet(item: $presentationState.guidedSetupContext) { context in
+            #if DEBUG
+            .background(UITestPrimaryScreenWindowConfigurator().frame(width: 0, height: 0))
+            #endif
+            .sheet(item: $presentationState.guidedSetupContext, onDismiss: presentationState.guidedSetupDidDismiss) { context in
                 GuidedSetupRepairView(
                     isPresented: Binding(
                         get: { presentationState.guidedSetupContext != nil },
                         set: { isPresented in
                             if !isPresented {
-                                presentationState.dismissGuidedSetup()
+                                presentationState.closeGuidedSetup()
                             }
                         }
                     ),
                     context: context,
+                    certificateModel: viewModel,
+                    accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: selfValidationCoordinator),
                     setupChecklistItems: viewModel.guidedSetupChecklistItems,
-                    nextSetupActionItem: viewModel.guidedSetupNextActionItem,
-                    certificateSetupTitle: viewModel.certificateSetupEntryPointTitle,
-                    openCertificateSetup: {
-                        presentationState.transitionFromGuidedSetup(to: .certificateSetup)
-                    },
                     openMacOSGuide: {
                         presentationState.transitionFromGuidedSetup(to: .macOSSetup)
                     },
@@ -241,10 +241,6 @@ struct ContentView: View {
                     openHelpTopic: { topic in
                         presentationState.dismissGuidedSetup()
                         presentationState.presentHelpHub(topic: topic)
-                    },
-                    openHelpHub: {
-                        presentationState.dismissGuidedSetup()
-                        presentationState.presentHelpHub()
                     },
                     startProxy: {
                         viewModel.startProxy()
@@ -294,28 +290,22 @@ struct ContentView: View {
                     }
                 )
             }
-            .sheet(isPresented: $presentationState.isCertificateSetupPresented, onDismiss: {
-                log("Certificate setup sheet dismissed")
-                viewModel.refreshCertificateStatus()
-            }) {
-                CertificateSetupSheet(
-                    viewModel: viewModel,
-                    isPresented: $presentationState.isCertificateSetupPresented
-                )
-            }
-            .sheet(isPresented: $presentationState.isIOSSetupWalkthroughPresented) {
+            .sheet(isPresented: $presentationState.isIOSSetupWalkthroughPresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 iOSSetupWalkthroughView(
                     isPresented: $presentationState.isIOSSetupWalkthroughPresented,
                     viewModel: viewModel
                 )
             }
-            .sheet(isPresented: $presentationState.isMacOSSetupWalkthroughPresented) {
+            .sheet(isPresented: $presentationState.isMacOSSetupWalkthroughPresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 macOSSetupWalkthroughView(
                     isPresented: $presentationState.isMacOSSetupWalkthroughPresented,
                     viewModel: viewModel
                 )
             }
-            .sheet(isPresented: $presentationState.isTVOSSetupWalkthroughPresented) {
+            .sheet(isPresented: $presentationState.isTVOSSetupWalkthroughPresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 TVOSSetupWalkthroughView(
                     isPresented: $presentationState.isTVOSSetupWalkthroughPresented,
                     viewModel: viewModel
@@ -475,7 +465,7 @@ struct ContentView: View {
                         }
                         mapLocalSheetContext = nil
                     },
-                    onCreateMapRemoteRule: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath in
+                    onCreateMapRemoteRule: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath, allowLoopbackDestination, preserveHostHeader in
                         Task {
                             await viewModel.createMapRemoteRule(
                                 from: context.session,
@@ -485,7 +475,9 @@ struct ContentView: View {
                                 remoteHost: remoteHost,
                                 remotePort: remotePort,
                                 remoteScheme: remoteScheme,
-                                remotePath: remotePath
+                                remotePath: remotePath,
+                                allowLoopbackDestination: allowLoopbackDestination,
+                                preserveHostHeader: preserveHostHeader
                             )
                         }
                         mapLocalSheetContext = nil
@@ -600,36 +592,11 @@ struct ContentView: View {
                     )
                 }
             }
-            .alert(item: $viewModel.trustAlertContext) { context in
-                switch context.primaryAction {
-                case .acknowledge:
-                    return Alert(
-                        title: Text(context.title),
-                        message: Text(context.message),
-                        dismissButton: .default(Text("OK")) {
-                            viewModel.dismissTrustAlert()
-                        }
-                    )
-                case .resetCertificateState:
-                    return Alert(
-                        title: Text(context.title),
-                        message: Text(context.message),
-                        primaryButton: .destructive(Text("Reset Certificate State")) {
-                            viewModel.dismissTrustAlert()
-                            viewModel.resetCertificateState()
-                        },
-                        secondaryButton: .cancel {
-                            viewModel.dismissTrustAlert()
-                        }
-                    )
+            .certificateTrustAlert(viewModel, active: !presentationState.isMacOSSetupWalkthroughPresented && presentationState.guidedSetupContext == nil)
+            .background {
+                Color.clear.alert(item: $exportAlert) { context in
+                    Alert(title: Text(context.title), message: Text(context.message), dismissButton: .default(Text("OK")))
                 }
-            }
-            .alert(item: $exportAlert) { context in
-                Alert(
-                    title: Text(context.title),
-                    message: Text(context.message),
-                    dismissButton: .default(Text("OK"))
-                )
             }
     }
 
@@ -676,9 +643,6 @@ struct ContentView: View {
                 if newValue == .active {
                     viewModel.scheduleCertificateStatusRefresh()
                 }
-            }
-            .onChange(of: presentationState.isCertificateSetupPresented) { _, isPresented in
-                log("Certificate setup sheet presented = \(isPresented)")
             }
             .onChange(of: presentationState.isHelpHubPresented) { _, isPresented in
                 log("Help hub presented = \(isPresented)")
@@ -996,9 +960,8 @@ struct ContentView: View {
             openMCPManagement: { destination in
                 presentationState.presentMCPManagement(destination: destination)
             },
-            showsSetupChip: presentationState.showsFirstRunSetupChip,
-            openSetupCompanion: {
-                presentationState.revealInspectorSetupCompanionFromChip()
+            openGuidedSetup: {
+                presentationState.presentGuidedSetup()
             }
         )
     }
@@ -3618,6 +3581,8 @@ struct ContentView: View {
             return " Served from bookmark response rewrite."
         case .liveResponseRewrite:
             return " Live response rewrite applied to real upstream JSON."
+        case .proxyError:
+            return " Error response generated by JoesProxy."
         case .upstream, nil:
             return ""
         }
@@ -3767,6 +3732,8 @@ struct ContentView: View {
             return ("Bk Response", .teal, "Response served from bookmark snapshot with field overrides")
         case .liveResponseRewrite:
             return ("Live Rewrite", .teal, "Live response JSON rewrite on real upstream traffic")
+        case .proxyError:
+            return ("Proxy Error", .orange, "Error response generated by JoesProxy")
         case .upstream:
             return ("", .secondary, "")
         }
@@ -4555,4 +4522,5 @@ struct ContentView: View {
         compactModeController: coordinator.compactModeController
     )
         .environmentObject(AppPresentationState())
+        .environmentObject(SettingsViewModel(configuration: coordinator.configuration, proxyRuntime: coordinator.proxyRuntime))
 }

@@ -1,0 +1,361 @@
+[
+  {
+    "question": "comparison",
+    "pair": 0,
+    "version": "1.9.0",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22055,
+      "output_tokens": 220,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29770,
+      "total_tokens": 22275
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 11024,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  },
+  {
+    "question": "comparison",
+    "pair": 0,
+    "version": "1.9.1",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 19686,
+      "output_tokens": 258,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14543,
+      "total_tokens": 19944
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": [
+        {
+          "field": "/updatedAt",
+          "before": "2026-01-01T00:00:00Z",
+          "after": "2026-01-02T00:00:00Z"
+        }
+      ],
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 8975,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "92f9c4488ea5a7fd05edd46d465fd63c21ea99ff5f1f27f12696c7750305157b",
+    "correct": true,
+    "v2LiteralNoiseGrader": false
+  },
+  {
+    "question": "comparison",
+    "pair": 1,
+    "version": "1.9.0",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22053,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29766,
+      "total_tokens": 22269
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 10617,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  },
+  {
+    "question": "comparison",
+    "pair": 1,
+    "version": "1.9.1",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22160,
+      "output_tokens": 248,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29519,
+      "total_tokens": 22408
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": [
+        "/updatedAt"
+      ],
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 10157,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "92f9c4488ea5a7fd05edd46d465fd63c21ea99ff5f1f27f12696c7750305157b",
+    "correct": true,
+    "v2LiteralNoiseGrader": false
+  },
+  {
+    "question": "comparison",
+    "pair": 2,
+    "version": "1.9.0",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22060,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29780,
+      "total_tokens": 22276
+    },
+    "answer": {
+      "field": "featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 9668,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  },
+  {
+    "question": "comparison",
+    "pair": 2,
+    "version": "1.9.1",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22150,
+      "output_tokens": 236,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29510,
+      "total_tokens": 22386
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "/updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 12055,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "92f9c4488ea5a7fd05edd46d465fd63c21ea99ff5f1f27f12696c7750305157b",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  },
+  {
+    "question": "comparison",
+    "pair": 3,
+    "version": "1.9.0",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22054,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29768,
+      "total_tokens": 22270
+    },
+    "answer": {
+      "field": "settings.featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "settings.updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 11762,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  },
+  {
+    "question": "comparison",
+    "pair": 3,
+    "version": "1.9.1",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 19675,
+      "output_tokens": 258,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14532,
+      "total_tokens": 19933
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": [
+        {
+          "field": "/updatedAt",
+          "before": "2026-01-01T00:00:00Z",
+          "after": "2026-01-02T00:00:00Z"
+        }
+      ],
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 9125,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "92f9c4488ea5a7fd05edd46d465fd63c21ea99ff5f1f27f12696c7750305157b",
+    "correct": true,
+    "v2LiteralNoiseGrader": false
+  },
+  {
+    "question": "comparison",
+    "pair": 4,
+    "version": "1.9.0",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 22059,
+      "output_tokens": 216,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 29778,
+      "total_tokens": 22275
+    },
+    "answer": {
+      "field": "featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 9566,
+    "calls": [
+      {
+        "index": 0,
+        "name": "session_summary",
+        "matched": true
+      },
+      {
+        "index": 1,
+        "name": "session_summary",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "000ac092bdf824ff563b20ed4c920531b5653d8814be193036d602d04eee90a0",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  },
+  {
+    "question": "comparison",
+    "pair": 4,
+    "version": "1.9.1",
+    "model": "gemini-3.8-flash-low",
+    "usage": {
+      "input_tokens": 19671,
+      "output_tokens": 185,
+      "thinking_tokens": 0,
+      "cache_read_tokens": 14528,
+      "total_tokens": 19856
+    },
+    "answer": {
+      "field": "/featureEnabled",
+      "before": false,
+      "after": true,
+      "noise": "/updatedAt",
+      "covered": true
+    },
+    "matchedAll": true,
+    "elapsedMs": 7337,
+    "calls": [
+      {
+        "index": 0,
+        "name": "investigation_compare_brief",
+        "matched": true
+      }
+    ],
+    "packetSHA256": "92f9c4488ea5a7fd05edd46d465fd63c21ea99ff5f1f27f12696c7750305157b",
+    "correct": true,
+    "v2LiteralNoiseGrader": true
+  }
+]

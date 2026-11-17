@@ -221,13 +221,18 @@ final class UploadProxyIntegrationTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testMapRemotePreservesSpooledUpload() async throws {
         let rules = ResponseOverrideStore()
-        try await runFixture(overrides: rules) { proxy, upstream, _ in
+        let configuration = MCPSelfValidationAppConfiguration()
+        try await runFixture(overrides: rules, configuration: configuration) { proxy, upstream, _ in
+            configuration.isLoopbackMapRemoteEnabled = true
+            configuration.authorizedLoopbackMapRemotePorts = [upstream]
             let source = CapturedRequest(method: "POST", scheme: .http, host: "127.0.0.1", port: upstream,
                 path: "/upload", headers: [], bodyData: nil, bodySize: nil)
             let rule = try await rules.addMapRemoteRule(from: source, label: "Synthetic upload remap",
-                remoteHost: "127.0.0.1", remotePort: upstream, remoteScheme: .http, remotePath: "/mapped")
+                remoteHost: "127.0.0.1", remotePort: upstream, remoteScheme: .http, remotePath: "/mapped",
+                allowLoopbackDestination: true)
             let body = Data(repeating: 91, count: 500 * 1024)
             let response = try await self.send(body: body, proxyPort: proxy.port, upstreamPort: upstream)
             let digest = SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()

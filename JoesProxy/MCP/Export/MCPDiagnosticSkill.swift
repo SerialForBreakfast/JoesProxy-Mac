@@ -25,7 +25,7 @@ enum MCPDiagnosticSkill {
         .init(fileName: "connection.md", heading: "## Cold-start bootstrap", purpose: "Enrollment, connection configuration and Compact workspace"),
         .init(fileName: "workflow.md", heading: "## Start here: task router and the real-device mutation loop", purpose: "Diagnostic runs, native prompts, connection checks and CLI sandbox recovery"),
         .init(fileName: "cli.md", heading: "## Bundled JoesProxy CLI", purpose: "CLI authentication, filtering and structured output"),
-        .init(fileName: "efficient-reads.md", heading: "## Efficiency conventions (apply to every tool below)", purpose: "Bounded reads, pagination, polling and response budgets"),
+        .init(fileName: "efficient-reads.md", heading: "## Efficiency conventions (apply to every tool below)", purpose: "Filtered counts, batch calculations, projections, diffs and bounded reads"),
         .init(fileName: "capture-and-edits.md", heading: "## Feature catalog", purpose: "Session capture, playback transport triage, reversible HTTPS rules and exports"),
         .init(fileName: "media-inspection.md", heading: "### Media discovery & inspection", purpose: "Media analysis, CODECS experiments and playlist rewriting"),
         .init(fileName: "response-edits.md", heading: "### Generic captured-response inspection (G2)", purpose: "Body inspection, edit previews, field-mapping diagnosis and persistent drafts"),
@@ -58,9 +58,9 @@ enum MCPDiagnosticSkill {
 
     # JoesProxy MCP Diagnostics
 
-    Revision: 2026-11-05. Diagnose HTTP/HTTPS and streaming-media behavior using JoesProxy's
+    Revision: 2026-11-14. Diagnose HTTP/HTTPS and streaming-media behavior using JoesProxy's
     capture, inspection and controlled mutations. Start here; load only the reference relevant
-    to the current task. This folder is portable: install the entire `joesproxy-mcp-diagnostics`
+    to the current task. For totals by HTTP status, start with capture_calculate. For individual examples, use sessions_search. This folder is portable: install the entire `joesproxy-mcp-diagnostics`
     directory, including `references/`, in your agent's skills directory. Do not copy SKILL.md alone.
 
     ## Connect and discover

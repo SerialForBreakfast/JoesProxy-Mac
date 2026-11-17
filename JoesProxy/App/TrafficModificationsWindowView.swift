@@ -123,7 +123,7 @@ struct TrafficModificationsWindowView: View {
                         }
                         mapLocalSheetContext = nil
                     },
-                    onCreateMapRemoteRule: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath in
+                    onCreateMapRemoteRule: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath, allowLoopbackDestination, preserveHostHeader in
                         Task {
                             await viewModel.createMapRemoteRule(
                                 from: context.session,
@@ -133,7 +133,9 @@ struct TrafficModificationsWindowView: View {
                                 remoteHost: remoteHost,
                                 remotePort: remotePort,
                                 remoteScheme: remoteScheme,
-                                remotePath: remotePath
+                                remotePath: remotePath,
+                                allowLoopbackDestination: allowLoopbackDestination,
+                                preserveHostHeader: preserveHostHeader
                             )
                         }
                         mapLocalSheetContext = nil
@@ -284,7 +286,7 @@ struct TrafficModificationsWindowView: View {
                         }
                         responseOverrideEditorContext = nil
                     },
-                    onSaveMapRemote: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath in
+                    onSaveMapRemote: { label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath, allowLoopbackDestination, preserveHostHeader in
                         Task {
                             await viewModel.updateMapRemoteResponseOverride(
                                 id: context.rule.id,
@@ -294,7 +296,9 @@ struct TrafficModificationsWindowView: View {
                                 remoteHost: remoteHost,
                                 remotePort: remotePort,
                                 remoteScheme: remoteScheme,
-                                remotePath: remotePath
+                                remotePath: remotePath,
+                                allowLoopbackDestination: allowLoopbackDestination,
+                                preserveHostHeader: preserveHostHeader
                             )
                         }
                         responseOverrideEditorContext = nil

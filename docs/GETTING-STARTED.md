@@ -1,6 +1,15 @@
 # Build and try JoesProxy
 
-Revision 2026-11-08 for source version 1.9.0 (23).
+Revision November 14, 2026. Installed-app setup appears first. Source builds follow.
+
+## First run on a Mac with the installed app
+
+1. **Capture one HTTP request.** Open Inspector and choose **Start Proxy**. Send one request through the displayed proxy port and select its row. Seeing the method, status and response body confirms routing. Plain HTTP works before certificate setup or CLI enrollment.
+2. **Inspect HTTPS when you need its contents.** Open **Set Up HTTPS Inspection** and follow the certificate action shown for this Mac. If trust is required, open Keychain Access, select the login keychain and locate the JoesProxy Root CA created by this installation. Open its Trust section, select Always Trust, save the change and return to JoesProxy. Choose **Check Again** if needed. Once ready, send a fresh HTTPS request through the proxy and choose **Verify Capture**. Look for an inspected response body. A tunnel alone establishes forwarding.
+3. **Connect the bundled CLI for Terminal access.** Open **MCP Management → Overview → Start MCP**, then **Clients → JoesProxy CLI → Add Client**. Start with Metadata Only for basic inspection. Choose **Copy command**, run it in Terminal, then use **Copy credential** at the waiting login prompt. Keep the credential on this Mac. Expect the CLI to print `state: stored`.
+4. **Verify the connection.** Run `/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl auth status`, followed by `/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl status`. The first checks local credential storage. The second checks the running service. If the first reports `configured: false`, finish the interactive login. If the second fails, check that MCP is running and the client is active. Review additional disclosure locally when a task needs response values.
+
+In the updated development build, open **Help → Guided Setup & Repair** to revisit one topic. Start with **Certificate** for HTTPS, **Proxy** for the listener, and **Verify Capture** to distinguish a captured request from an inspected HTTPS response. **Devices** and **MCP/CLI** are optional and can be opened directly. Choose **Close** or press Escape to leave any page.
 
 ## Requirements
 

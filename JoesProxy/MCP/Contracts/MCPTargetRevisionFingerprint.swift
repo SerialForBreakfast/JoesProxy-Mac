@@ -71,6 +71,8 @@ enum MCPTargetRevisionFingerprint {
             mapRemotePath: rule.mapRemotePath,
             mapRemoteQueryPolicy: rule.mapRemoteQueryPolicy.rawValue,
             mapRemoteQuery: rule.mapRemoteQuery,
+            mapRemoteAllowLoopback: rule.allowLoopbackDestination,
+            mapRemotePreserveHostHeader: rule.preserveHostHeader,
             bookmarkRewriteRequest: rule.bookmarkRewriteRequest.map { semanticPayload(for: $0) },
             liveResponseRewrites: rule.liveResponseRewrites.map {
                 SemanticRewrite(
@@ -223,6 +225,8 @@ private struct SemanticResponseOverridePayload: Codable {
     var mapRemotePath: String?
     var mapRemoteQueryPolicy: String?
     var mapRemoteQuery: String?
+    var mapRemoteAllowLoopback: Bool?
+    var mapRemotePreserveHostHeader: Bool?
     var bookmarkRewriteRequest: SemanticCapturedRequestPayload?
     var liveResponseRewrites: [SemanticRewrite]
     var expectedSchemaFingerprint: String?

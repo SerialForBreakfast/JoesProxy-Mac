@@ -98,8 +98,17 @@ protocol CertificateStatusReading: Sendable {
 
 protocol CertificateStore: AnyObject {
     func loadRootCertificate(label: String) -> RootCertificateIdentity?
+    /// A mutation must distinguish a missing root from a protected item that cannot be read.
+    func readRootBeforeCreation(label: String) throws -> RootCertificateIdentity?
     func saveRootCertificate(_ identity: RootCertificateIdentity) throws
     func removeRootCertificate(label: String) throws
+}
+
+extension CertificateStore {
+    /// Memory-backed stores have no Keychain access errors to propagate.
+    func readRootBeforeCreation(label: String) throws -> RootCertificateIdentity? {
+        loadRootCertificate(label: label)
+    }
 }
 
 protocol CertificateAuthorityProviding: AnyObject {
@@ -128,7 +137,8 @@ protocol CertificateKeychainAccessing: AnyObject {
     func retrieveCertificate(withLabel label: String) throws -> SecCertificate?
     func retrieveCertificates(withLabel label: String) throws -> [SecCertificate]
     func saveData(_ data: Data, service: String, account: String) throws
-    func retrieveData(service: String, account: String) -> Data?
+    /// Returns nil only for an absent item. Only a local setup gesture may allow interaction.
+    func retrieveData(service: String, account: String, interactive: Bool) throws -> Data?
     func deleteData(service: String, account: String) throws
 }
 

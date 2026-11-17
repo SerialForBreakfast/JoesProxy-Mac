@@ -3,6 +3,7 @@ import SwiftUI
 /// MCP management panel with Overview, Clients, Data Access, Activity, and Disclosure Preview.
 struct MCPManagementView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openSettings) private var openSettings
     @ObservedObject var controller: MCPServerController
     @ObservedObject var selfValidationCoordinator: MCPSelfValidationCoordinator
     let textScale: CGFloat
@@ -220,6 +221,15 @@ struct MCPManagementView: View {
             Text("Off by default. When enabled, a local process can launch JoesProxy and request that its loopback MCP server start. It cannot enroll clients or change policy.")
                 .foregroundStyle(.secondary)
                 .appFont(.caption, scale: textScale)
+            HStack(spacing: 8) {
+                Text("Local-server Map Remote (loopback destinations & authorized ports) applies across both GUI and MCP rules.")
+                    .foregroundStyle(.secondary)
+                    .appFont(.caption, scale: textScale)
+                Button("Open Proxy Settings…") {
+                    openSettings()
+                }
+                .controlSize(.small)
+            }
             unattendedCLIReadinessSection
             statusLine
             if compoundUIState == .offActive || compoundUIState == .offConflict {
@@ -290,7 +300,7 @@ struct MCPManagementView: View {
             return "Enable CLI startup, then grant Runtime Control to the enrolled JoesProxy CLI client."
         }
         if eligibleClients.isEmpty {
-            return "No active client has both Shareable access and a Runtime Control grant. Trigger a CLI runtime command, approve it, and choose Add To Client Policy."
+            return "Under Clients, open Standing approvals for the Shareable CLI client, select runtime control, and save."
         }
         if !cleanupReady {
             return "Runtime control is authorized, but active effects, approvals, scenarios, or operations currently block unattended MCP shutdown."
@@ -794,7 +804,25 @@ struct MCPManagementView: View {
                 .accessibilityIdentifier("mcpRevokeClientButton")
             }
             let grants = controller.grantStore.summaries(for: client.id)
+            if controller.requiresVerifierUnlock(client) {
+                Button("Unlock credential for " + client.displayName) {
+                    Task {
+                        do {
+                            try await controller.unlockClientVerifier(client.id)
+                        } catch {
+                            statusMessage = "Credential access is unavailable. Choose Unlock when you are ready to try again."
+                        }
+                    }
+                }
+                .disabled(controller.unlockingClientIDs.contains(client.id))
+                .accessibilityIdentifier("mcpUnlockVerifier-" + client.id)
+            }
             let runtimeReady = runtimeControlIsPreauthorized(client)
+            if client.credentialState == .active && !controller.requiresVerifierUnlock(client) {
+                SetupClientPermissions(controller: controller, client: client)
+                    .id(client.credentialGeneration)
+                    .toggleStyle(.checkbox)
+            }
             Label(runtimeReady ? "Unattended runtime control ready" : "Runtime control requires approval or policy setup",
                   systemImage: runtimeReady ? "checkmark.circle.fill" : "lock.fill")
                 .appFont(.caption, scale: textScale)

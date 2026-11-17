@@ -2,6 +2,25 @@
 
 JoesProxy development began on November 5, 2024, by Joseph McCraw. The 1.9.0 source preview follows two years of development.
 
+## 1.9.1 — build 28 release candidate source
+
+- Setup & Repair brings Certificate, Proxy, Verify Capture, Devices and MCP/CLI into one flow. The toolbar and the JoesProxy, Certificate and Help menus open it. The toolbar wraps at larger text sizes. SDK controls are hidden from setup, Proxy settings and the Apple TV guide.
+- Streaming waterfalls use captured playlist references to associate segments with their bitrate ladder, including across CDN hosts. When references are missing, a unique matching directory can supply the ladder. Ambiguous captures omit the inferred ladder. Capture-wide candidate filtering uses request paths and response headers. A replaced capture produces the same `source_changed` result as filtered calculations.
+- The DMG packaging includes the portable diagnostic skill and uninstall instructions. Build 27 was privately tested on an upgrade account. Fresh installation, certificate retirement, MCP/CLI checklist transitions and acceptance of the final installer remain open. See the [release record](RELEASE.md).
+
+## 1.9.1 private candidate — build 25
+
+See the [versioned benchmark report](docs/releases/benchmarks/1.9.1-edge-v7.md) for the optimized rehearsal and subscription-token measurements comparing 1.9.0 with build 25.
+
+
+Private candidate **1.9.1 (25)**. See the [candidate notes](docs/releases/1.9.1-build25.md) and [release workflow](RELEASE.md).
+
+- Filter and calculate retained capture metadata over a bounded time window from MCP or the CLI. Search by response characteristics, request endpoint groups, or inspect scoped credential continuity.
+- Use structured predicates and batch calculations for supported selected sources. Request bounded field projections, value differences, and rule near-miss diagnostics.
+- Comparison briefs preserve JSON Boolean and string types. Search and list discovery point agents to filtered status grouping. Loopback routing includes local approval and upstream self-connection diagnostics.
+- Capture details distinguish busy-traffic omissions, body retention, and session eviction. See the [build 24 record](docs/releases/1.9.1-build24.md) for the earlier candidate.
+
+
 ## 1.9.0 source release (build 23)
 
 - Live text-size changes scale the Compact HUD's text and layout, main-window health statistics and inherited controls. The main header selects a layout with room for larger reading text.

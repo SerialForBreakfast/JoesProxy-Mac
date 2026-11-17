@@ -20,16 +20,6 @@ enum MainTitleBarLayoutMode: Equatable {
         self == .full
     }
 
-    var healthMetricsWidth: CGFloat {
-        switch self {
-        case .full:
-            return 360
-        case .compact:
-            return 210
-        case .minimal:
-            return 120
-        }
-    }
 }
 
 /// One glanceable answer to "is the capture pipeline healthy, and if not, what do I click?"
@@ -366,8 +356,7 @@ struct MainStatusTitleBar: View {
     var mcpPipelineStatus: MCPPipelineStatus = .hidden
     var openMCPManagement: (MCPPipelineStatus.ManagementDestination) -> Void = { _ in }
     /// Quiet BA-3 Setup chip while first capture or expert bypass is still in progress.
-    var showsSetupChip: Bool = false
-    var openSetupCompanion: () -> Void = {}
+    var openGuidedSetup: () -> Void = {}
 
     @State private var titleBarWidth: CGFloat = 1_400
 
@@ -392,7 +381,7 @@ struct MainStatusTitleBar: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        FlowLayout(horizontalSpacing: 8, verticalSpacing: 6) {
             Button {
                 toggleProxy()
             } label: {
@@ -439,18 +428,18 @@ struct MainStatusTitleBar: View {
             .layoutPriority(3)
             .help(mcpPipelineStatus.detail ?? "Open MCP Management.")
 
-            if showsSetupChip {
-                Button(action: openSetupCompanion) {
-                    Label("Setup", systemImage: "checklist")
-                        .appFont(.caption, scale: textScale, weight: .semibold)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("First-run setup is still in progress. Capture a request from the selected target to finish.")
-                .accessibilityLabel("Setup in progress")
-                .accessibilityIdentifier("firstRunSetupChip")
-                .layoutPriority(3)
+            Button(action: openGuidedSetup) {
+                Label(layoutMode == .full ? "Setup & Repair" : "Setup", systemImage: "checklist")
+                    .labelStyle(.titleAndIcon)
+                    .appFont(.body, scale: textScale, weight: .semibold)
+                    .fixedSize()
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
+            .help("Open Setup & Repair")
+            .accessibilityLabel("Open Setup & Repair")
+            .accessibilityIdentifier("firstRunSetupChip")
+            .layoutPriority(4)
 
             // The three per-component pills stay available for detail, but only in the
             // full-width layout — the unified pill above carries the at-a-glance answer.
@@ -550,15 +539,11 @@ struct MainStatusTitleBar: View {
             .accessibilityIdentifier("globalSettingsButton")
             .layoutPriority(2)
 
-            Spacer(minLength: 8)
-
             MainTitleBarHealthMetrics(captureHealth: captureHealth, layoutMode: layoutMode, textScale: textScale)
-                .layoutPriority(-1)
-                .frame(maxWidth: layoutMode.healthMetricsWidth * textScale, alignment: .trailing)
                 .accessibilityIdentifier("captureHealthMetricsInline")
 
             systemProxyIndicator
-                .layoutPriority(1)
+                .lineLimit(1)
 
             if let lastErrorMessage, !lastErrorMessage.isEmpty {
                 Label("Attention", systemImage: "exclamationmark.triangle.fill")
@@ -585,6 +570,8 @@ struct MainStatusTitleBar: View {
             .accessibilityIdentifier("mainHelpDrawerToggle")
             .layoutPriority(2)
         }
+        // Measure the available width, independent of how many controls fit on each row.
+        .frame(maxWidth: .infinity, alignment: .leading)
         .reportViewWidth { titleBarWidth = $0 }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

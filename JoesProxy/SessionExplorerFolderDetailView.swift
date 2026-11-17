@@ -173,7 +173,7 @@ struct ExplorerFolderDetailView: View {
             return "Bk Response"
         case .liveResponseRewrite:
             return "Live Rewrite"
-        case .upstream, nil:
+        case .proxyError, .upstream, nil:
             break
         }
         if summary.inspectionKind == .tunneledTLS {
@@ -208,7 +208,7 @@ struct ExplorerFolderDetailView: View {
             return .teal
         case .liveResponseRewrite:
             return .teal
-        case .upstream, nil:
+        case .proxyError, .upstream, nil:
             break
         }
         if summary.inspectionKind == .tunneledTLS {
@@ -270,7 +270,7 @@ struct ExplorerFolderDetailView: View {
             return .teal
         case .liveResponseRewrite:
             return .teal
-        case .upstream, nil:
+        case .proxyError, .upstream, nil:
             break
         }
 

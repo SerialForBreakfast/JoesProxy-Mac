@@ -27,6 +27,7 @@ struct MediaInfoSheet: View, Equatable {
     @State private var selectedTab: MediaInfoTab = .image
     @State private var inspectionCapacityUnavailable = false
     @State private var inspectionRetry = 0
+    @State private var waterfallReport: StreamingQualityWaterfallReport?
     private var parsedHLSManifestSessions: [ParsedHLSManifestSession] { manifestModel.result.hls }
     private var parsedDASHManifestSessions: [ParsedDASHManifestSession] { manifestModel.result.dash }
     @State private var imageMetadata: ImageMetadata?
@@ -220,8 +221,22 @@ struct MediaInfoSheet: View, Equatable {
 
     @ViewBuilder
     private var waterfallSection: some View {
-        let report = StreamingWaterfallEngine.analyze(target: session, allSessions: sessions)
-        StreamingQualityWaterfallView(report: report)
+        Group {
+            if let waterfallReport {
+                StreamingQualityWaterfallView(report: waterfallReport)
+            } else if !inspectionCapacityUnavailable {
+                ProgressView("Analyzing captured segments")
+            }
+        }
+        .task(id: "\(session.id)-\(contentRevision)-\(manifestRevision)-\(inspectionRetry)") {
+            waterfallReport = nil
+            let result = await MediaInspectionWorkBudget.shared.run { [session, sessions] in
+                StreamingWaterfallEngine.analyze(target: session, allSessions: sessions)
+            }
+            guard !Task.isCancelled else { return }
+            waterfallReport = result
+            inspectionCapacityUnavailable = result == nil
+        }
     }
 
     @ViewBuilder

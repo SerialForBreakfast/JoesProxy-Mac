@@ -1,0 +1,249 @@
+import SwiftUI
+
+/// Local setup and repair controls backed by the same settings, credentials, and policies
+/// used by the proxy and MCP Management. Opening this view never probes the Keychain.
+struct SetupAccessChecklist: View {
+    @EnvironmentObject private var settings: SettingsViewModel
+    @Environment(\.appTextScale) private var textScale
+    @ObservedObject var controller: MCPServerController
+    let selfValidationCoordinator: MCPSelfValidationCoordinator
+    @State private var managementDestination: MCPPipelineStatus.ManagementDestination?
+    @State private var credentialError: String?
+    @State private var listener: String?
+    @State private var destinations: String?
+    @State private var routing: Bool?
+    @State private var localServers: Bool?
+    @State private var cliStartup: Bool?
+    @State private var preferenceMessage: String?
+
+    enum Scope { case all, proxy, client }
+    var scope: Scope = .all
+
+    func scoped(to scope: Scope) -> Self {
+        var copy = self
+        copy.scope = scope
+        return copy
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if scope == .all {
+                Text("Capture and agent preferences").appFont(.headline, scale: textScale)
+                Text("Select the access you need and choose Save Preferences.")
+            }
+            if scope != .client {
+                LabeledContent("Proxy listening port") {
+                    TextField("Listening port", text: draft($listener, current: settings.savedListeningPort))
+                        .textFieldStyle(.roundedBorder)
+                        .disabled(!settings.canEditProxyPort)
+                }
+                if !settings.canEditProxyPort { Text(settings.proxyPortEditingHelpText) }
+                Toggle("Route this Mac’s traffic when I manually start the proxy", isOn: draft($routing, current: settings.isSystemProxyManagementEnabled))
+                if routing == true { Text(settings.systemProxyConsentMessage) }
+                DisclosureGroup("Advanced capture settings") {
+                Toggle("Allow Map Remote rules to reach local Mac servers", isOn: draft($localServers, current: settings.isLoopbackMapRemoteEnabled))
+                if localServers ?? settings.isLoopbackMapRemoteEnabled {
+                    Text("Enter the destination ports these rules may reach, separated by commas. Removing a port closes matching streams and disables their rules.")
+                    LabeledContent("Destination ports") {
+                        TextField("e.g. 3000, 8080", text: draft($destinations, current: LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    Text("Authorized ports: " + (settings.authorizedLoopbackPorts.isEmpty ? "None" : LoopbackDestinationPolicy.formatPortsList(settings.authorizedLoopbackPorts)))
+                }
+                }
+            }
+            if scope != .proxy {
+                DisclosureGroup("CLI startup preference") {
+                    Toggle("Allow the local CLI to start MCP", isOn: draft($cliStartup, current: controller.isCLIAutomationStartEnabled))
+                }
+            }
+            Button("Save Preferences", action: savePreferences)
+                .disabled(listener == nil && destinations == nil && routing == nil && localServers == nil && cliStartup == nil)
+            if let preferenceMessage { Text(preferenceMessage) }
+            if scope != .proxy {
+                Divider()
+                SetupStep("1. Start the MCP service", serviceStatus)
+                switch controller.state {
+                case .stopped:
+                    Button("Start MCP on this Mac") {
+                        // The main-actor controller owns startup and rejects duplicate starts.
+                        Task { await controller.start() }
+                    }
+                case .starting: Text("Starting MCP…")
+                case .running(let port, _): Text("MCP listening on port \(String(port))")
+                case .failed(let message), .degraded(let message):
+                    Label { Text(message) } icon: {
+                        Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    }
+                    Button("Open MCP Management to repair…") { managementDestination = .overview }
+                }
+                SetupStep("2. Enroll your client", enrolled.isEmpty ? .pending : .complete)
+                Text("For Terminal, choose JoesProxy CLI. Enter its credential only at the local login prompt.")
+                if enrolled.isEmpty { Text("No active client enrollment") }
+                Button("Enroll or manage an MCP / CLI client…") { managementDestination = .clients }
+                SetupStep("3. Allow access to the enrolled clients’ credentials", credentialStatus)
+                if controller.enrolledClients.isEmpty { Text("Enroll a client first. Each locked verifier has its own Unlock button.") }
+                ForEach(controller.enrolledClients) { client in
+                    GroupBox(client.displayName) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if controller.requiresVerifierUnlock(client) {
+                                Label { Text("Keychain approval required for this client") } icon: {
+                                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                                }
+                                Text("Unlock requests access for this client only. Enter a password only in the macOS dialog; denying access does not revoke enrollment.")
+                                Button("Unlock credential for " + client.displayName) {
+                                    Task {
+                                        do {
+                                            try await controller.unlockClientVerifier(client.id)
+                                            credentialError = nil
+                                        } catch {
+                                            credentialError = "Credential remains locked. Choose Unlock to try again."
+                                        }
+                                    }
+                                }
+                                .disabled(controller.unlockingClientIDs.contains(client.id))
+                            } else if client.credentialState == .active {
+                                Label { Text("Credential ready") } icon: {
+                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                                }
+                                SetupClientPermissions(controller: controller, client: client)
+                                    .id(client.credentialGeneration)
+                            } else {
+                                Text(client.credentialState == .revoked ? "Credential revoked. Open client management to enroll again." : "Credential needs rotation. Open client management and choose Rotate.")
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                if let credentialError { Text(credentialError) }
+                SetupStep("4. Authorize the CLI in Terminal and verify the connection", .manual)
+                Text("Run joesproxyctl auth status to check local login, then joesproxyctl status to confirm the service accepts this client.")
+                if case .running(_, let endpoint) = controller.state {
+                    Button("Copy CLI verification commands") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(MCPClientConfigSnippetBuilder.cliVerificationCommands(endpointURL: endpoint), forType: .string)
+                    }
+                }
+                SetupStep("5. Review actions when requested", controller.pendingApprovals.isEmpty ? .manual : .needsAttention)
+                if !controller.pendingApprovals.isEmpty {
+                    Button("Review pending requests (\(controller.pendingApprovals.count))…") { managementDestination = .approvals }
+                }
+                Text("If a command returns a request ID, review it in MCP Management → Pending Approvals. No rule approval is needed for basic setup.").font(.caption)
+            }
+        }
+        .toggleStyle(.checkbox)
+        .fixedSize(horizontal: false, vertical: true)
+        .sheet(isPresented: Binding(get: { managementDestination != nil }, set: { if !$0 { managementDestination = nil } })) {
+            MCPManagementView(controller: controller, selfValidationCoordinator: selfValidationCoordinator,
+                              textScale: textScale, initialDestination: managementDestination ?? .clients)
+        }
+    }
+
+    private var serviceStatus: SetupStep.Status {
+        switch controller.state {
+        case .running: .complete
+        case .starting: .working
+        case .stopped: .pending
+        case .failed, .degraded: .needsAttention
+        }
+    }
+
+    private var enrolled: [MCPClientRecord] {
+        controller.enrolledClients.filter { $0.credentialState != .revoked }
+    }
+
+    private var credentialStatus: SetupStep.Status {
+        guard !enrolled.isEmpty else { return .pending }
+        return enrolled.allSatisfy { $0.credentialState == .active && !controller.requiresVerifierUnlock($0) }
+            ? .complete : .needsAttention
+    }
+
+    /// Untouched fields mirror the live configuration even if another window edits it.
+    private func draft<Value: Equatable>(_ edit: Binding<Value?>, current: Value) -> Binding<Value> {
+        Binding(get: { edit.wrappedValue ?? current }, set: { value in
+            edit.wrappedValue = value == current ? nil : value
+            preferenceMessage = nil
+        })
+    }
+
+    /// Commits only reviewed values. Validate ports before applying permissions or routing consent.
+    private func savePreferences() {
+        let enabled = localServers ?? settings.isLoopbackMapRemoteEnabled
+        if let error = settings.applySetupPorts(listener: listener, destinations: enabled ? destinations : nil) {
+            preferenceMessage = error
+            return
+        }
+        if let routing {
+            if routing { settings.confirmRoutingConsent() } else { settings.isSystemProxyManagementEnabled = false }
+        }
+        if let localServers { settings.isLoopbackMapRemoteEnabled = localServers }
+        if let cliStartup { controller.isCLIAutomationStartEnabled = cliStartup }
+        listener = nil
+        destinations = nil
+        routing = nil
+        localServers = nil
+        cliStartup = nil
+        preferenceMessage = "Preferences saved for future launches."
+    }
+}
+
+/// Stages only explicitly edited capabilities, then confirms future access once for the named client.
+struct SetupClientPermissions: View {
+    @ObservedObject var controller: MCPServerController
+    let client: MCPClientRecord
+    @State private var changes: [MCPCapabilityID: Bool] = [:]
+    @State private var message: String?
+    @State private var saving = false
+
+    var body: some View {
+        DisclosureGroup("Standing approvals for " + client.displayName) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Profile: " + client.assignedProfileID.rawValue)
+                Text("Select access to remember for future calls. Existing temporary permissions keep their expiry. File sharing, HTTPS rule changes and certificate cleanup require review when requested.")
+                let capabilities = ([MCPCapabilityID.runtimeControl] + MCPCapabilityID.allCases.filter { $0 != .runtimeControl }).filter {
+                    $0.setupPermissionTitle != nil && controller.policyEvaluator.effectiveAllows(capability: $0, client: client)
+                }
+                if capabilities.isEmpty {
+                    Text("This profile has no configurable standing approvals. Choose a disclosure profile when enrolling a client.")
+                }
+                ForEach(capabilities, id: \.self) { capability in
+                    Toggle(capability.setupPermissionTitle ?? capability.rawValue, isOn: selection(for: capability))
+                }
+                Button("Save approvals for " + client.displayName) {
+                    guard !saving else { return }
+                    saving = true
+                    Task { await save() }
+                }
+                .disabled(changes.isEmpty)
+                if let message { Text(message) }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+                .disabled(saving)
+        }
+    }
+
+    /// Apply explicit changes on the UI actor, then wait for the store's serial disk writer
+    /// before confirming persistence. Keep failed selections available for retry.
+    @MainActor private func save() async {
+        defer { saving = false }
+        do {
+            try controller.applySetupGrants(changes, for: client)
+            if await controller.grantStore.saveReviewedChanges() {
+                changes.removeAll()
+                message = "Approvals saved."
+            } else {
+                message = "Access changed for this run. Saving failed. Choose Save approvals to retry."
+            }
+        } catch let error as MCPStructuredError {
+            message = error.message
+        } catch { message = error.localizedDescription }
+    }
+
+    /// A temporary grant stays temporary unless the user explicitly selects standing access.
+    private func selection(for capability: MCPCapabilityID) -> Binding<Bool> {
+        let saved = controller.grantStore.activeGrant(capability: capability, clientID: client.id)?.mode == .durablePolicy
+        return Binding(get: { changes[capability] ?? saved }, set: { selected in
+            changes[capability] = selected == saved ? nil : selected
+            message = nil
+        })
+    }
+}

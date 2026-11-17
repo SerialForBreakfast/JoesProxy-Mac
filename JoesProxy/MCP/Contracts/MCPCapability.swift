@@ -189,6 +189,43 @@ enum MCPCapabilityID: String, Equatable, Sendable, Codable, CaseIterable {
 }
 
 extension MCPCapabilityID {
+    /// User-facing scope of capabilities with standing approvals offered during local setup.
+    /// Explicit membership keeps new tools and request-specific reviews out of saved consent.
+    var setupPermissionTitle: String? {
+        switch self {
+        case .runtimeControl: return "Control the proxy and capture runtime"
+        case .headerRead: return "Read captured HTTP headers"
+        case .queryRead: return "Read captured URL query values"
+        case .bodyRead: return "Read captured request and response bodies"
+        case .mediaInspection: return "Run media inspection"
+        case .deviceAliasManage: return "Edit device aliases"
+        case .createDisabledBookmark: return "Create disabled bookmarks"
+        case .createDisabledMapLocal: return "Create disabled local mapping rules"
+        case .createDisabledMapRemote: return "Create disabled remote mapping rules"
+        case .createDisabledBlock: return "Create disabled blocking rules"
+        case .createDisabledRewrite: return "Create disabled rewrite rules"
+        case .createDisabledLiveRewrite: return "Create disabled live rewrite rules"
+        case .createDisabledCollectionMock: return "Create disabled collection mock rules"
+        case .createResponseDraft: return "Manage response drafts"
+        case .enableRule: return "Enable rules"
+        case .disableRule: return "Disable rules"
+        case .deleteRule: return "Delete MCP-owned rules"
+        case .changeThrottle: return "Change network throttling"
+        case .executeBookmark: return "Execute saved requests"
+        case .activateMapRemote: return "Activate remote mapping rules"
+        case .activateLiveRewrite: return "Activate live rewrite rules"
+        case .activateCollectionMock: return "Activate collection mock rules"
+        case .replayRequest: return "Replay requests"
+        case .liveMediaProbe: return "Send live media probes"
+        case .scenarioLifecycle: return "Manage capture scenarios"
+        case .hlsFixtureLifecycle: return "Start and stop HLS fixtures"
+        case .hlsSubstitutionLifecycle: return "Manage HLS stream substitution"
+        case .openAPIMockLifecycle: return "Start and stop OpenAPI mocks"
+        case .diagnosticRunLifecycle: return "Manage diagnostic runs"
+        default: return nil
+        }
+    }
+
     /// Maps each capability to its ADR risk tier.
     var riskTier: MCPCapabilityRiskTier {
         switch self {

@@ -184,7 +184,9 @@ enum MCPScenarioFault: Equatable, Sendable, Codable {
         remoteScheme: SessionScheme,
         remotePath: String? = nil,
         remoteQueryPolicy: MapRemoteQueryPolicy = .preserve,
-        remoteQuery: String? = nil
+        remoteQuery: String? = nil,
+        allowLoopbackDestination: Bool? = nil,
+        preserveHostHeader: Bool? = nil
     )
     case jsonRewrite(
         matcher: MCPMutationMatcher,
@@ -243,7 +245,7 @@ enum MCPScenarioFault: Equatable, Sendable, Codable {
     var targetLockKey: String {
         switch self {
         case .block(let matcher, _, _), .mapLocal(let matcher, _, _, _),
-             .mapRemote(let matcher, _, _, _, _, _, _), .jsonRewrite(let matcher, _, _, _):
+             .mapRemote(let matcher, _, _, _, _, _, _, _, _), .jsonRewrite(let matcher, _, _, _):
             return MCPScenarioFault.matcherLockKey(matcher)
         case .bookmarkRewrite(let bookmarkID, _, _), .replay(let bookmarkID):
             return "bookmark:\(bookmarkID.uuidString)"

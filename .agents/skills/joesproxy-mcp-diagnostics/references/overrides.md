@@ -87,9 +87,11 @@ a second propose for the same enable/disable while waiting.
   `responseEditPreviewDigest`/`hlsPreviewDigest`/`responseRevisionID` — those sub-paths inherit their
   matcher from an earlier preview/draft call and cannot pick up a fresh scope at create time.
 - **Map Remote** — `propose_create_map_remote` / `apply_create_map_remote`: same matcher, plus
-  `remoteHost`/`remotePort`/`remoteScheme` — the destination cannot be any loopback address (checked
-  against the full `127.0.0.0/8` range, not just `127.0.0.1`). Supports `graphqlOperationName` like
-  the others. No `joesproxyctl` CLI command exists for Map Remote — MCP tool only.
+  `remoteHost`/`remotePort`/`remoteScheme` (and optional `allowLoopbackDestination` /
+  `preserveHostHeader`). Loopback destinations (`127.0.0.0/8`, `::1`, `localhost` — meaning the
+  Mac running JoesProxy) are rejected by default unless **Settings → Proxy → Local-Server Routing**
+  is enabled, the destination port is explicitly authorized, and `allowLoopbackDestination: true`
+  is passed. Supports `graphqlOperationName` like the others. CLI: `joesproxyctl response map-remote prepare|apply|activate`.
 - **Rewrite** — `propose_create_rewrite` / `apply_create_rewrite`: `bookmarkID`, `jsonPath` (e.g.
   `$.data.id`), `overrideValue` (`{"type":"number","value":"2"}`-shaped) — patches one field of a
   bookmark's saved JSON response.

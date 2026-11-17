@@ -184,7 +184,8 @@ enum EffectBundleValidator {
         case .collectionMock:
             guard schemaVersion >= 4, effect.collectionMockPlan != nil, effect.mapRemoteHost == nil,
                   effect.mapRemotePort == nil, effect.mapRemoteScheme == nil,
-                  effect.mapRemotePath == nil, effect.bookmarkRewriteRequest == nil,
+                  effect.mapRemotePath == nil, effect.allowLoopbackDestination != true,
+                  effect.preserveHostHeader != true, effect.bookmarkRewriteRequest == nil,
                   effect.liveResponseRewrites.isEmpty, effect.expectedSchemaFingerprint == nil else {
                 throw EffectBundleError.invalidBodySource(effect.id.uuidString)
             }

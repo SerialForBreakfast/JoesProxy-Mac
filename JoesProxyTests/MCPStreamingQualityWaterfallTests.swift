@@ -53,7 +53,7 @@ final class MCPStreamingQualityWaterfallTests: XCTestCase {
         store.append(seg1)
         store.append(seg2)
 
-        let dto = try service.streamingWaterfall(
+        let dto = try await service.streamingWaterfall(
             sessionID: manifestSession.id,
             policyRevision: .initial
         )
@@ -71,7 +71,43 @@ final class MCPStreamingQualityWaterfallTests: XCTestCase {
         XCTAssertEqual(dto.switchingEvents[0].switchType, "stepUp")
     }
 
-    // MARK: - Helper
+    func testCaptureReplacementDuringWaterfallIsRetryable() async throws {
+        let store = InMemorySessionStore()
+        let snapshot = MCPSessionSnapshotService(sessionStore: store)
+        let service = MCPMediaInspectionService(sessionStore: store, snapshotService: snapshot)
+        let master = createSession(path: "/master.m3u8", body: Data(masterHLS.utf8),
+                                   contentType: "application/vnd.apple.mpegurl")
+        store.append(master)
+        // The main actor can clear the capture once the waterfall yields to its worker.
+        let clear = Task { @MainActor in store.clear() }
+        do {
+            _ = try await service.streamingWaterfall(sessionID: master.id, policyRevision: .initial)
+            XCTFail("A report from the previous capture was delivered")
+        } catch let failure as ArtifactAnalysisFailure {
+            XCTAssertEqual(failure, .sourceChanged)
+        }
+        await clear.value
+    }
+
+    func testBuild26AcceptanceRecordingFromMasterAndSegment() async throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("docs/releases/fixtures/1.9.1/waterfall-build26.jproxy")
+        let imported = try await JSONSessionRecordingImportService().open(from: url)
+        XCTAssertTrue(imported.failedSessionIDs.isEmpty)
+        XCTAssertEqual(imported.envelope.sessions.count, 4)
+        let store = InMemorySessionStore()
+        let snapshot = MCPSessionSnapshotService(sessionStore: store)
+        let service = MCPMediaInspectionService(sessionStore: store, snapshotService: snapshot)
+        for session in imported.envelope.sessions { store.append(session) }
+        let master = try XCTUnwrap(UUID(uuidString: "00000026-0000-4000-8000-000000000002"))
+        let segment = try XCTUnwrap(UUID(uuidString: "00000026-0000-4000-8000-000000000004"))
+        for target in [master, segment] {
+            let report = try await service.streamingWaterfall(sessionID: target, policyRevision: .initial)
+            XCTAssertEqual(report.manifestKind, "HLS Master Playlist")
+            XCTAssertEqual(report.bitrateLadder.map(\.bandwidth), [249082, 310996, 374666])
+            XCTAssertEqual(report.segments.map(\.sessionID), [segment.uuidString])
+        }
+    }
 
     private func createSession(
         path: String,

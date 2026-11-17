@@ -33,6 +33,8 @@ final class MCPSelfValidationAppConfiguration: AppConfiguration {
     var sdkEventServerEnabled = false { didSet { didChangeSubject.send(()) } }
     var sdkEventServerPort: UInt16 { 9091 }
     var networkThrottleConfiguration = NetworkThrottleConfiguration.defaults { didSet { didChangeSubject.send(()) } }
+    var isLoopbackMapRemoteEnabled = false { didSet { didChangeSubject.send(()) } }
+    var authorizedLoopbackMapRemotePorts: [Int] = [] { didSet { didChangeSubject.send(()) } }
     var profileHostStrategyRawValue = ProfileHostStrategy.bonjourLocal.rawValue { didSet { didChangeSubject.send(()) } }
     var manualProfileHost = "" { didSet { didChangeSubject.send(()) } }
     var responseOverridesData: Data? { didSet { didChangeSubject.send(()) } }
@@ -47,6 +49,8 @@ final class MCPSelfValidationAppConfiguration: AppConfiguration {
 
     func resetToDefaults() {
         networkThrottleConfiguration = .defaults
+        isLoopbackMapRemoteEnabled = false
+        authorizedLoopbackMapRemotePorts = []
     }
 }
 

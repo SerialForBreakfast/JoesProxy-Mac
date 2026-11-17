@@ -57,6 +57,7 @@ final class HLSFixtureServer: @unchecked Sendable {
     let playbackConfiguration: HLSPlaybackConfiguration
     private let clock: () -> Date
     private var serverChannel: Channel?
+    private var listenerReservation: ReservedListenerRegistry.ReservationToken?
     private let state = HLSFixtureConnectionState()
     /// Relative path (from `profileDirectory`, e.g. `"video-lo/stream.m3u8"`) -> parsed static
     /// playlist, populated once at construction (sync `init` or async `make`).
@@ -341,7 +342,16 @@ final class HLSFixtureServer: @unchecked Sendable {
         do {
             let channel = try await bootstrap.bind(host: "127.0.0.1", port: 0).get()
             serverChannel = channel
+            if let bound = channel.localAddress?.port.flatMap(UInt16.init(exactly:)) {
+                listenerReservation = ReservedListenerRegistry.shared.reserve(
+                    owner: "HLSFixtureServer",
+                    port: bound,
+                    boundHost: "127.0.0.1"
+                )
+            }
         } catch {
+            ReservedListenerRegistry.shared.release(listenerReservation)
+            listenerReservation = nil
             if ownsGroup { try? await group.shutdownGracefully() }
             throw FixtureServerError.bindFailed(String(describing: error))
         }
@@ -351,6 +361,8 @@ final class HLSFixtureServer: @unchecked Sendable {
         completionLock.withLock { stopped = true }
         try? await serverChannel?.close()
         serverChannel = nil
+        ReservedListenerRegistry.shared.release(listenerReservation)
+        listenerReservation = nil
         if ownsGroup { try? await group.shutdownGracefully() }
     }
 

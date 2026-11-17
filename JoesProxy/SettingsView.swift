@@ -207,62 +207,67 @@ struct SettingsView: View {
                 }
             }
 
-            Section("SDK Connections") {
-                Toggle("Allow SDK clients to connect to JoesProxy", isOn: $viewModel.sdkEventServerEnabled)
-                    .accessibilityLabel("Allow SDK clients to connect to JoesProxy")
-                    .accessibilityHint("Controls whether JoesProxy opens a local SDK event server while the proxy is running.")
-                    .accessibilityIdentifier("settingsSDKEventServerToggle")
+            Section("Local-Server Routing") {
+                Toggle("Allow Map Remote to target local Mac servers", isOn: $viewModel.isLoopbackMapRemoteEnabled)
+                    .accessibilityLabel("Allow Map Remote to target local Mac servers")
+                    .accessibilityHint("Enables Map Remote rules that explicitly opt in to forward traffic to authorized ports on this Mac.")
+                    .accessibilityIdentifier("settingsLoopbackMapRemoteToggle")
 
-                LabeledContent("SDK Event Server", value: viewModel.sdkEventServerStatusDescription)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("SDK event server")
-                    .accessibilityValue(viewModel.sdkEventServerStatusDescription)
-                    .accessibilityIdentifier("settingsSDKEventServerStatus")
-
-                LabeledContent("SDK Event Port", value: viewModel.sdkEventServerPortDescription)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("SDK event port")
-                    .accessibilityValue(viewModel.sdkEventServerPortDescription)
-
-                LabeledContent("Connected Clients", value: viewModel.sdkEventServerClientCountDescription)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Connected SDK clients")
-                    .accessibilityValue(viewModel.sdkEventServerClientCountDescription)
-                    .accessibilityIdentifier("settingsSDKEventServerClientCount")
-
-                if viewModel.shouldShowSDKEventServerPairingToken {
-                    LabeledContent("Pairing Token") {
-                        HStack(spacing: 8) {
-                            Text(viewModel.sdkEventServerPairingTokenDescription)
-                                .font(.system(.caption, design: .monospaced))
-                                .textSelection(.enabled)
-                                .lineLimit(1)
-
-                            Button("Copy") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(
-                                    viewModel.sdkEventServerPairingTokenDescription,
-                                    forType: .string
-                                )
-                            }
-                            .accessibilityLabel("Copy SDK pairing token")
-                            .accessibilityHint("Copies the current SDK pairing token to the clipboard.")
-                            .accessibilityIdentifier("settingsSDKEventServerCopyPairingTokenButton")
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("SDK pairing token")
-                    .accessibilityValue(viewModel.sdkEventServerPairingTokenDescription)
-                    .accessibilityIdentifier("settingsSDKEventServerPairingToken")
-                }
-
-                Text("When enabled and the proxy is running, JoesProxy opens a local-network SDK event server for apps using the JoesProxy SDK. Keep this off unless you are testing an app that supports SDK connections.")
+                Text("Off by default. Loopback means the Mac running JoesProxy, not the test device. Turning this off or removing a port immediately blocks new requests, closes active remapped streams, and disables matching rules so they never resume silently.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                LabeledContent("Authorized Ports") {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        TextField("e.g. 3000, 8080", text: $viewModel.authorizedLoopbackPortsDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 180)
+                            .onSubmit {
+                                viewModel.commitAuthorizedLoopbackPortsDraft()
+                            }
+                            .accessibilityLabel("Authorized local destination ports")
+                            .accessibilityIdentifier("settingsLoopbackAuthorizedPortsField")
+
+                        Button("Save Ports") {
+                            viewModel.commitAuthorizedLoopbackPortsDraft()
+                        }
+                        .accessibilityIdentifier("settingsSaveLoopbackPortsButton")
+                    }
+                }
+
+                if !viewModel.authorizedLoopbackPorts.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(viewModel.authorizedLoopbackPorts, id: \.self) { port in
+                                HStack(spacing: 4) {
+                                    Text(verbatim: ":\(port)")
+                                        .font(.system(.caption, design: .monospaced))
+                                    Button {
+                                        viewModel.removeAuthorizedLoopbackPort(port)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.caption2)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Remove authorized port \(port)")
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.secondary.opacity(0.15), in: Capsule())
+                            }
+                        }
+                    }
+                }
+
+                if let loopbackPortsValidationMessage = viewModel.loopbackPortsValidationMessage {
+                    Text(loopbackPortsValidationMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .accessibilityLabel(loopbackPortsValidationMessage)
+                        .accessibilityIdentifier("settingsLoopbackPortsValidationMessage")
+                }
             }
-            .task {
-                await viewModel.refreshSDKEventServerStatus()
-            }
+
 
             Section("System Proxy") {
                 Toggle("Automatically set macOS system proxy while capturing", isOn: $viewModel.isSystemProxyManagementEnabled)

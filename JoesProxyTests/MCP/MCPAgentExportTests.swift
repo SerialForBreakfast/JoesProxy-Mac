@@ -65,7 +65,7 @@ final class MCPAgentExportTests: XCTestCase {
 
         XCTAssertEqual(
             command,
-            "'/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl' auth login --endpoint 'http://127.0.0.1:9091/mcp'"
+            "/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl auth login"
         )
 
         let instructions = MCPClientConfigSnippetBuilder.setupInstructions(
@@ -77,9 +77,20 @@ final class MCPAgentExportTests: XCTestCase {
         guard case .command(let setupCommand) = instructions.mechanism else {
             return XCTFail("Expected JoesProxy CLI to use an interactive command.")
         }
-        XCTAssertTrue(setupCommand.contains("joesproxyctl' auth login --endpoint"))
-        XCTAssertTrue(setupCommand.hasSuffix("'http://127.0.0.1:9091/mcp'"))
+        XCTAssertEqual(setupCommand, MCPClientConfigSnippetBuilder.joesProxyCLICommand(
+            endpointURL: endpoint, appBundleURL: Bundle.main.bundleURL
+        ))
+        XCTAssertEqual(MCPClientConfigSnippetBuilder.joesProxyCLICommand(
+            endpointURL: URL(string: "http://127.0.0.1:9191/mcp")!,
+            appBundleURL: URL(fileURLWithPath: "/Local Apps/Joe's.app")
+        ), "'/Local Apps/Joe'\\''s.app/Contents/MacOS/joesproxyctl' auth login --endpoint http://127.0.0.1:9191/mcp")
         XCTAssertFalse(setupCommand.contains("secret-that-must-not-appear"))
+        let executable = "/Applications/JoesProxy.app/Contents/MacOS/joesproxyctl"
+        let customEndpoint = try XCTUnwrap(URL(string: "http://127.0.0.1:9191/mcp"))
+        XCTAssertEqual(MCPClientConfigSnippetBuilder.cliVerificationCommands(endpointURL: customEndpoint, appBundleURL: appURL),
+                       "\(executable) auth status --endpoint \(customEndpoint.absoluteString) && \(executable) status --endpoint \(customEndpoint.absoluteString)")
+        XCTAssertEqual(MCPClientConfigSnippetBuilder.cliVerificationCommands(endpointURL: endpoint, appBundleURL: appURL),
+                       "\(executable) auth status && \(executable) status")
         XCTAssertTrue(instructions.restartNote.contains("Keychain"))
     }
 
@@ -258,11 +269,10 @@ final class MCPAgentExportTests: XCTestCase {
         let skillURL = repoRoot()
             .appendingPathComponent(".agents/skills/joesproxy-mcp-diagnostics/SKILL.md")
         let skillText = try String(contentsOf: skillURL, encoding: .utf8)
-        let body = try XCTUnwrap(Self.markdownBodyAfterFrontmatter(skillText))
         XCTAssertEqual(
-            body,
-            MCPDiagnosticSkill.entryBody,
-            "Repo SKILL.md body must match the exported routed entry point"
+            skillText,
+            MCPAgentExportService.skillMarkdown,
+            "DMG skill entry point must match the app export, including metadata"
         )
     }
 
@@ -339,13 +349,6 @@ final class MCPAgentExportTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-    }
-
-    private static func markdownBodyAfterFrontmatter(_ text: String) -> String? {
-        guard text.hasPrefix("---\n") else { return nil }
-        let afterOpen = text.dropFirst(4)
-        guard let closeRange = afterOpen.range(of: "\n---\n") else { return nil }
-        return String(afterOpen[closeRange.upperBound...])
     }
 
     private static func frontmatterVersion(_ text: String) -> String? {

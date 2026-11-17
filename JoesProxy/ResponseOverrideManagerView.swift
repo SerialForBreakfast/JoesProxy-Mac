@@ -281,7 +281,7 @@ struct ResponseOverridesSheet: View {
                                     )
                                 }
                             },
-                            onSaveMapRemote: { host, port, scheme, path in
+                            onSaveMapRemote: { host, port, scheme, path, allowLoopback, preserveHost in
                                 Task {
                                     await viewModel.updateMapRemoteResponseOverride(
                                         id: rule.id,
@@ -290,7 +290,9 @@ struct ResponseOverridesSheet: View {
                                         remoteHost: host,
                                         remotePort: port,
                                         remoteScheme: scheme,
-                                        remotePath: path
+                                        remotePath: path,
+                                        allowLoopbackDestination: allowLoopback,
+                                        preserveHostHeader: preserveHost
                                     )
                                 }
                             }
@@ -489,7 +491,7 @@ struct ResponseOverrideRuleRow: View {
     let onSaveBlock: (_ statusCode: Int) -> Void
     /// Called when the user commits new destination details for a Map Remote rule. `path` is nil
     /// to keep reusing the original request's path/query (unchanged pre-`remotePath` behavior).
-    let onSaveMapRemote: (_ host: String, _ port: Int?, _ scheme: SessionScheme, _ path: String?) -> Void
+    let onSaveMapRemote: (_ host: String, _ port: Int?, _ scheme: SessionScheme, _ path: String?, _ allowLoopbackDestination: Bool, _ preserveHostHeader: Bool) -> Void
 
     // Inline-edit state for Block rules
     @State private var blockStatusText: String
@@ -498,6 +500,8 @@ struct ResponseOverrideRuleRow: View {
     @State private var mapRemotePortText: String
     @State private var mapRemoteScheme: SessionScheme
     @State private var mapRemotePathText: String
+    @State private var mapRemoteAllowLoopback: Bool
+    @State private var mapRemotePreserveHost: Bool
 
     @FocusState private var blockStatusFocused: Bool
     @FocusState private var mapRemoteHostFocused: Bool
@@ -510,7 +514,7 @@ struct ResponseOverrideRuleRow: View {
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void,
         onSaveBlock: @escaping (_ statusCode: Int) -> Void,
-        onSaveMapRemote: @escaping (_ host: String, _ port: Int?, _ scheme: SessionScheme, _ path: String?) -> Void
+        onSaveMapRemote: @escaping (_ host: String, _ port: Int?, _ scheme: SessionScheme, _ path: String?, _ allowLoopbackDestination: Bool, _ preserveHostHeader: Bool) -> Void
     ) {
         self.rule = rule
         self.onToggle = onToggle
@@ -523,6 +527,8 @@ struct ResponseOverrideRuleRow: View {
         _mapRemotePortText = State(initialValue: rule.mapRemotePort.map { String($0) } ?? "")
         _mapRemoteScheme = State(initialValue: rule.mapRemoteScheme ?? .https)
         _mapRemotePathText = State(initialValue: rule.mapRemotePath ?? "")
+        _mapRemoteAllowLoopback = State(initialValue: rule.allowLoopbackDestination)
+        _mapRemotePreserveHost = State(initialValue: rule.preserveHostHeader)
     }
 
     // MARK: Badge color
@@ -567,7 +573,14 @@ struct ResponseOverrideRuleRow: View {
         }
         let port = Int(mapRemotePortText.trimmingCharacters(in: .whitespacesAndNewlines))
         let trimmedPath = mapRemotePathText.trimmingCharacters(in: .whitespacesAndNewlines)
-        onSaveMapRemote(host, port, mapRemoteScheme, trimmedPath.isEmpty ? nil : trimmedPath)
+        onSaveMapRemote(
+            host,
+            port,
+            mapRemoteScheme,
+            trimmedPath.isEmpty ? nil : trimmedPath,
+            mapRemoteAllowLoopback,
+            mapRemotePreserveHost
+        )
     }
 
     // MARK: Body
@@ -986,8 +999,8 @@ struct ResponseOverrideEditorSheet: View {
     let onSaveDirectory: (String?, String, URL, Bool) -> Void
     /// Called when saving a block rule: (label, matchMode, matchPath, statusCode)
     let onSaveBlock: (String?, ResponseOverrideMatchMode, String, Int) -> Void
-    /// Called when saving a map-remote rule: (label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath)
-    let onSaveMapRemote: (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?) -> Void
+    /// Called when saving a map-remote rule: (label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath, allowLoopbackDestination, preserveHostHeader)
+    let onSaveMapRemote: (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?, Bool, Bool) -> Void
     /// Called when saving a live-response rewrite rule: (label, matchMode, matchPath, rewrites)
     let onSaveLiveResponseRewrite: (String?, ResponseOverrideMatchMode, String, [BookmarkResponseFieldRewrite]) -> Void
     let onCancel: () -> Void
@@ -1011,6 +1024,8 @@ struct ResponseOverrideEditorSheet: View {
     @State private var remotePortText: String
     @State private var remoteSchemeSelection: SessionScheme
     @State private var remotePathText: String
+    @State private var allowLoopbackDestination: Bool
+    @State private var preserveHostHeader: Bool
     @State private var liveRewriteDrafts: [LiveResponseRewriteDraft]
 
     init(
@@ -1020,7 +1035,7 @@ struct ResponseOverrideEditorSheet: View {
         onSaveFile: @escaping (String?, ResponseOverrideMatchMode, String, Int, String?, URL, Bool) -> Void,
         onSaveDirectory: @escaping (String?, String, URL, Bool) -> Void,
         onSaveBlock: @escaping (String?, ResponseOverrideMatchMode, String, Int) -> Void,
-        onSaveMapRemote: @escaping (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?) -> Void,
+        onSaveMapRemote: @escaping (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?, Bool, Bool) -> Void,
         onSaveLiveResponseRewrite: @escaping (String?, ResponseOverrideMatchMode, String, [BookmarkResponseFieldRewrite]) -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -1063,6 +1078,8 @@ struct ResponseOverrideEditorSheet: View {
         _remotePortText = State(initialValue: rule.mapRemotePort.map { String($0) } ?? "")
         _remoteSchemeSelection = State(initialValue: rule.mapRemoteScheme ?? .https)
         _remotePathText = State(initialValue: rule.mapRemotePath ?? "")
+        _allowLoopbackDestination = State(initialValue: rule.allowLoopbackDestination)
+        _preserveHostHeader = State(initialValue: rule.preserveHostHeader)
         _liveRewriteDrafts = State(
             initialValue: rule.sourceKind == .liveResponseRewrite
                 ? rule.liveResponseRewrites.map(LiveResponseRewriteDraft.init(from:))
@@ -1301,7 +1318,10 @@ struct ResponseOverrideEditorSheet: View {
                                     .textFieldStyle(.roundedBorder)
                             }
 
-                            Text("Matching requests are forwarded to this host instead of the original destination. The original query string is preserved. Leave the path blank to also keep the original path.")
+                            Toggle("Allow local Mac destination (loopback)", isOn: $allowLoopbackDestination)
+                            Toggle("Preserve original HTTP Host header", isOn: $preserveHostHeader)
+
+                            Text("Matching requests are forwarded to this host instead of the original destination. Loopback targets require Settings > Proxy > Local-Server Routing to be enabled with the destination port authorized. Preserving Host keeps the original HTTP Host authority while TLS SNI and certificate verification stay pinned to the destination host.")
                                 .appFont(.caption, scale: appTextScale)
                                 .foregroundStyle(.secondary)
                         }
@@ -1394,7 +1414,17 @@ struct ResponseOverrideEditorSheet: View {
                     case .mapRemote:
                         let resolvedPort = Int(remotePortText.trimmingCharacters(in: .whitespacesAndNewlines))
                         let trimmedPath = remotePathText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        onSaveMapRemote(labelText.nilIfBlank, selectedMatchMode, resolvedMatchPath, remoteHostText, resolvedPort, remoteSchemeSelection, trimmedPath.isEmpty ? nil : trimmedPath)
+                        onSaveMapRemote(
+                            labelText.nilIfBlank,
+                            selectedMatchMode,
+                            resolvedMatchPath,
+                            remoteHostText,
+                            resolvedPort,
+                            remoteSchemeSelection,
+                            trimmedPath.isEmpty ? nil : trimmedPath,
+                            allowLoopbackDestination,
+                            preserveHostHeader
+                        )
                     case .bookmarkRewrite:
                         break
                     case .liveResponseRewrite:
@@ -1462,8 +1492,8 @@ struct MapLocalSheet: View {
     let onCreateDirectoryBackedOverride: (String?, String, ResponseOverrideConflictStrategy, URL, Bool) -> Void
     /// Called when the user confirms a block rule. Parameters: label, matchMode, matchPath, statusCode.
     let onCreateBlockRule: (String?, ResponseOverrideMatchMode, String, Int) -> Void
-    /// Called when the user confirms a map-remote rule. Parameters: label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath.
-    let onCreateMapRemoteRule: (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?) -> Void
+    /// Called when the user confirms a map-remote rule. Parameters: label, matchMode, matchPath, remoteHost, remotePort, remoteScheme, remotePath, allowLoopbackDestination, preserveHostHeader.
+    let onCreateMapRemoteRule: (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?, Bool, Bool) -> Void
     /// Called when the user confirms a live-response rewrite rule.
     let onCreateLiveResponseRewrite: (String?, ResponseOverrideMatchMode, String, String, JSONMutationOperation, BookmarkJSONValue) -> Void
     let onOpenHLSTestStream: () -> Void
@@ -1497,6 +1527,8 @@ struct MapLocalSheet: View {
     @State private var remotePortText: String = ""
     @State private var remoteScheme: SessionScheme = .https
     @State private var remotePathText: String = ""
+    @State private var allowLoopbackDestination: Bool = false
+    @State private var preserveHostHeader: Bool = false
     @State private var liveRewritePath: String = ""
     @State private var liveRewriteOperation: JSONMutationOperation = .set
     @State private var liveRewriteValueText: String = "true"
@@ -1509,7 +1541,7 @@ struct MapLocalSheet: View {
         onCreateFileBackedOverride: @escaping (String?, ResponseOverrideMatchMode, String, ResponseOverrideConflictStrategy, Int, String?, URL, Bool) -> Void,
         onCreateDirectoryBackedOverride: @escaping (String?, String, ResponseOverrideConflictStrategy, URL, Bool) -> Void,
         onCreateBlockRule: @escaping (String?, ResponseOverrideMatchMode, String, Int) -> Void,
-        onCreateMapRemoteRule: @escaping (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?) -> Void,
+        onCreateMapRemoteRule: @escaping (String?, ResponseOverrideMatchMode, String, String, Int?, SessionScheme, String?, Bool, Bool) -> Void,
         onCreateLiveResponseRewrite: @escaping (String?, ResponseOverrideMatchMode, String, String, JSONMutationOperation, BookmarkJSONValue) -> Void,
         onOpenHLSTestStream: @escaping () -> Void,
         onCancel: @escaping () -> Void
@@ -2009,7 +2041,10 @@ struct MapLocalSheet: View {
                                     .textFieldStyle(.roundedBorder)
                             }
 
-                            Text("The original method, headers, and body are forwarded to the remote host unchanged, along with the original query string. Leave the destination path blank to also keep the original path.")
+                            Toggle("Allow local Mac destination (loopback)", isOn: $allowLoopbackDestination)
+                            Toggle("Preserve original HTTP Host header", isOn: $preserveHostHeader)
+
+                            Text("The original method, headers, and body are forwarded to the remote host unchanged, along with the original query string. Loopback targets require Settings > Proxy > Local-Server Routing to be enabled with the destination port authorized. Preserving Host keeps the original HTTP Host authority while TLS SNI and certificate verification stay pinned to the destination host.")
                                 .appFont(.caption, scale: appTextScale)
                                 .foregroundStyle(.secondary)
                         }
@@ -2094,7 +2129,17 @@ struct MapLocalSheet: View {
                         let host = remoteHostText.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !host.isEmpty else { return }
                         let trimmedRemotePath = remotePathText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        onCreateMapRemoteRule(overrideLabel.nilIfBlank, matchMode, resolvedMatchPath, host, resolvedRemotePort, remoteScheme, trimmedRemotePath.isEmpty ? nil : trimmedRemotePath)
+                        onCreateMapRemoteRule(
+                            overrideLabel.nilIfBlank,
+                            matchMode,
+                            resolvedMatchPath,
+                            host,
+                            resolvedRemotePort,
+                            remoteScheme,
+                            trimmedRemotePath.isEmpty ? nil : trimmedRemotePath,
+                            allowLoopbackDestination,
+                            preserveHostHeader
+                        )
                     case .bookmarkRewrite:
                         break
                     case .liveResponseRewrite:

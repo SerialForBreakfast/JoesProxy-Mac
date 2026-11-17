@@ -132,7 +132,10 @@ final class AppCoordinator {
             let responseOverrideStore = self.responseOverrideStore
             let configuration = self.configuration
             responseOverrideLoadingTask = Task {
-                try? await responseOverrideStore.loadPersistedData(configuration.responseOverridesData)
+                try? await responseOverrideStore.loadPersistedData(
+                    configuration.responseOverridesData,
+                    loopbackPolicy: configuration.loopbackDestinationPolicy
+                )
             }
         }
         await responseOverrideLoadingTask?.value
@@ -248,10 +251,13 @@ final class AppCoordinator {
         resolvedCAInstanceMetadataStore.load()
         let resolvedCertificateDistributionRecordStore = CertificateDistributionRecordStore(persistenceURL: storageScope?.file("certificate-distribution.json"))
         resolvedCertificateDistributionRecordStore.load()
-        let resolvedCertificateStatusReader: (any CertificateStatusReading)? =
-            certificateStore == nil && certificateAuthority == nil && trustInstaller == nil
-            ? PersistentCertificateStatusReader(label: resolvedConfiguration.certificateLabel)
-            : nil
+        let resolvedCertificateStatusReader: (any CertificateStatusReading)?
+        if certificateStore == nil, certificateAuthority == nil, trustInstaller == nil,
+           let persistentStore = resolvedCertificateStore as? PersistentKeychainCertificateStore {
+            resolvedCertificateStatusReader = PersistentCertificateStatusReader(label: resolvedConfiguration.certificateLabel, certificateStore: persistentStore)
+        } else {
+            resolvedCertificateStatusReader = nil
+        }
         let resolvedProfileSnapshotStore = storageScope.map {
             ProfileSnapshotStore(fileURL: $0.file("ProfileSnapshots.json"))
         } ?? ProfileSnapshotStore.defaultStore()
@@ -293,7 +299,10 @@ final class AppCoordinator {
         let resolvedEffectBundleActivationCoordinator = EffectBundleActivationCoordinator(
             repository: resolvedEffectBundleRepository,
             responseOverrideStore: resolvedResponseOverrideStore,
-            hlsCoordinator: resolvedHLSSubstitutionCoordinator
+            hlsCoordinator: resolvedHLSSubstitutionCoordinator,
+            loopbackPolicyProvider: { @MainActor [resolvedConfiguration] in
+                resolvedConfiguration.loopbackDestinationPolicy
+            }
         )
         self.effectBundleSleepObserver = EffectBundleSleepObserver(coordinator: resolvedEffectBundleActivationCoordinator)
         let resolvedOpenAPISchemaStore = OpenAPISchemaStore()

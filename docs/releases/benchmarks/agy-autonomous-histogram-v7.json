@@ -1,0 +1,750 @@
+{
+  "autonomous": {
+    "arms": [
+      {
+        "version": "1.9.0",
+        "correct": 3,
+        "n": 5,
+        "median": 60743,
+        "range": [
+          41824,
+          109401
+        ],
+        "total": 330306,
+        "calls": [
+          1,
+          7,
+          6,
+          1,
+          7
+        ]
+      },
+      {
+        "version": "1.9.1",
+        "correct": 5,
+        "n": 5,
+        "median": 22869,
+        "range": [
+          22458,
+          37675
+        ],
+        "total": 128727,
+        "calls": [
+          1,
+          1,
+          1,
+          2,
+          1
+        ]
+      }
+    ],
+    "eligiblePairs": 3,
+    "pairedReductionPercent": 65.16006948752947
+  },
+  "guided": {
+    "arms": [
+      {
+        "version": "1.9.0",
+        "correct": 3,
+        "n": 3,
+        "median": 79647,
+        "range": [
+          79599,
+          82675
+        ],
+        "total": 241921,
+        "calls": [
+          4,
+          4,
+          4
+        ]
+      },
+      {
+        "version": "1.9.1",
+        "correct": 3,
+        "n": 3,
+        "median": 21659,
+        "range": [
+          21649,
+          21677
+        ],
+        "total": 64985,
+        "calls": [
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "eligiblePairs": 3,
+    "pairedReductionPercent": 72.80242214098168
+  },
+  "trials": [
+    {
+      "version": "1.9.0",
+      "rep": 0,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 52455,
+        "output_tokens": 1411,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 99509,
+        "total_tokens": 53866
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 34163,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "212312b0c864ffced0ae65a3791d68314fc651d0a113edf26a63b189ebc9ef8e",
+          "error": null
+        }
+      ],
+      "extra": [
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 0,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 22514,
+        "output_tokens": 355,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 34404,
+        "total_tokens": 22869
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 11399,
+      "calls": [
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount",
+              "limit": 20
+            },
+            "selectionPointer": ""
+          },
+          "ok": true,
+          "answerSHA256": "8e95c8295172dcb4cd94dcce327dfcac252b52ea0bf3d7ed9535c4e96cc2b97d",
+          "error": null
+        }
+      ],
+      "extra": []
+    },
+    {
+      "version": "1.9.0",
+      "rep": 1,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 106139,
+        "output_tokens": 3262,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 571666,
+        "total_tokens": 109401
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 73408,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "91b51ebfd5def6999cebaf0aa9955c30297560ae0ed953ef141d25029e804fb6",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "ee4201314aba220d4e581d7a034f1ef25e5f01f3708113858715b346feb80abe",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "C21E7B39-EDBC-4F4B-8929-E1F3DA30E34B",
+            "limit": 100,
+            "method": "GET",
+            "projection": "full"
+          },
+          "ok": false,
+          "answerSHA256": "2291f38ac452caea2954bf5bf87e2b5d1cbadb682156601579a5f878827265e8",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "C21E7B39-EDBC-4F4B-8929-E1F3DA30E34B",
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "e030162d7542a7b61027ef5e79ce5a38ca3ca61971d8c4428ccb7d4db41f5593",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "C214BBFF-6E50-4335-90C7-B772EF47E68D",
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "6ea376ed2f74278af6b35a24b423bb8a82e3ed998ff239aac83d3a1ad01ab626",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "0689359C-5490-4B81-A455-E9F384D16A41",
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "0c8e8eed5e5e7d380fca87e8f28b2a0866c38253901a3a027d03da4cbc55bade",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "BFFF52C5-51A6-410C-9AA8-FCFFBAD4A243",
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "61c142e0b4849f72082ed51f6c4dfc3b6135c47a23e28fe323d6c12d7e8cef53",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 1,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 22134,
+        "output_tokens": 324,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 34037,
+        "total_tokens": 22458
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 10656,
+      "calls": [
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount"
+            },
+            "selectionPointer": ""
+          },
+          "ok": true,
+          "answerSHA256": "6450600efa78915edc0830ef519b1f75ff37bb122566ff589f0ec95ecf0d84af",
+          "error": null
+        }
+      ],
+      "extra": []
+    },
+    {
+      "version": "1.9.0",
+      "rep": 2,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 58855,
+        "output_tokens": 1888,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 360862,
+        "total_tokens": 60743
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 55022,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full"
+          },
+          "ok": true,
+          "answerSHA256": "1ecb96885f4ff3fada97c4db566881eb224e8a69d26ec5f5687edac392382ac5",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 660
+          },
+          "ok": true,
+          "answerSHA256": "4207db4ef52351b75286c4bcd539b857ebe2f198f0255f8ac61ac82dac1a9294",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 760
+          },
+          "ok": true,
+          "answerSHA256": "d3fed68d8105d2accd6b6dbb2502f2ab01f0cb8c69f7d187343544c01c4b2da4",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 860
+          },
+          "ok": true,
+          "answerSHA256": "8819ca41885db7a91e83437f3c9299208b8d52fd65ffca4eb8c675a6af045708",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 960
+          },
+          "ok": true,
+          "answerSHA256": "49e80e0e571371b4f784aeac98b9e488eba280036038160e3995cb94b7af9c2f",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "full",
+            "sinceSequence": 1060
+          },
+          "ok": true,
+          "answerSHA256": "6052d23934125cd372275f0ee0ad83dcca52302312c1f0a3aafda7dd9edefc81",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 2,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 22870,
+        "output_tokens": 393,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 34761,
+        "total_tokens": 23263
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 11381,
+      "calls": [
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount"
+            },
+            "selectionPointer": ""
+          },
+          "ok": true,
+          "answerSHA256": "8dac4c81706014f68b01faa6a685490017bb262f462ceb7515cfb7c6e610cd02",
+          "error": null
+        }
+      ],
+      "extra": []
+    },
+    {
+      "version": "1.9.0",
+      "rep": 3,
+      "correct": false,
+      "answer": null,
+      "usage": {
+        "input_tokens": 40984,
+        "output_tokens": 840,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 81855,
+        "total_tokens": 41824
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 19266,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "ca39e5e197fbceb08a084e0517c62285d7b1b89a5d4d557cf396df61dc73c13b",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file",
+        "run_command",
+        "run_workflow"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 3,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 37073,
+        "output_tokens": 602,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 74660,
+        "total_tokens": 37675
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 16418,
+      "calls": [
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount"
+            },
+            "selectionPointer": ""
+          },
+          "ok": true,
+          "answerSHA256": "ed7d225cc2953b935b901f4d97abf367ac565b8fb9a7850b8387f1ba50106a8a",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "path": "/vod/",
+            "projection": "minimal",
+            "startedAfter": "1970-01-01T00:11:11Z",
+            "startedBefore": "1970-01-01T00:17:50Z"
+          },
+          "ok": true,
+          "answerSHA256": "d6319cdd70ae9338f77bfb03796a1d843de46b22833c2966f34f7f9098d8ecc2",
+          "error": null
+        }
+      ],
+      "extra": [
+        "read_file"
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "rep": 4,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 62031,
+        "output_tokens": 2441,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 367195,
+        "total_tokens": 64472
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 54609,
+      "calls": [
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 10,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": true,
+          "answerSHA256": "598af403c750496fe33dd4f5d96baaf9c3ce70480f356425b0a95b4182fbde19",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "b8f4f4264ecf0ad5c102293175b720bdee962979c415ee1113d0d7ccb0017a8e",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "6E623155-BFDC-420F-B2CA-3A349B8E0AA3",
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary"
+          },
+          "ok": false,
+          "answerSHA256": "7ffd708cbf94ed02f243446ad92e209778c4349c308806d8ffb737097d82925e",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "6E623155-BFDC-420F-B2CA-3A349B8E0AA3",
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "e1d6c3d53087126467297acb684c3ef121aaf592d2845c025ebcdb536f54efa8",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "2FE8B4D9-E064-4771-AD4D-23A353E1A8D1",
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "bb45055826cc50ef3544fdd0abe037733bd7b6ca3fdc6474744063fab5b92f57",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "85017058-4F45-464B-B33A-93F48A98E853",
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "ef1779e63080d4cf2bb261b0b422c371d450a92a904ff6266dacc97caa7e1b6c",
+          "error": null
+        },
+        {
+          "name": "sessions_search",
+          "arguments": {
+            "cursor": "4259F615-3B76-4A6B-BAE1-351AFAC9020F",
+            "limit": 100,
+            "method": "GET",
+            "projection": "summary",
+            "sinceSequence": 670
+          },
+          "ok": true,
+          "answerSHA256": "29fcee7d9f1955245a2a6add0685d102bd8fc855d09314360dd5fa9134e4204a",
+          "error": null
+        }
+      ],
+      "extra": [
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command",
+        "run_command"
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "rep": 4,
+      "correct": true,
+      "answer": {
+        "200": 260,
+        "206": 60,
+        "304": 20,
+        "404": 20,
+        "503": 20,
+        "missing": 20
+      },
+      "usage": {
+        "input_tokens": 22138,
+        "output_tokens": 324,
+        "thinking_tokens": 0,
+        "cache_read_tokens": 34045,
+        "total_tokens": 22462
+      },
+      "status": "SUCCESS",
+      "elapsedMs": 14060,
+      "calls": [
+        {
+          "name": "capture_calculate",
+          "arguments": {
+            "dataset": "sessionMetadata",
+            "filter": {
+              "method": "GET",
+              "path": "/vod/",
+              "startedAfter": "1970-01-01T00:11:11Z",
+              "startedBefore": "1970-01-01T00:17:50Z"
+            },
+            "operation": {
+              "fieldPointer": "/statusCode",
+              "kind": "groupCount"
+            },
+            "selectionPointer": ""
+          },
+          "ok": true,
+          "answerSHA256": "ba4d5f850f8aa3bd3c680d1d130e8fe3bf62c5d368d45bfab0ea8fe2a5889736",
+          "error": null
+        }
+      ],
+      "extra": []
+    }
+  ]
+}

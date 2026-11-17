@@ -833,6 +833,8 @@ struct SessionDetailView: View {
                 .padding(.vertical, 2)
             }
 
+        case .proxyError:
+            Text("JoesProxy generated this HTTP error response.")
         case .upstream:
             EmptyView()
         }

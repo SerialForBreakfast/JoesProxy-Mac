@@ -30,7 +30,7 @@ final class PersistentTrustInstallerTests: XCTestCase {
 
         XCTAssertEqual(
             trustInstaller.installationStatus(for: installedIdentity.label),
-            .invalid(reason: "Installed '\(installedIdentity.label)' certificates do not match the current JoesProxy root CA. Reset Certificate State to clean up stale certificates.")
+            .invalid(reason: "Installed '\(installedIdentity.label)' certificates do not match the current JoesProxy root CA. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         )
     }
 
@@ -129,20 +129,34 @@ final class PersistentTrustInstallerTests: XCTestCase {
         XCTAssertTrue(keychain.deletedLabels.isEmpty)
     }
 
-    func testRemoveCertificateThrowsWhenStoredIdentityExistsButInstalledCertificateIsMissing() throws {
+    func testRepeatedRemovalOfAbsentInstalledCertificatePreservesStoredIdentity() throws {
         let identity = try makeRootIdentity(label: "MissingInstalledCertificate")
+        let store = InMemoryTrustCertificateStore(identity: identity)
         let trustInstaller = PersistentTrustInstaller(
             keychainHelper: FakeCertificateKeychain(),
-            certificateStore: InMemoryTrustCertificateStore(identity: identity),
+            certificateStore: store,
             trustEvaluator: FakeCertificateTrustEvaluator(result: .installed)
         )
 
-        XCTAssertThrowsError(try trustInstaller.removeCertificate(label: identity.label)) { error in
-            XCTAssertEqual(
-                error.localizedDescription,
-                "JoesProxy has stored root CA material for '\(identity.label)', but no matching installed certificate was found in the keychain to remove."
-            )
-        }
+        try trustInstaller.removeCertificate(label: identity.label)
+        try trustInstaller.removeCertificate(label: identity.label)
+        XCTAssertEqual(store.loadRootCertificate(label: identity.label)?.certificateData, identity.certificateData)
+    }
+
+    func testRemovalWithoutStoredIdentityPreservesInstalledCertificate() throws {
+        let other = try makeRootIdentity(label: "Shared")
+        let keychain = FakeCertificateKeychain(certificatesByLabel: [
+            other.label: [try makeCertificate(from: other)]
+        ])
+        let installer = PersistentTrustInstaller(
+            keychainHelper: keychain,
+            certificateStore: InMemoryTrustCertificateStore(identity: nil),
+            trustEvaluator: FakeCertificateTrustEvaluator(result: .installed)
+        )
+
+        XCTAssertThrowsError(try installer.removeCertificate(label: other.label))
+        XCTAssertTrue(keychain.deletedLabels.isEmpty)
+        XCTAssertEqual(try keychain.retrieveCertificates(withLabel: other.label).count, 1)
     }
 
     func testInstallationStatusReturnsInvalidWhenMultipleCertificatesShareLabel() throws {
@@ -162,11 +176,11 @@ final class PersistentTrustInstallerTests: XCTestCase {
 
         XCTAssertEqual(
             trustInstaller.installationStatus(for: identity.label),
-            .invalid(reason: "Multiple '\(identity.label)' certificates are installed. Reset Certificate State to remove stale or duplicate certificates.")
+            .invalid(reason: "Multiple '\(identity.label)' certificates are installed. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         )
     }
 
-    func testRemoveCertificateDeletesAllCertificatesWithSharedLabel() throws {
+    func testRemoveCertificatePreservesUnrelatedCertificateWithSharedLabel() throws {
         let identity = try makeRootIdentity(label: "CleanupAll")
         let staleIdentity = try makeRootIdentity(label: "CleanupAll")
         let keychain = FakeCertificateKeychain(certificatesByLabel: [
@@ -183,8 +197,25 @@ final class PersistentTrustInstallerTests: XCTestCase {
 
         try trustInstaller.removeCertificate(label: identity.label)
 
-        XCTAssertNil(keychain.certificatesByLabel[identity.label])
-        XCTAssertEqual(keychain.deletedLabels.count, 2)
+        XCTAssertEqual(try keychain.retrieveCertificates(withLabel: identity.label).map { SecCertificateCopyData($0) as Data },
+                       [staleIdentity.certificateData])
+        XCTAssertEqual(keychain.deletedLabels.count, 1)
+    }
+
+    func testFingerprintRetirementPreservesOtherRootAndCanBeRepeated() throws {
+        let target = try makeRootIdentity(label: "Shared")
+        let other = try makeRootIdentity(label: target.label)
+        let keychain = FakeCertificateKeychain(certificatesByLabel: [
+            target.label: [try makeCertificate(from: target), try makeCertificate(from: other)]
+        ])
+        let installer = PersistentTrustInstaller(keychainHelper: keychain,
+            certificateStore: InMemoryTrustCertificateStore(identity: target),
+            trustEvaluator: FakeCertificateTrustEvaluator(result: .installed))
+        let fingerprint = CertificateIdentityExtraction.sha256Fingerprint(from: target.certificateData)
+        XCTAssertEqual(try installer.removeInstalledCertificate(matchingFingerprint: fingerprint, label: target.label), 1)
+        XCTAssertEqual(try installer.removeInstalledCertificate(matchingFingerprint: fingerprint, label: target.label), 0)
+        XCTAssertEqual(try keychain.retrieveCertificates(withLabel: target.label).map { SecCertificateCopyData($0) as Data },
+                       [other.certificateData])
     }
 }
 
@@ -249,7 +280,7 @@ private final class FakeCertificateKeychain: CertificateKeychainAccessing {
 
     func saveData(_ data: Data, service: String, account: String) throws {}
 
-    func retrieveData(service: String, account: String) -> Data? { nil }
+    func retrieveData(service: String, account: String, interactive: Bool) throws -> Data? { nil }
 
     func deleteData(service: String, account: String) throws {}
 }

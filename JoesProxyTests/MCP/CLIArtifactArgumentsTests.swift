@@ -26,6 +26,16 @@ final class CLIArtifactArgumentsTests: XCTestCase {
         XCTAssertNil(rhs["sessionIDs"])
     }
 
+    func testFilteredMetadataArgumentsRequireExactlyOneSelection() throws {
+        let command = ["capture", "calculate", "--dataset", "sessionMetadata", "--operation", "rowCount"]
+        let bounds = ["--started-after", "1970-01-01T00:00:00Z", "--started-before", "1970-01-01T00:05:00Z"]
+        let arguments = try CLIArtifactArguments.calculation(CLIInvocation.parse(command + bounds + ["--path-contains", "/checkout"]), live: true)
+        XCTAssertEqual((arguments["filter"] as? [String: String])?["path"], "/checkout")
+        XCTAssertNil(arguments["sessionIDs"])
+        XCTAssertThrowsError(try CLIArtifactArguments.calculation(CLIInvocation.parse(command + Array(bounds.prefix(2))), live: true))
+        XCTAssertThrowsError(try CLIArtifactArguments.calculation(CLIInvocation.parse(command + bounds + ["--session-ids", UUID().uuidString]), live: true))
+    }
+
     func testRegistrationRequiresExplicitScopesAndRejectsPathInput() throws {
         let base = ["artifact", "source", "register", "--request-key", UUID().uuidString, "--kind", "json", "--scope", "metadata-v1,calculations-v1"]
         let valid = try CLIArtifactArguments.source(CLIInvocation.parse(base), action: "register")

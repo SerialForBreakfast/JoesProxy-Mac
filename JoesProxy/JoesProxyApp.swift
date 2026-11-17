@@ -115,7 +115,7 @@ struct JoesProxyApp: App {
             let certificateIdentity: RootCertificateIdentity?
             let trustStatus: TrustInstallationStatus
             switch uiTestConfiguration.certificateState {
-            case .notSetUp, nil:
+            case .notSetUp, .keychainLocked, nil:
                 certificateIdentity = nil
                 trustStatus = .notInstalled
             case .installedTrustRequired:
@@ -130,6 +130,14 @@ struct JoesProxyApp: App {
             }
 
             let setupVerificationState: ProxyViewModel.SetupVerificationState?
+            let fixtureStore: any CertificateStore
+            if uiTestConfiguration.certificateState == .keychainLocked {
+                let store = PersistentKeychainCertificateStore(keychainHelper: UITestDeniedCAKeychain())
+                _ = store.loadRootCertificate(label: uiTestConfigurationStore.certificateLabel)
+                fixtureStore = store
+            } else {
+                fixtureStore = UITestCertificateStore(identity: certificateIdentity)
+            }
             switch uiTestConfiguration.verificationState {
             case .inspected:
                 setupVerificationState = .inspected
@@ -164,7 +172,7 @@ struct JoesProxyApp: App {
                 configuration: uiTestConfigurationStore,
                 proxyRuntime: proxyRuntime,
                 sessionStore: uiTestSessionStore,
-                certificateStore: UITestCertificateStore(identity: certificateIdentity),
+                certificateStore: fixtureStore,
                 certificateAuthority: UITestCertificateAuthority(currentIdentity: certificateIdentity),
                 trustInstaller: UITestTrustInstaller(status: trustStatus),
                 setupVerificationState: setupVerificationState,
@@ -226,7 +234,8 @@ struct JoesProxyApp: App {
             wrappedValue: SettingsViewModel(
                 configuration: coordinator.configuration,
                 proxyRuntime: coordinator.proxyRuntime,
-                diagnosticsCoordinator: coordinator.previousRunDiagnosticsCoordinator
+                diagnosticsCoordinator: coordinator.previousRunDiagnosticsCoordinator,
+                responseOverrideStore: coordinator.responseOverrideStore
             )
         )
         let resolvedPresentationState = AppPresentationState(configuration: coordinator.configuration)
@@ -340,6 +349,7 @@ struct JoesProxyApp: App {
                         uploadSpoolService: coordinator.uploadSpoolService
                     )
                     .environmentObject(presentationState)
+                    .environmentObject(settingsViewModel)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -433,8 +443,11 @@ struct JoesProxyApp: App {
                 )
                     .environment(\.appTextScale, viewModel.appTextSize.fontScale)
             }
-            .sheet(isPresented: $presentationState.isFirstRunPathChoicePresented) {
+            .sheet(isPresented: $presentationState.isFirstRunPathChoicePresented,
+                   onDismiss: presentationState.presentPendingSetupAfterDismissal) {
                 FirstRunPathChoiceView(
+                    viewModel: viewModel,
+                    accessChecklist: SetupAccessChecklist(controller: mcpServerController, selfValidationCoordinator: coordinator.selfValidationCoordinator),
                     onStartFirstCapture: {
                         presentationState.chooseStartFirstCapture()
                         coordinator.sessionStartCoordinator.syncPersistedOnboardingState()
@@ -444,6 +457,7 @@ struct JoesProxyApp: App {
                         presentationState.chooseConnectAnAgent()
                         coordinator.sessionStartCoordinator.syncPersistedOnboardingState()
                         compactModeController.enterCompactWorkingView()
+                        presentationState.presentMCPManagement(destination: .overview)
                     },
                     onOpenInspector: {
                         presentationState.chooseOpenInspector()
@@ -452,6 +466,8 @@ struct JoesProxyApp: App {
                     }
                 )
                 .interactiveDismissDisabled()
+                .environmentObject(settingsViewModel)
+                .environmentObject(presentationState)
             }
             .onAppear {
                 presentationState.installUtilityWindowOpener { [openWindow] kind in
@@ -557,6 +573,8 @@ struct JoesProxyApp: App {
                     Text("Settings…")
                 }
                 .keyboardShortcut(",", modifiers: .command)
+                Button("Setup & Repair…", action: openSetupAndRepair)
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
             }
 
             // MARK: Apple menu — About
@@ -803,11 +821,7 @@ struct JoesProxyApp: App {
 
             // MARK: Certificate menu
             CommandMenu("Certificate") {
-                Button(viewModel.certificateSetupEntryPointTitle) {
-                    compactModeController.performRequiringFullView {
-                        presentationState.presentCertificateSetup()
-                    }
-                }
+                Button("Setup & Repair…", action: openSetupAndRepair)
                 .keyboardShortcut("h", modifiers: [.command, .shift])
                 Button("Reset Certificate State") {
                     compactModeController.performRequiringFullView {
@@ -878,12 +892,7 @@ struct JoesProxyApp: App {
 
                 Divider()
 
-                Button("Guided Setup & Repair") {
-                    compactModeController.performRequiringFullView {
-                        presentationState.presentGuidedSetup()
-                    }
-                }
-                .keyboardShortcut("g", modifiers: [.command, .shift])
+                Button("Setup & Repair…", action: openSetupAndRepair)
                 .accessibilityIdentifier("joesProxyGuidedSetupMenuItem")
 
                 Divider()
@@ -925,7 +934,8 @@ struct JoesProxyApp: App {
                     routingModel: coordinator.systemProxyRoutingModel,
                     compactModeController: coordinator.compactModeController,
                     mcpServerController: coordinator.mcpServerController,
-                    presentationState: presentationState
+                    presentationState: presentationState,
+                    openSetupAndRepair: openSetupAndRepair
                 )
             }
         } label: {
@@ -935,6 +945,13 @@ struct JoesProxyApp: App {
             )
         }
         .menuBarExtraStyle(.menu)
+    }
+
+    private func openSetupAndRepair() {
+        MainWindowActivation.activateMainWindow()
+        compactModeController.performRequiringFullView {
+            presentationState.presentCertificateSetup()
+        }
     }
 
     @ViewBuilder
@@ -1160,7 +1177,7 @@ struct JoesProxyApp: App {
     /// are both requested, ``LaunchInterruptionArbitrator`` keeps a single primary surface (BA-2).
     @MainActor
     private func applyUITestPresentationStateIfNeeded(using configuration: UITestLaunchConfiguration) {
-        if configuration.opensCertificateSetup, !presentationState.isCertificateSetupPresented {
+        if configuration.opensCertificateSetup, presentationState.guidedSetupContext == nil {
             presentationState.presentCertificateSetup()
         }
 
@@ -1198,7 +1215,7 @@ struct JoesProxyApp: App {
             return
         }
 
-        let section = configuration.guidedSetupSection ?? .welcome
+        let section = configuration.guidedSetupSection ?? .certificate
         switch mode {
         case .firstRun:
             presentationState.presentFirstRunPathChoiceIfNeeded()

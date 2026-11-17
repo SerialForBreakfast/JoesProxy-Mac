@@ -318,9 +318,7 @@ final class MCPPhase4ClosureTests: XCTestCase {
         try registry.revokeAll()
         XCTAssertTrue(registry.clients.allSatisfy { $0.credentialState == .revoked })
 
-        // Read the persisted file directly rather than through a second `load()` — reloading would
-        // re-run `reconcileKeychainVerifiers()`, which retries the same failing Keychain delete via
-        // a separate, unrelated code path and would throw again, masking what this test checks.
+        // Verify the durable revocation even when one Keychain item could not be deleted.
         let data = try Data(contentsOf: persistenceURL)
         let persisted = try JSONDecoder().decode(MCPClientRegistry.PersistedState.self, from: data)
         XCTAssertTrue(

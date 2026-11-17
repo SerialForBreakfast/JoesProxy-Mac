@@ -6,9 +6,10 @@ import Foundation
 enum MCPScenarioValidationService {
     static func validate(
         draft: MCPScenarioDraftInput,
-        now: Date = Date()
+        now: Date = Date(),
+        loopbackPolicy: LoopbackDestinationPolicy = .disabled
     ) throws -> MCPScenarioValidationResultDTO {
-        let definition = try MCPScenarioCompiler.compile(draft: draft, now: now)
+        let definition = try MCPScenarioCompiler.compile(draft: draft, now: now, loopbackPolicy: loopbackPolicy)
         let tier = MCPScenarioCompiler.riskTier(for: definition)
         let disclosure = MCPScenarioCompiler.approvalDisclosure(for: definition)
         var warnings: [String] = []

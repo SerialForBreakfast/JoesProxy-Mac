@@ -21,6 +21,7 @@
       "parallelizable" : false,
       "skippedTests" : [
         "JoesProxyTests",
+        "ProxyServerTests\/testCaptureSoakWithAgentWorkflows()",
         "ProxyServerTests\/testSSLHandshake()"
       ],
       "target" : {

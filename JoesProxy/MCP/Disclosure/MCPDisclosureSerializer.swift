@@ -78,10 +78,7 @@ struct MCPDisclosureSerializer: Sendable {
     /// segments that look like opaque tokens (JWTs, session IDs, reset/confirmation tokens embedded
     /// directly in the path — a common real-world pattern that a query-string strip alone misses).
     func sanitizedPath(_ path: String) -> String {
-        var withoutQuery = path
-        if withoutQuery.contains("?") {
-            withoutQuery = String(withoutQuery.split(separator: "?", maxSplits: 1).first ?? Substring(withoutQuery))
-        }
+        let withoutQuery = path.prefix { $0 != "?" }
         let segments = withoutQuery.split(separator: "/", omittingEmptySubsequences: false)
         let sanitizedSegments = segments.map { segment -> String in
             let segmentString = String(segment)

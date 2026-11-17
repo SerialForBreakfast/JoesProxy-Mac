@@ -4,13 +4,24 @@ import Network
 import Security
 import os
 
-final class PersistentKeychainCertificateStore: CertificateStore {
+/// Shares approved CA material between status, trust and issuance callers. The lock protects
+/// storage edits and cache state. An interactive Keychain operation runs outside that lock.
+final class PersistentKeychainCertificateStore: CertificateStore, @unchecked Sendable {
+    private struct Material: Codable {
+        let certificate: Data
+        let privateKey: Data
+    }
     private enum Accounts {
+        static func identity(label: String) -> String { "\(label).root.identity-v1" }
         static func certificate(label: String) -> String { "\(label).root.certificate" }
         static func privateKey(label: String) -> String { "\(label).root.private-key" }
     }
 
     private let keychainHelper: any CertificateKeychainAccessing
+    private let lock = NSLock()
+    private var blockedAccounts: [String: String] = [:]
+    private var approvedData: [String: Data] = [:]
+    private var pendingUnlocks: [String: UUID] = [:]
     private let service = "com.JoesProxy.CertificateAuthority"
     private let logger = Logger(subsystem: "com.JoesProxyApp.TrustFlow", category: "PersistentKeychainCertificateStore")
 
@@ -18,57 +29,111 @@ final class PersistentKeychainCertificateStore: CertificateStore {
         self.keychainHelper = keychainHelper
     }
 
+    /// All lifecycle, forwarding and status reads are noninteractive.
     func loadRootCertificate(label: String) -> RootCertificateIdentity? {
-        logger.info("Trust flow: loading persisted root CA for label '\(label, privacy: .public)'")
-        guard let certificateData = keychainHelper.retrieveData(
-            service: service,
-            account: Accounts.certificate(label: label)
-        ) else {
-            logger.info("Trust flow: no persisted root CA certificate data found for label '\(label, privacy: .public)'")
-            return nil
+        try? readRootBeforeCreation(label: label)
+    }
+
+    /// Reads one combined item, or the original two accounts on older installations.
+    func readRootBeforeCreation(label: String) throws -> RootCertificateIdentity? {
+        try lock.withLock {
+            guard blockedAccounts[label] == nil else { throw Self.unlockRequired }
+            if let data = try read(Accounts.identity(label: label), label: label) {
+                let material = try PropertyListDecoder().decode(Material.self, from: data)
+                return .make(certificateData: material.certificate, label: label, privateKeyData: material.privateKey)
+            }
+            guard let cert = try read(Accounts.certificate(label: label), label: label) else { return nil }
+            let key = try read(Accounts.privateKey(label: label), label: label)
+            return .make(certificateData: cert, label: label, privateKeyData: key)
         }
+    }
 
-        let privateKeyData = keychainHelper.retrieveData(
-            service: service,
-            account: Accounts.privateKey(label: label)
-        )
+    /// Called only while holding the store lock. Failed reads cannot be mistaken for absence.
+    private func read(_ account: String, label: String) throws -> Data? {
+        if let data = approvedData[account] { return data }
+        do { return try keychainHelper.retrieveData(service: service, account: account, interactive: false) }
+        catch {
+            blockedAccounts[label] = account
+            throw Self.unlockRequired
+        }
+    }
 
-        let identity = RootCertificateIdentity.make(
-            certificateData: certificateData,
-            label: label,
-            privateKeyData: privateKeyData
-        )
-        logger.info(
-            "Trust flow: loaded persisted root CA for label '\(label, privacy: .public)' privateKeyPresent=\(privateKeyData != nil)"
-        )
-        return identity
+    private static var unlockRequired: CertificateAuthorityError {
+        .keychainAccessFailed("Open HTTPS Setup and choose Unlock Certificate Authority to allow Keychain access.")
+    }
+
+    /// Exposes the blocked state without consulting the Keychain during view rendering.
+    func requiresUnlock(label: String) -> Bool { lock.withLock { blockedAccounts[label] != nil } }
+
+    /// Pending renewals have separate labels and can need their own recovery gesture.
+    func blockedRenewalLabel(for activeLabel: String) -> String? {
+        lock.withLock { blockedAccounts.keys.sorted().first { $0.hasPrefix(activeLabel + ".pending-") } }
+    }
+
+    /// Identifies the actual protected record before requesting its password dialog.
+    func blockedItemDescription(label: String) -> String? {
+        lock.withLock {
+            guard let account = blockedAccounts[label] else { return nil }
+            if account == Accounts.certificate(label: label) { return "the legacy root certificate" }
+            if account == Accounts.privateKey(label: label) { return "the legacy certificate signing key" }
+            return "the certificate and signing key stored together"
+        }
+    }
+
+    /// Allows one interactive item read per local gesture. Multiple observers can continue
+    /// passive reads while the OS dialog is open. Discard results after a reset or replacement.
+    func unlock(label: String) throws {
+        let token = UUID()
+        let account: String? = lock.withLock {
+            guard pendingUnlocks[label] == nil, let account = blockedAccounts[label] else { return nil }
+            pendingUnlocks[label] = token
+            return account
+        }
+        guard let account else { return }
+        defer { lock.withLock { if pendingUnlocks[label] == token { pendingUnlocks[label] = nil } } }
+        let data = try keychainHelper.retrieveData(service: service, account: account, interactive: true)
+        lock.withLock {
+            guard pendingUnlocks[label] == token else { return }
+            approvedData[account] = data
+            blockedAccounts[label] = nil
+        }
     }
 
     func saveRootCertificate(_ identity: RootCertificateIdentity) throws {
         logger.info("Trust flow: saving persisted root CA for label '\(identity.label, privacy: .public)'")
-        try keychainHelper.saveData(
-            identity.certificateData,
-            service: service,
-            account: Accounts.certificate(label: identity.label)
-        )
-
         guard let privateKeyData = identity.privateKeyData else {
             throw CertificateAuthorityError.storageFailed("The root certificate identity is missing private key data.")
         }
 
-        try keychainHelper.saveData(
-            privateKeyData,
-            service: service,
-            account: Accounts.privateKey(label: identity.label)
-        )
+        let data = try PropertyListEncoder().encode(Material(certificate: identity.certificateData, privateKey: privateKeyData))
+        try lock.withLock {
+            guard blockedAccounts[identity.label] == nil else { throw Self.unlockRequired }
+            try keychainHelper.saveData(data, service: service, account: Accounts.identity(label: identity.label))
+            invalidate(label: identity.label)
+            // Setup already holds this newly written identity. Use it for this process lifetime.
+            approvedData[Accounts.identity(label: identity.label)] = data
+        }
         logger.info("Trust flow: saved persisted root CA and private key for label '\(identity.label, privacy: .public)'")
     }
 
     func removeRootCertificate(label: String) throws {
         logger.info("Trust flow: removing persisted root CA material for label '\(label, privacy: .public)'")
-        try keychainHelper.deleteData(service: service, account: Accounts.certificate(label: label))
-        try keychainHelper.deleteData(service: service, account: Accounts.privateKey(label: label))
+        try lock.withLock {
+            invalidate(label: label)
+            try keychainHelper.deleteData(service: service, account: Accounts.certificate(label: label))
+            try keychainHelper.deleteData(service: service, account: Accounts.privateKey(label: label))
+            try keychainHelper.deleteData(service: service, account: Accounts.identity(label: label))
+        }
         logger.info("Trust flow: removed persisted root CA material for label '\(label, privacy: .public)'")
+    }
+
+    /// Drops approvals when replacing or removing a particular identity under the store lock.
+    private func invalidate(label: String) {
+        blockedAccounts[label] = nil
+        pendingUnlocks[label] = nil
+        approvedData[Accounts.identity(label: label)] = nil
+        approvedData[Accounts.certificate(label: label)] = nil
+        approvedData[Accounts.privateKey(label: label)] = nil
     }
 }
 
@@ -152,7 +217,7 @@ final class PersistentCertificateAuthorityProvider: CertificateAuthorityProvidin
 
     func loadOrCreateRootCertificate() throws -> RootCertificateIdentity {
         logger.info("Trust flow: loadOrCreate root CA started for label '\(self.configuration.certificateLabel, privacy: .public)'")
-        if let existing = certificateStore.loadRootCertificate(label: configuration.certificateLabel) {
+        if let existing = try certificateStore.readRootBeforeCreation(label: configuration.certificateLabel) {
             if let privateKeyData = existing.privateKeyData {
                 do {
                     _ = try certificateFactory.rootPrivateKey(from: privateKeyData)
@@ -254,7 +319,7 @@ final class PersistentCertificateAuthorityProvider: CertificateAuthorityProvidin
     /// - Parameter pendingLabel: Must differ from the active ``AppConfiguration/certificateLabel``
     ///   so ``PersistentTrustInstaller`` does not treat both roots as duplicate same-label certs.
     func prepareRenewalRoot(pendingLabel: String) throws -> RootCertificateIdentity {
-        if let existing = certificateStore.loadRootCertificate(label: pendingLabel),
+        if let existing = try certificateStore.readRootBeforeCreation(label: pendingLabel),
            existing.privateKeyData != nil {
             return existing
         }
@@ -334,8 +399,11 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         }
 
         guard let currentIdentity = preloadedIdentity ?? certificateStore.loadRootCertificate(label: label) else {
+            if let store = certificateStore as? PersistentKeychainCertificateStore, store.requiresUnlock(label: label) {
+                return .trustRequired(reason: "Open HTTPS Setup to unlock the existing Certificate Authority.")
+            }
             logger.error("Trust flow: installed certificate(s) exist but no persisted root CA material exists for label '\(label, privacy: .public)'")
-            return .invalid(reason: "A '\(label)' certificate is installed, but JoesProxy has no matching persisted CA material. Reset Certificate State before creating a new root CA.")
+            return .invalid(reason: "A '\(label)' certificate is installed, but JoesProxy has no matching persisted CA material. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         }
 
         let matchingCertificates = installedCertificates.filter {
@@ -347,12 +415,12 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
 
         if matchingCertificates.isEmpty {
             logger.error("Trust flow: installed certificate(s) do not match persisted root CA for label '\(label, privacy: .public)'")
-            return .invalid(reason: "Installed '\(label)' certificates do not match the current JoesProxy root CA. Reset Certificate State to clean up stale certificates.")
+            return .invalid(reason: "Installed '\(label)' certificates do not match the current JoesProxy root CA. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         }
 
         if matchingCertificates.count > 1 || !staleCertificates.isEmpty {
             logger.error("Trust flow: duplicate or stale certificates detected for label '\(label, privacy: .public)' matching=\(matchingCertificates.count) stale=\(staleCertificates.count)")
-            return .invalid(reason: "Multiple '\(label)' certificates are installed. Reset Certificate State to remove stale or duplicate certificates.")
+            return .invalid(reason: "Multiple '\(label)' certificates are installed. Compare the certificate fingerprints in Keychain Access before choosing which root to retire.")
         }
 
         let status = trustEvaluator.installationStatus(for: matchingCertificates[0])
@@ -411,7 +479,7 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         guard exactMatches.count == 1, staleCertificates.isEmpty else {
             logger.error("Trust flow: readback certificate mismatch or duplicates after install for label '\(identity.label, privacy: .public)' matches=\(exactMatches.count) stale=\(staleCertificates.count)")
             throw CertificateAuthorityError.trustInstallationFailed(
-                "Installed certificates for '\(identity.label)' do not uniquely match the current JoesProxy root CA. Reset Certificate State to clear stale or duplicate certificates."
+                "Installed certificates for '\(identity.label)' do not uniquely match the current JoesProxy root CA. Compare the certificate fingerprints in Keychain Access before choosing which root to retire."
             )
         }
 
@@ -422,36 +490,18 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         logger.info("Trust flow: removing root CA from keychain for label '\(label, privacy: .public)'")
         let installedCertificates = try keychainHelper.retrieveCertificates(withLabel: label)
         guard !installedCertificates.isEmpty else {
-            if certificateStore.loadRootCertificate(label: label) != nil {
-                logger.error("Trust flow: persisted root CA exists but keychain item is missing during remove for label '\(label, privacy: .public)'")
-                throw CertificateAuthorityError.trustRemovalFailed(
-                    "JoesProxy has stored root CA material for '\(label)', but no matching installed certificate was found in the keychain to remove."
-                )
-            }
             logger.info("Trust flow: nothing to remove from keychain for label '\(label, privacy: .public)'")
             return
         }
 
-        logger.info("Trust flow: deleting \(installedCertificates.count) installed certificate(s) for label '\(label, privacy: .public)'")
-        for certificate in installedCertificates {
-            try keychainHelper.deleteCertificate(certificate, label: label)
+        guard let identity = try certificateStore.readRootBeforeCreation(label: label) else {
+            throw CertificateAuthorityError.trustRemovalFailed("Cannot identify the installed root. Compare fingerprints in Keychain Access before removing anything.")
         }
-        logger.info("Trust flow: keychain delete completed for label '\(label, privacy: .public)', verifying removal")
-
-        if !(try keychainHelper.retrieveCertificates(withLabel: label)).isEmpty {
-            logger.error("Trust flow: certificate still visible after removal for label '\(label, privacy: .public)'")
-            throw CertificateAuthorityError.trustRemovalFailed(
-                "One or more '\(label)' certificates still appear in the keychain after removal was requested."
-            )
-        }
-
-        logger.info("Trust flow: removal verification succeeded for label '\(label, privacy: .public)'")
+        let fingerprint = CertificateIdentityExtraction.sha256Fingerprint(from: identity.certificateData)
+        try removeInstalledCertificate(matchingFingerprint: fingerprint, label: label)
     }
 
-    /// Removes only installed trust certificates whose DER SHA-256 matches `fingerprint`.
-    ///
-    /// Unlike ``removeCertificate(label:)``, this never deletes unrelated certificates that share
-    /// the generic JoesProxy label (e.g. another Mac's still-valid root).
+    /// Removes only installed trust certificates whose DER SHA-256 matches the supplied fingerprint.
     @discardableResult
     func removeInstalledCertificate(matchingFingerprint fingerprint: String, label: String) throws -> Int {
         let normalized = fingerprint.replacingOccurrences(of: ":", with: "").lowercased()
@@ -468,6 +518,12 @@ final class PersistentTrustInstaller: TrustInstalling, CertificateFingerprintTru
         }
         for certificate in matches {
             try keychainHelper.deleteCertificate(certificate, label: label)
+        }
+        let remaining = try keychainHelper.retrieveCertificates(withLabel: label)
+        guard !remaining.contains(where: {
+            CertificateIdentityExtraction.sha256Fingerprint(from: SecCertificateCopyData($0) as Data) == normalized
+        }) else {
+            throw CertificateAuthorityError.trustRemovalFailed("The selected root is still installed after removal.")
         }
         logger.info(
             "Trust flow: removed \(matches.count) fingerprint-matched installed certificate(s) for label '\(label, privacy: .public)'"
@@ -781,9 +837,8 @@ actor PersistentCertificateStatusReader: CertificateStatusReading {
     private let certificateFactory = SwiftCertificateFactory()
     private let logger = Logger(subsystem: "com.JoesProxyApp.TrustFlow", category: "CertificateStatusReader")
 
-    init(label: String) {
+    init(label: String, certificateStore: PersistentKeychainCertificateStore) {
         self.label = label
-        let certificateStore = PersistentKeychainCertificateStore()
         self.certificateStore = certificateStore
         self.trustInstaller = PersistentTrustInstaller(certificateStore: certificateStore)
     }

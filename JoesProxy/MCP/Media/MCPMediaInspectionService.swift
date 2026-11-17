@@ -1309,12 +1309,21 @@ final class MCPMediaInspectionService: MCPMediaOperationServicing {
     func streamingWaterfall(
         sessionID: SessionRecord.ID,
         policyRevision: MCPPolicyRevision
-    ) throws -> MCPStreamingQualityWaterfallDTO {
+    ) async throws -> MCPStreamingQualityWaterfallDTO {
         guard let indexed = snapshotService.indexedSession(id: sessionID) else {
             throw MCPStructuredError(code: .malformedRequest, message: "Media session was not found.")
         }
-        let allRecords = snapshotService.allIndexedSessions.map { $0.record }
-        let report = StreamingWaterfallEngine.analyze(target: indexed.record, allSessions: allRecords)
+        let epoch = snapshotService.captureEpoch
+        let allRecords = sessionStore.sessions
+        let target = indexed.record
+        guard let report = await MediaInspectionWorkBudget.shared.run({
+            StreamingWaterfallEngine.analyze(target: target, allSessions: allRecords)
+        }) else {
+            throw MCPStructuredError(code: .busy, message: "Waterfall analysis busy or cancelled.")
+        }
+        guard epoch == snapshotService.captureEpoch else {
+            throw ArtifactAnalysisFailure.sourceChanged
+        }
 
         let segmentDTOs = report.segments.map { seg in
             MCPStreamingSegmentDTO(

@@ -38,6 +38,7 @@ final class ProxyViewModel: ObservableObject {
             case openCertificateSetup
             case openMacOSGuide
             case openIOSGuide
+            case refreshDeviceStatus
             case openTVOSGuide
             case openTrafficHelp
             case startProxy
@@ -319,6 +320,51 @@ final class ProxyViewModel: ObservableObject {
     @Published private(set) var openAPIMockPacks: [OpenAPIMockPack] = []
     @Published private(set) var isResettingTrafficModifications = false
     @Published private(set) var setupVerificationState: SetupVerificationState?
+    @Published private(set) var setupCheckResults: [SetupTrafficProbe.Kind: SetupTrafficProbe.Outcome] = [:]
+    @Published private(set) var runningSetupChecks = false
+
+    func runLiveSetupChecks(includeHTTPS: Bool) {
+        guard !runningSetupChecks, case .running(let port) = proxyState else { return }
+        runningSetupChecks = true
+        setupCheckResults = [:]
+        let nonce = UUID()
+        Task {
+            defer { runningSetupChecks = false }
+            for kind in includeHTTPS ? SetupTrafficProbe.Kind.allCases : [.http] {
+                guard proxyState == .running(port: port) else {
+                    setupCheckResults[kind] = .failed("Listener stopped or changed. Run again.")
+                    continue
+                }
+                let probe = SetupTrafficProbe(kind: kind, nonce: nonce)
+                setupCheckResults[kind] = .checking
+                do {
+                    let status = try await probe.send(port: port)
+                    guard (200..<300).contains(status) else {
+                        setupCheckResults[kind] = .failed("Received HTTP \(status). Check the origin and active rules.")
+                        continue
+                    }
+                    // Capture publication may arrive a little after the client gets its response.
+                    var matched = false
+                    for attempt in 0..<12 {
+                        matched = captureWorkspace.allSessions.contains { row in
+                            probe.matches(method: row.request.method, host: row.request.host,
+                                          scheme: row.request.scheme.rawValue, path: row.request.path,
+                                          inspection: row.request.inspectionKind.rawValue,
+                                          status: row.response?.statusCode, clientStatus: status)
+                        }
+                        if matched { break }
+                        if attempt < 11 { try await Task.sleep(for: .milliseconds(200)) }
+                    }
+                    setupCheckResults[kind] = matched
+                        ? .passed(kind == .https ? "HTTPS inspected" : "HTTP request captured")
+                        : .failed(kind == .https ? "No matching inspected response. Check capture and HTTPS bypass rules."
+                                                : "No matching captured response. Check capture and routing.")
+                } catch {
+                    setupCheckResults[kind] = .failed(error.localizedDescription)
+                }
+            }
+        }
+    }
     @Published private(set) var setupNetworkSnapshot: SetupNetworkSnapshot?
     /// Base URL of the running profile server (e.g. `http://192.168.1.5:8765`).
     /// `nil` when the server is not running.
@@ -623,7 +669,10 @@ final class ProxyViewModel: ObservableObject {
                 runStore: HLSFixtureRunStore(),
                 routeStore: HLSSubstitutionRouteStore(),
                 responseOverrideStore: responseOverrideStore
-            )
+            ),
+            loopbackPolicyProvider: { @MainActor [configuration] in
+                configuration.loopbackDestinationPolicy
+            }
         )
         self.openAPISchemaStore = openAPISchemaStore
         self.certificateAuthority = certificateAuthority
@@ -1074,6 +1123,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateWorkflowState: CertificateWorkflowState {
+        if certificateAuthorityNeedsUnlock { return .notSetUp }
         switch trustStatus {
         case .installed:
             return .ready
@@ -1087,10 +1137,11 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateSectionTitle: String {
-        certificateWorkflowState.rawValue
+        certificateAuthorityNeedsUnlock ? "Keychain access required" : certificateWorkflowState.rawValue
     }
 
     var certificateStatusText: String {
+        if certificateAuthorityNeedsUnlock { return "Keychain access required" }
         switch trustStatus {
         case .notInstalled:
             return "Not installed"
@@ -1155,36 +1206,9 @@ final class ProxyViewModel: ObservableObject {
         httpsProxyMode == .intercepting ? "HTTPS Setup" : "Certificate Setup"
     }
 
-    var certificateSetupSheetTitle: String {
-        switch certificateWorkflowState {
-        case .notSetUp:
-            return "Set Up HTTPS Inspection"
-        case .installedTrustRequired:
-            return "Finish HTTPS Trust Setup"
-        case .ready:
-            return "HTTPS Setup Complete"
-        case .needsCleanup:
-            return "Recover Certificate Setup"
-        }
-    }
-
-    var certificateSetupSheetMessage: String {
-        switch certificateWorkflowState {
-        case .notSetUp:
-            if rootCertificate == nil {
-                return "JoesProxy needs its own root certificate before it can inspect HTTPS traffic."
-            }
-            return "The JoesProxy root certificate is ready. Install it in your login keychain to continue."
-        case .installedTrustRequired:
-            return "The JoesProxy root certificate is installed. Trust it in Keychain Access, then come back and check again."
-        case .ready:
-            return "JoesProxy is ready to inspect HTTPS traffic on this Mac."
-        case .needsCleanup:
-            return "The current certificate state is stale or incomplete. Reset Certificate State before trying setup again."
-        }
-    }
 
     var certificatePrimaryActionTitle: String? {
+        if certificateAuthorityNeedsUnlock { return "Unlock Certificate Authority" }
         switch certificateWorkflowState {
         case .notSetUp:
             return rootCertificate == nil ? "Create JoesProxy Root CA" : "Install In Login Keychain"
@@ -1198,6 +1222,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificatePrimaryActionDetail: String {
+        if certificateAuthorityNeedsUnlock { return "You can leave HTTPS inspection locked and continue with plain HTTP." }
         switch certificateWorkflowState {
         case .notSetUp:
             if rootCertificate == nil {
@@ -1213,21 +1238,6 @@ final class ProxyViewModel: ObservableObject {
         }
     }
 
-    var shouldShowTrustInstructions: Bool {
-        certificateWorkflowState == .installedTrustRequired || certificateWorkflowState == .ready
-    }
-
-    var shouldShowSetupVerificationSection: Bool {
-        certificateWorkflowState == .ready || setupVerificationState != nil
-    }
-
-    var setupVerificationIntroText: String {
-        "Use Verify Capture after routing a client or diagnostic command through the proxy to confirm whether HTTPS traffic is inspected, tunneled, or not observed yet."
-    }
-
-    var setupVerificationButtonTitle: String {
-        "Verify Capture"
-    }
 
     var setupVerificationStateTint: String {
         switch setupVerificationState {
@@ -1261,7 +1271,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     var certificateRefreshHelpText: String {
-        "Keep this sheet open after trusting the certificate. JoesProxy checks automatically while the sheet is open. If the state still does not update, confirm the trust change was saved in the login keychain, then choose Check Again."
+        "After saving the trust change in Keychain Access, return to JoesProxy. If the status has not updated, choose Check Again."
     }
 
     func runSetupVerification() {
@@ -1318,7 +1328,7 @@ final class ProxyViewModel: ObservableObject {
             lines.append("Stored CA summary: \(rootCertificate.subjectSummary)")
             lines.append("Stored private key available: \(rootCertificate.privateKeyData != nil ? "Yes" : "No")")
         } else {
-            lines.append("Stored CA summary: Missing")
+            lines.append(certificateAuthorityNeedsUnlock ? "Stored CA summary: Unlock required to check identity" : "Stored CA summary: Missing")
         }
 
         if let lastErrorMessage {
@@ -1538,8 +1548,8 @@ final class ProxyViewModel: ObservableObject {
                 state: guidedSetupTrafficObservedState(currentNetworkSnapshot: currentNetworkSnapshot),
                 primaryActionTitle: guidedSetupTrafficObservedActionTitle(currentNetworkSnapshot: currentNetworkSnapshot),
                 primaryAction: guidedSetupTrafficObservedAction(currentNetworkSnapshot: currentNetworkSnapshot),
-                secondaryActionTitle: "macOS Setup Guide",
-                secondaryAction: .openMacOSGuide,
+                secondaryActionTitle: nil,
+                secondaryAction: nil,
                 helpTopic: .trafficStates,
                 accessibilityIdentifier: "setupChecklistRoutingRow"
             ),
@@ -1560,10 +1570,10 @@ final class ProxyViewModel: ObservableObject {
                 title: "Device traffic detected",
                 detail: guidedSetupDeviceSummary(currentNetworkSnapshot: currentNetworkSnapshot),
                 state: guidedSetupDeviceState(currentNetworkSnapshot: currentNetworkSnapshot),
-                primaryActionTitle: "iOS Setup Guide",
-                primaryAction: .openIOSGuide,
-                secondaryActionTitle: "Apple TV Setup Guide",
-                secondaryAction: .openTVOSGuide,
+                primaryActionTitle: "Refresh Device Status",
+                primaryAction: .refreshDeviceStatus,
+                secondaryActionTitle: nil,
+                secondaryAction: nil,
                 helpTopic: .certificateSetup,
                 accessibilityIdentifier: "setupChecklistDeviceRow"
             )
@@ -1575,6 +1585,7 @@ final class ProxyViewModel: ObservableObject {
     }
 
     private var guidedSetupCertificateSummary: String {
+        if certificateAuthorityNeedsUnlock { return "Certificate Authority access is locked. Open HTTPS Setup to review the Keychain prompt." }
         switch certificateWorkflowState {
         case .ready:
             return "The JoesProxy Root CA is installed and trusted on this Mac."
@@ -2532,6 +2543,29 @@ final class ProxyViewModel: ObservableObject {
     }
 
     func setResponseOverrideEnabled(_ isEnabled: Bool, id: ResponseOverrideRule.ID) async {
+        if isEnabled, let rule = await responseOverrideStore.rule(id: id), rule.sourceKind == .mapRemote {
+            let host = rule.mapRemoteHost ?? rule.host
+            let scheme = rule.mapRemoteScheme ?? rule.requestScheme
+            let port = rule.mapRemotePort
+            do {
+                try MCPMutationValidator.validateMapRemoteDestination(
+                    host: host,
+                    port: port,
+                    scheme: scheme,
+                    allowLoopbackDestination: rule.allowLoopbackDestination,
+                    policy: configuration.loopbackDestinationPolicy,
+                    reservedRegistry: .shared
+                )
+            } catch let error as MCPMutationValidationError {
+                lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
+                await refreshResponseOverrides()
+                return
+            } catch {
+                lastErrorMessage = error.localizedDescription
+                await refreshResponseOverrides()
+                return
+            }
+        }
         do {
             try await responseOverrideStore.setEnabled(isEnabled, for: id)
             try await persistResponseOverrides()
@@ -2679,18 +2713,30 @@ final class ProxyViewModel: ObservableObject {
         remoteHost: String,
         remotePort: Int?,
         remoteScheme: SessionScheme,
-        remotePath: String? = nil
+        remotePath: String? = nil,
+        allowLoopbackDestination: Bool? = nil,
+        preserveHostHeader: Bool? = nil
     ) async {
-        if let remotePath {
-            do {
+        let existingRule = await responseOverrideStore.rule(id: id)
+        let effectiveAllowLoopback = allowLoopbackDestination ?? existingRule?.allowLoopbackDestination ?? false
+        do {
+            try MCPMutationValidator.validateMapRemoteDestination(
+                host: remoteHost,
+                port: remotePort,
+                scheme: remoteScheme,
+                allowLoopbackDestination: effectiveAllowLoopback,
+                policy: configuration.loopbackDestinationPolicy,
+                reservedRegistry: .shared
+            )
+            if let remotePath {
                 try MCPMutationValidator.validateMapRemoteRequestTarget(remotePath)
-            } catch let error as MCPMutationValidationError {
-                lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
-                return
-            } catch {
-                lastErrorMessage = error.localizedDescription
-                return
             }
+        } catch let error as MCPMutationValidationError {
+            lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
+            return
+        } catch {
+            lastErrorMessage = error.localizedDescription
+            return
         }
         do {
             try await responseOverrideStore.updateMapRemoteRule(
@@ -2701,7 +2747,9 @@ final class ProxyViewModel: ObservableObject {
                 remoteHost: remoteHost,
                 remotePort: remotePort,
                 remoteScheme: remoteScheme,
-                remotePath: remotePath
+                remotePath: remotePath,
+                allowLoopbackDestination: allowLoopbackDestination,
+                preserveHostHeader: preserveHostHeader
             )
             try await persistResponseOverrides()
             await refreshResponseOverrides()
@@ -2775,18 +2823,28 @@ final class ProxyViewModel: ObservableObject {
         remoteHost: String,
         remotePort: Int?,
         remoteScheme: SessionScheme,
-        remotePath: String? = nil
+        remotePath: String? = nil,
+        allowLoopbackDestination: Bool = false,
+        preserveHostHeader: Bool = false
     ) async {
-        if let remotePath {
-            do {
+        do {
+            try MCPMutationValidator.validateMapRemoteDestination(
+                host: remoteHost,
+                port: remotePort,
+                scheme: remoteScheme,
+                allowLoopbackDestination: allowLoopbackDestination,
+                policy: configuration.loopbackDestinationPolicy,
+                reservedRegistry: .shared
+            )
+            if let remotePath {
                 try MCPMutationValidator.validateMapRemoteRequestTarget(remotePath)
-            } catch let error as MCPMutationValidationError {
-                lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
-                return
-            } catch {
-                lastErrorMessage = error.localizedDescription
-                return
             }
+        } catch let error as MCPMutationValidationError {
+            lastErrorMessage = MCPMutationValidator.structuredError(for: error).message
+            return
+        } catch {
+            lastErrorMessage = error.localizedDescription
+            return
         }
         do {
             try await responseOverrideStore.addMapRemoteRule(
@@ -2797,7 +2855,9 @@ final class ProxyViewModel: ObservableObject {
                 remoteHost: remoteHost,
                 remotePort: remotePort,
                 remoteScheme: remoteScheme,
-                remotePath: remotePath
+                remotePath: remotePath,
+                allowLoopbackDestination: allowLoopbackDestination,
+                preserveHostHeader: preserveHostHeader
             )
             try await persistResponseOverrides()
             await refreshResponseOverrides()
@@ -3940,7 +4000,65 @@ final class ProxyViewModel: ObservableObject {
         noCachingDomains = []
     }
 
+    /// Reads cached access state only. A foreground or status refresh cannot show password UI.
+    var certificateAuthorityNeedsUnlock: Bool {
+        (certificateStore as? PersistentKeychainCertificateStore)?.requiresUnlock(label: configuration.certificateLabel) == true
+    }
+
+    var certificateReadinessSummary: String {
+        certificateAuthorityNeedsUnlock ? "Unlock required to check identity" : certificateWorkflowState.rawValue
+    }
+
+    /// Prefer the active CA when both it and a pending renewal need access.
+    private var certificateUnlockLabel: String? {
+        if certificateAuthorityNeedsUnlock { return configuration.certificateLabel }
+        return (certificateStore as? PersistentKeychainCertificateStore)?.blockedRenewalLabel(for: configuration.certificateLabel)
+    }
+
+    var certificateRenewalNeedsUnlock: Bool {
+        !certificateAuthorityNeedsUnlock && certificateUnlockLabel != nil
+    }
+
+    var certificateUnlockWarning: String {
+        let store = certificateStore as? PersistentKeychainCertificateStore
+        let item = certificateUnlockLabel.flatMap { store?.blockedItemDescription(label: $0) } ?? "the certificate authority"
+        return "Choosing Unlock Certificate Authority lets macOS ask for your login keychain password to read \(item) in “com.JoesProxy.CertificateAuthority”. JoesProxy uses it to sign certificates for HTTPS inspection. Enter your password only in the macOS dialog. Allow grants access this time. Always Allow remembers your choice for this item. Deny leaves it locked."
+    }
+
+    @Published private(set) var isUnlockingCertificateAuthority = false
+    @Published private(set) var certificateUnlockMessage: String?
+
+    /// A local setup button owns this operation. Keep the Keychain dialog off the main actor,
+    /// coalesce repeated clicks across windows, and refresh status silently after it closes.
+    func unlockCertificateAuthority() {
+        guard !isUnlockingCertificateAuthority,
+              let store = certificateStore as? PersistentKeychainCertificateStore,
+              let label = certificateUnlockLabel else { return }
+        isUnlockingCertificateAuthority = true
+        certificateUnlockMessage = nil
+        Task { @MainActor in
+            let unlocked = await Task.detached(priority: .userInitiated) {
+                do {
+                    try store.unlock(label: label)
+                    _ = try? store.readRootBeforeCreation(label: label)
+                    return true
+                } catch {
+                    return false
+                }
+            }.value
+            certificateStatusRefreshTask?.cancel()
+            refreshCertificateStatus()
+            isUnlockingCertificateAuthority = false
+            if certificateUnlockLabel != nil {
+                certificateUnlockMessage = unlocked
+                    ? "Another stored item needs permission. Choose Unlock Certificate Authority to review it."
+                    : "Access was not granted. You can leave setup or choose Unlock Certificate Authority to retry."
+            }
+        }
+    }
+
     func performPrimaryCertificateAction() {
+        if certificateAuthorityNeedsUnlock { unlockCertificateAuthority(); return }
         switch certificateWorkflowState {
         case .notSetUp:
             if rootCertificate == nil {
@@ -3997,7 +4115,7 @@ final class ProxyViewModel: ObservableObject {
             logger.error("Trust flow: install root CA failed for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
             presentTrustFailure(
                 title: "Install Failed",
-                message: "\(error.localizedDescription)\n\nReset Certificate State to clear JoesProxy's stored CA material and remove any conflicting JoesProxy root certificates.",
+                message: "\(error.localizedDescription)\n\nReset Certificate State retires the saved identity and its matching installed root.",
                 suggestsReset: true
             )
             refreshCertificateStatus()
@@ -4015,7 +4133,7 @@ final class ProxyViewModel: ObservableObject {
             logger.error("Trust flow: remove root CA failed for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
             presentTrustFailure(
                 title: "Certificate Removal Failed",
-                message: "\(error.localizedDescription)\n\nReset Certificate State if you want JoesProxy to clear stored CA material too. If the certificate still appears in Keychain Access, remove it manually.",
+                message: "\(error.localizedDescription)\n\nRefresh status and compare the root fingerprint in Keychain Access before retrying.",
                 suggestsReset: true
             )
             refreshCertificateStatus()
@@ -4025,7 +4143,7 @@ final class ProxyViewModel: ObservableObject {
     func confirmResetCertificateState() {
         trustAlertContext = TrustAlertContext(
             title: "Reset Certificate State",
-            message: "This removes installed JoesProxy root certificates and clears JoesProxy's stored CA material. If anything remains in Keychain Access afterward, JoesProxy will tell you what still needs manual cleanup.",
+            message: "This retires the current CA: it removes the matching installed root and deletes the saved signing identity. To keep the identity for reinstall, cancel and choose Remove Installed Certificate instead.",
             primaryAction: .resetCertificateState
         )
     }
@@ -4033,25 +4151,33 @@ final class ProxyViewModel: ObservableObject {
     func resetCertificateState() {
         logger.info("Trust flow: reset certificate state requested for label '\(self.configuration.certificateLabel, privacy: .public)'")
 
-        let retiringFingerprint = rootCertificate.map {
-            CertificateIdentityExtraction.sha256Fingerprint(from: $0.certificateData)
-        }
+        let retiringFingerprint: String?
         var failureMessages: [String] = []
 
         do {
-            try trustInstaller.removeCertificate(label: configuration.certificateLabel)
-            logger.info("Trust flow: reset removed installed certificate state for label '\(self.configuration.certificateLabel, privacy: .public)'")
+            let label = configuration.certificateLabel
+            retiringFingerprint = try CertificateRetirement.run(readFingerprint: {
+                try certificateStore.readRootBeforeCreation(label: label).map {
+                    CertificateIdentityExtraction.sha256Fingerprint(from: $0.certificateData)
+                }
+            }, removeInstalled: { fingerprint in
+                if let cleaner = trustInstaller as? CertificateFingerprintTrustCleaning {
+                    if let fingerprint {
+                        try cleaner.removeInstalledCertificate(matchingFingerprint: fingerprint, label: label)
+                    } else if trustInstaller.installationStatus(for: label) != .notInstalled {
+                        throw CertificateAuthorityError.trustRemovalFailed("Cannot identify the installed root. Compare fingerprints in Keychain Access before removing anything.")
+                    }
+                } else {
+                    try trustInstaller.removeCertificate(label: label)
+                }
+            }, removeStored: {
+                try certificateStore.removeRootCertificate(label: label)
+            })
         } catch {
-            logger.error("Trust flow: reset could not remove installed certificate for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-            failureMessages.append("Installed certificate cleanup: \(error.localizedDescription)")
-        }
-
-        do {
-            try certificateStore.removeRootCertificate(label: configuration.certificateLabel)
-            logger.info("Trust flow: reset removed persisted root CA material for label '\(self.configuration.certificateLabel, privacy: .public)'")
-        } catch {
-            logger.error("Trust flow: reset could not remove persisted root CA material for label '\(self.configuration.certificateLabel, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-            failureMessages.append("Persisted CA cleanup: \(error.localizedDescription)")
+            logger.error("Trust flow: reset incomplete: \(error.localizedDescription, privacy: .public)")
+            refreshCertificateStatus()
+            presentTrustFailure(title: "Reset Incomplete", message: error.localizedDescription, suggestsReset: false)
+            return
         }
 
         // Pending renewal Keychain labels are keyed by the *active* short code at prepare time.
@@ -4102,7 +4228,7 @@ final class ProxyViewModel: ObservableObject {
             lastErrorMessage = nil
             trustAlertContext = TrustAlertContext(
                 title: "Certificate State Reset",
-                message: "JoesProxy removed its stored CA material and any visible installed JoesProxy root certificates.",
+                message: "The current signing identity and its matching installed root are absent. Other installed roots were not targeted.",
                 primaryAction: .acknowledge
             )
             logger.info("Trust flow: reset completed successfully for label '\(self.configuration.certificateLabel, privacy: .public)'")
@@ -5243,7 +5369,10 @@ final class ProxyViewModel: ObservableObject {
 
     private func loadPersistedResponseOverrides() async {
         do {
-            try await responseOverrideStore.loadPersistedData(configuration.responseOverridesData)
+            try await responseOverrideStore.loadPersistedData(
+                configuration.responseOverridesData,
+                loopbackPolicy: configuration.loopbackDestinationPolicy
+            )
         } catch {
             lastErrorMessage = error.localizedDescription
         }

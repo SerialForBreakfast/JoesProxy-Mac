@@ -29,8 +29,8 @@ final class MCPMediaDiscoveryTests: XCTestCase {
             bytes += data.count
             count += 1
         }
-        XCTAssertEqual(count, 3)
-        XCTAssertEqual(unavailable, ["diagnostic_run_brief", "capture_calculate", "artifact_calculate", "artifact_inventory", "artifact_search", "artifact_response_brief", "artifact_compare_responses"])
+        XCTAssertEqual(count, 4)
+        XCTAssertEqual(unavailable, ["diagnostic_run_brief", "artifact_calculate", "artifact_inventory", "artifact_search", "artifact_response_brief", "artifact_compare_responses"])
         XCTAssertLessThan(bytes, 4096, "Budget discovery must remain compact")
         XCTAssertNil(MCPCapabilitiesManifestBuilder.analysis(for: "vision_ocr"))
         XCTAssertTrue(guide.contains("OCR and semantic artifact retrieval are unavailable"))
@@ -43,7 +43,7 @@ final class MCPMediaDiscoveryTests: XCTestCase {
         let structured = try XCTUnwrap(result["structuredContent"] as? [String: Any])
         let payload = try XCTUnwrap(structured["payload"] as? [String: Any])
         let status = try JSONDecoder().decode(MCPToolsetStatusDTO.self, from: JSONSerialization.data(withJSONObject: payload))
-        XCTAssertEqual(status.analysis.count, 3)
+        XCTAssertEqual(status.analysis.count, 4)
         XCTAssertTrue(status.unavailableAnalyses.contains("diagnostic_run_brief"))
         XCTAssertTrue(unavailable.isSubset(of: Set(status.unavailableAnalyses)))
         XCTAssertTrue(status.unavailableAnalyses.contains("vision_ocr"))
@@ -55,7 +55,7 @@ final class MCPMediaDiscoveryTests: XCTestCase {
         print("ANALYSIS_DISCOVERY_METRIC " + String(decoding: try JSONSerialization.data(withJSONObject: metrics, options: [.sortedKeys]), as: UTF8.self))
     }
     func testCapabilitiesRevisionReflectsCurrentToolAndDTOContract() {
-        XCTAssertEqual(MCPCapabilitiesRevision.current, 29)
+        XCTAssertEqual(MCPCapabilitiesRevision.current, 33)
         XCTAssertEqual(MCPCapabilityRouter.capability(forTool: "https_rules_get"), .httpsRulesInspect)
         XCTAssertEqual(MCPCapabilityRouter.capability(forTool: "https_rules_set"), .httpsRulesManage)
         XCTAssertEqual(MCPCapabilityRouter.capability(forTool: "effect_bundle_advance"), .enableRule)

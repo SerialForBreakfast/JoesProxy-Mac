@@ -11,7 +11,7 @@ search require revision 27 and a locally reviewed search grant. Check the runnin
 
 ```text
 joesproxyctl capture calculate --session-ids <id,id> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode --json
-joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items --operation fieldStats --field-pointer /imageURL --json
+joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items --operation fieldStats --field-pointer /imageURL --where-pointer /status --where-op gte --where-value 400 --json
 joesproxyctl artifact source register --request-key <uuid> --kind json --scope metadata-v1,calculations-v1 --wait-for-approval --json
 joesproxyctl artifact source status --request-key <uuid> --json
 joesproxyctl artifact source inspect --handle <handle> --json
@@ -65,13 +65,19 @@ Standard input preserves all UTF-8 bytes including a trailing newline. Use --lit
 ## Group captured sessions {#group-captured-sessions}
 
 ```text
-joesproxyctl capture calculate --session-ids <id,id> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode
+joesproxyctl capture calculate --session-ids <id,id> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode [--where-pointer <p> --where-op <op> [--where-value <v>]]
 ```
 
 ## Summarize a captured JSON response {#summarize-capture-json}
 
 ```text
-joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items --operation numericSummary --field-pointer /price
+joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items (--operation numericSummary --field-pointer /price | --operations-json <json-array>)
+```
+
+## Filter captured metadata calculations {#filter-captured-metadata-calculations}
+
+```text
+joesproxyctl capture calculate --started-after <ISO8601> --started-before <ISO8601> [--method GET] [--domain <text>] [--path-contains <text>] --dataset sessionMetadata --operation rowCount
 ```
 
 ## Register a saved source {#register-saved-source}
@@ -101,7 +107,7 @@ joesproxyctl artifact source release --handle <handle>
 ## Calculate on a saved source {#calculate-saved-source}
 
 ```text
-joesproxyctl artifact calculate --handle <handle> --snapshot-revision <revision> --dataset json --selection-pointer /items --operation rowCount
+joesproxyctl artifact calculate --handle <handle> --snapshot-revision <revision> --dataset json --selection-pointer /items (--operation rowCount | --operations-json <json-array>)
 ```
 
 
@@ -325,13 +331,13 @@ joesproxyctl capture marker --name <marker-name> [--detail <text>] [--label <tex
 ## Command 29 {#command-3f35b82ad87b90f8}
 
 ```text
-joesproxyctl capture activity --since-marker <session-id> [--rule <override-id>] [--limit <n>]
+joesproxyctl capture activity (--since-marker <session-id> | --since-sequence <n>) [--rule <override-id>] [--limit <n>]
 ```
 
 ## Command 30 {#command-b47b63e47b882fc7}
 
 ```text
-joesproxyctl sessions list|search [filters]
+joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--include-auth-chain]
 ```
 
 ## Command 31 {#command-1d391102ffe95d92}
@@ -357,10 +363,11 @@ joesproxyctl session show <session-id>
 Revision 2026-11-05: next-development command. Discover support from the running build.
 
 ```text
-joesproxyctl session brief <session-id> [--selection-pointer /items] [--include-structure]
+joesproxyctl session brief <session-id> [--selection-pointer /items] [--include-structure] [--field-pointers /p1,/p2] [--row-limit <1...50>]
 ```
 
-Runs `response_evidence_brief` with existing body-read approval. No scalar values are returned.
+Runs `response_evidence_brief` with existing body-read approval. No scalar values are returned
+unless `--field-pointers` is specified for compact tabular projection with sensitive-key redaction.
 Inspect status, coverage and omittedFieldCount before using counts; missing fields are relative
 to object items only. Complete JSON input is bounded to 256 KiB; partial bodies are not analyzed.
 Nested structure is opt-in and has separate coverage/limit reporting. Ordinary raw excerpts
@@ -371,7 +378,7 @@ toolset as needed. Existing discovery defaults and permissions are unchanged.
 ## Investigation comparison brief {#investigation-compare-brief}
 
 ```text
-joesproxyctl investigate compare --baseline-sessions <id,id> --candidate-sessions <id,id> [--selection-pointer /items]
+joesproxyctl investigate compare --baseline-sessions <id,id> --candidate-sessions <id,id> [--selection-pointer /items] [--include-value-diff] [--ignore-pointers /p1,/p2]
 ```
 
 Revision 2026-11-05: compares explicit retained selections with existing structural metadata and
@@ -989,7 +996,7 @@ joesproxyctl contract regression --live-sessions <id,id> --baseline-sessions <id
 ## Command 134 {#command-2f357ea87d7b3935}
 
 ```text
-joesproxyctl lineage trace --target-value <text> [--candidate-sessions <id,id>]
+joesproxyctl lineage trace (--target-value <text> | --auth-chain) [--candidate-sessions <id,id>]
 ```
 
 ## Command 135 {#command-a8fc5c2a81776f14}
@@ -1255,3 +1262,22 @@ joesproxyctl effect bundle discard prepare <bundle-id>
 ```text
 joesproxyctl effect bundle discard apply <token>
 ```
+
+## Command 179 {#command-map-remote-prepare}
+
+```text
+joesproxyctl response map-remote prepare --method <verb> --host <host> --path <path> --remote-host <host> [--remote-port <n>] [--remote-scheme http|https]
+```
+
+## Command 180 {#command-map-remote-apply}
+
+```text
+joesproxyctl response map-remote apply <proposal-token> [--wait-for-approval] [--idempotency-key <key>]
+```
+
+## Command 181 {#command-map-remote-activate}
+
+```text
+joesproxyctl response map-remote activate <override-id> [--wait-for-approval] [--idempotency-key <key>]
+```
+

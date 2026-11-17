@@ -42,41 +42,17 @@ struct ReproPackagePresentationContext: Identifiable, Equatable, Sendable {
 }
 
 enum GuidedSetupSection: String, CaseIterable, Identifiable, Sendable {
-    case welcome
-    case startCapturing
-    case httpsAndTrust
-    case exploreTraffic
-    case needHelp
+    case certificate, proxy, verifyCapture, devices, mcpCLI
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .welcome:
-            return "Welcome"
-        case .startCapturing:
-            return "Start Capturing"
-        case .httpsAndTrust:
-            return "HTTPS & Trust"
-        case .exploreTraffic:
-            return "Explore Traffic"
-        case .needHelp:
-            return "Need Help"
-        }
-    }
-
-    var compactTitle: String {
-        switch self {
-        case .welcome:
-            return "Welcome"
-        case .startCapturing:
-            return "Capture"
-        case .httpsAndTrust:
-            return "Trust"
-        case .exploreTraffic:
-            return "Explore"
-        case .needHelp:
-            return "Help"
+        case .certificate: "Certificate"
+        case .proxy: "Proxy"
+        case .verifyCapture: "Verify Capture"
+        case .devices: "Devices"
+        case .mcpCLI: "MCP/CLI"
         }
     }
 }
@@ -102,7 +78,7 @@ enum GuidedSetupBlockingState: String, Equatable, Sendable {
         case .notSetUp:
             return "JoesProxy can capture basic proxy traffic, but HTTPS inspection will stay unavailable until the Root CA is created and trusted."
         case .installedTrustRequired:
-            return "The Root CA exists, but the current device or Mac has not completed the trust step needed for HTTPS inspection."
+            return "The Root CA is installed on this Mac. Approve trust on this Mac to inspect HTTPS."
         case .needsCleanup:
             return "The current certificate or trust state is no longer usable. Clean it up, then run setup again to restore HTTPS inspection."
         }
@@ -180,7 +156,8 @@ final class AppPresentationState: ObservableObject {
     @Published var helpHubTopic: MainWindowHelpTopic?
     @Published var contextualHelpTopic: MainWindowHelpTopic = .capturedSessions
     @Published var isHTTPSRulesRequested = false
-    @Published var isCertificateSetupPresented = false
+    private var setupAfterSheetDismissal: GuidedSetupContext?
+    private var resumePathChoiceAfterSetup = false
     @Published var isIOSSetupWalkthroughPresented = false
     @Published var isMacOSSetupWalkthroughPresented = false
     @Published var isTVOSSetupWalkthroughPresented = false
@@ -214,7 +191,7 @@ final class AppPresentationState: ObservableObject {
     var blocksAgentTransition: Bool {
         isTrafficModificationWindowOpen || trafficModificationEditor != nil || visualizationExportContext != nil ||
         reproPackageContext != nil || pendingRecordingURL != nil || guidedSetupContext != nil ||
-        isCertificateSetupPresented || isIOSSetupWalkthroughPresented || isMacOSSetupWalkthroughPresented ||
+        isIOSSetupWalkthroughPresented || isMacOSSetupWalkthroughPresented ||
         isTVOSSetupWalkthroughPresented || isSimulatorSetupWalkthroughPresented ||
         isDeviceAliasManagerPresented || isFirstRunPathChoicePresented
     }
@@ -255,8 +232,16 @@ final class AppPresentationState: ObservableObject {
     }
 
     func presentCertificateSetup() {
-        log("Presenting certificate setup sheet")
-        isCertificateSetupPresented = true
+        if isFirstRunPathChoicePresented {
+            openSetupFromFirstRun(section: .certificate)
+        } else if isIOSSetupWalkthroughPresented || isMacOSSetupWalkthroughPresented || isTVOSSetupWalkthroughPresented {
+            setupAfterSheetDismissal = GuidedSetupContext(section: .certificate, mode: .replay)
+            isIOSSetupWalkthroughPresented = false
+            isMacOSSetupWalkthroughPresented = false
+            isTVOSSetupWalkthroughPresented = false
+        } else {
+            presentGuidedSetup(section: .certificate)
+        }
     }
 
     func presentIOSSetupWalkthrough() {
@@ -303,7 +288,7 @@ final class AppPresentationState: ObservableObject {
     }
 
     func presentGuidedSetup(
-        section: GuidedSetupSection = .welcome,
+        section: GuidedSetupSection = .certificate,
         mode: GuidedSetupEntryMode = .replay
     ) {
         log("Presenting guided setup in mode \(String(describing: mode)) at section \(section.rawValue)")
@@ -329,13 +314,24 @@ final class AppPresentationState: ObservableObject {
         isFirstRunPathChoicePresented = true
     }
 
+    func openSetupFromFirstRun(section: GuidedSetupSection) {
+        setupAfterSheetDismissal = GuidedSetupContext(section: section, mode: .firstRun)
+        isFirstRunPathChoicePresented = false
+    }
+
+    func presentPendingSetupAfterDismissal() {
+        guard let context = setupAfterSheetDismissal else { return }
+        setupAfterSheetDismissal = nil
+        guidedSetupContext = context
+    }
+
     /// Start First Capture: Inspector plus companion, lifecycle in progress.
     func chooseStartFirstCapture() {
         configuration.preferredWorkingView = .inspector
         persistOnboardingLifecycle(.inProgress)
         isInspectorSetupCompanionDismissed = false
         isInspectorSetupCompanionRevealed = true
-        isFirstRunPathChoicePresented = false
+        openSetupFromFirstRun(section: .proxy)
     }
 
     /// Connect an Agent: Compact preference plus in-progress lifecycle. Compact enrollment UI is BA-4.
@@ -403,13 +399,24 @@ final class AppPresentationState: ObservableObject {
         guidedSetupContext = nil
     }
 
+    func closeGuidedSetup() {
+        resumePathChoiceAfterSetup = guidedSetupContext?.mode == .firstRun && onboardingLifecycle == .notStarted
+        dismissGuidedSetup()
+    }
+
+    func guidedSetupDidDismiss() {
+        guard resumePathChoiceAfterSetup else { return }
+        resumePathChoiceAfterSetup = false
+        presentFirstRunPathChoiceIfNeeded()
+    }
+
     private func persistOnboardingLifecycle(_ lifecycle: OnboardingLifecycle) {
         configuration.onboardingProgressRecord = OnboardingProgressRecord(lifecycle: lifecycle)
         onboardingLifecycle = lifecycle
     }
 
     func presentGuidedRepair(for blockingState: GuidedSetupBlockingState) {
-        presentGuidedSetup(section: .httpsAndTrust, mode: .repair(blockingState))
+        presentGuidedSetup(section: .certificate, mode: .repair(blockingState))
     }
 
     func transitionFromHelpHub(to destination: HelpDestination) {

@@ -35,9 +35,12 @@ These are confirmed, previously-live gotchas — not hypothetical:
   it discloses a real destination; the generic enable/disable tools reject it.
 - **Live response rewrite requires `activate_live_rewrite`, not `enable_rule`.** It's open-world
   because matching traffic reaches the real upstream and the response JSON may be patched.
-- **Map Remote can never reach a local HLS fixture — this is by design, not a gap to work
-  around.** `validateMapRemoteDestination` unconditionally rejects any loopback destination
-  (`127.0.0.0/8`, `localhost`). To substitute fixture content for a real external host, use
+- **Map Remote to local Mac servers is opt-in and port-scoped; HLS fixtures belong in Map Local.**
+  Loopback destinations (`127.0.0.0/8`, `::1`, `localhost` — always meaning the Mac running
+  JoesProxy, never the client device) are blocked by default unless **Settings → Proxy →
+  Local-Server Routing** is enabled, the exact destination port is authorized (JoesProxy's own
+  listener ports remain reserved), and the rule passes `allowLoopbackDestination: true`. To
+  substitute JoesProxy-managed HLS fixture content for a real external host, still use
   fixture-backed Map Local (`fixtureRunID` on `propose_create_map_local`), not Map Remote.
 - **A fixture-backed Map Local rule fails open, silently, if its fixture run stops.** Confirm the
   fixture run is still active (`hls_fixture_status`) before concluding a redirect "isn't working" —

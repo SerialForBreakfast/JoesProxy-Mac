@@ -29,6 +29,8 @@ def validate_selection(root, value, lane="policy"):
         "JoesProxyTests/NetworkThrottleSocketPressureTests",
     ):
         raise ValueError("Transport lane is restricted to bounded scripted transport tests")
+    if lane == "soak" and value != "JoesProxyTests/ProxyServerTests/testCaptureSoakWithAgentWorkflows":
+        raise ValueError("Soak lane is restricted to the opt-in capture soak test")
     if lane == "stability":
         if value != "JoesProxyUITests/CaptureStabilityProfilingUITests":
             raise ValueError("Stability preparation must select the complete CaptureStabilityProfilingUITests class")
@@ -72,6 +74,7 @@ def fingerprint(root, packages, derived, selections, version, lane="policy", com
                 "packages": str(packages), "selections": sorted(selections), "xcode": version,
                 "configuration": ("Release/Stability/serial/no-sanitizers/no-checkers/no-coverage" if lane == "stability"
                                   else "Release/Transport/serial/testability/no-sanitizers/no-checkers/no-coverage" if lane == "transport"
+                                  else "Release/Soak/serial/testability/no-sanitizers/no-checkers/no-coverage" if lane == "soak"
                                   else "Debug/Policy/serial/default-scheme-instrumentation"),
                 "environment": {key: os.environ.get(key) for key in
                                 ("DEVELOPER_DIR", "TOOLCHAINS", "SDKROOT", "MACOSX_DEPLOYMENT_TARGET")}}
@@ -103,9 +106,9 @@ def require_stability_products(derived):
         raise ValueError("Incomplete stability products: Release app, UI runner and stability xctestrun are required")
 
 
-def require_transport_products(derived):
+def require_transport_products(derived, plan="JoesProxy-Transport"):
     products = derived / "Build/Products"
-    runs = list(products.glob("*JoesProxy-Transport*.xctestrun"))
+    runs = list(products.glob("*" + plan + "*.xctestrun"))
     if len(runs) != 1:
         raise ValueError("Exactly one transport xctestrun required")
     with runs[0].open("rb") as source:
@@ -135,7 +138,7 @@ def main():
         return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--derived-data", required=True)
-    parser.add_argument("--lane", choices=("policy", "stability", "transport"), default="policy")
+    parser.add_argument("--lane", choices=("policy", "stability", "transport", "soak"), default="policy")
     parser.add_argument("--compiler-stats", action="store_true")
     parser.add_argument("--packages", required=True)
     parser.add_argument("--products", action="store_true")
@@ -170,6 +173,8 @@ def main():
             require_stability_products(derived)
         if args.lane == "transport":
             require_transport_products(derived)
+        if args.lane == "soak":
+            require_transport_products(derived, "JoesProxy-Soak")
         value["products"] = digest([derived / "Build/Products"])
     print(json.dumps(value, sort_keys=True))
 

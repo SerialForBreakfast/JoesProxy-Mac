@@ -150,6 +150,72 @@ final class MCPCaptureActivitySinceMarkerTests: XCTestCase {
         XCTAssertEqual(rule["found"] as? Bool, false)
     }
 
+    func testSinceSequenceAndNearMissPredicateDiagnostics() async throws {
+        let sessionStore = InMemorySessionStore()
+        let snapshotService = MCPSessionSnapshotService(sessionStore: sessionStore)
+        let stack = try makeStack(snapshotService: snapshotService)
+
+        let rule = ResponseOverrideRule(
+            requestMethod: "POST",
+            requestScheme: .https,
+            host: "api.example.com",
+            port: 443,
+            path: "/v1/checkout",
+            matchMode: .exactPath,
+            sourceKind: .inlineText,
+            sourceDescription: "checkout rule",
+            statusCode: 200,
+            headers: [],
+            bodySource: .inline(Data("{}".utf8)),
+            createdAt: Date().addingTimeInterval(-60),
+            isEnabled: false,
+            matchQueryKey: "env",
+            matchQueryValue: "staging"
+        )
+        try await stack.responseOverrideStore.addRule(rule)
+
+        let anchor = makeSession(path: "/anchor")
+        sessionStore.append(anchor)
+        let nearMiss = SessionRecord(
+            request: CapturedRequest(
+                method: "GET",
+                scheme: .http,
+                inspectionKind: .plain,
+                host: "api.example.com",
+                port: 80,
+                path: "/v1/checkout?env=prod",
+                headers: [],
+                bodyData: nil,
+                bodySize: nil
+            ),
+            response: CapturedResponse(statusCode: 200, headers: [], bodyData: nil, bodySize: nil),
+            state: .completed,
+            timing: SessionTiming(startedAt: Date())
+        )
+        sessionStore.append(nearMiss)
+
+        let anchorSeq = try XCTUnwrap(snapshotService.indexedSession(id: anchor.id)?.captureSequence)
+        let result = try await stack.mutationService.handleTool(
+            name: "capture_activity_since_marker",
+            arguments: [
+                "sinceSequence": anchorSeq,
+                "overrideID": rule.id.uuidString
+            ],
+            client: stack.client
+        )
+        XCTAssertEqual(result["newRequestCount"] as? Int, 1)
+        let ruleReport = try XCTUnwrap(result["rule"] as? [String: Any])
+        XCTAssertEqual(ruleReport["isEnabled"] as? Bool, false)
+        let nearMisses = try XCTUnwrap(ruleReport["nearMisses"] as? [[String: Any]])
+        XCTAssertEqual(nearMisses.count, 1)
+        let failed = try XCTUnwrap(nearMisses[0]["failedPredicates"] as? [String])
+        XCTAssertTrue(failed.contains("rule_disabled"))
+        XCTAssertTrue(failed.contains("scheme_mismatch"))
+        XCTAssertTrue(failed.contains("method_mismatch"))
+        XCTAssertTrue(failed.contains("path_mismatch"))
+        XCTAssertTrue(failed.contains("query_predicate_mismatch"))
+    }
+
     // MARK: - Fixtures
 
     private func temporaryURL(named: String) -> URL {

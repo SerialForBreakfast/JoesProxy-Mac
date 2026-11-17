@@ -1,7 +1,42 @@
+import SwiftUI
 import XCTest
 @testable import JoesProxy
 
 final class MainStatusTitleBarTests: XCTestCase {
+    @MainActor
+    func testRunningToolbarReflowsAcrossWindowAndTextSizes() {
+        let health = CaptureHealthMetrics(sessionCount: 226, retainedBodyBytes: 2_900_000,
+                                         droppedSessionCount: 0, captureStartedAt: Date(),
+                                         processMetrics: AppProcessMetrics(cpuPercent: 10, residentMemoryBytes: 133_400_000))
+        func toolbar(width: CGFloat, size: AppTextSize) -> some View {
+            MainStatusTitleBar(
+                proxyState: .running(port: 9090), canStartProxy: false, canStopProxy: true,
+                proxyPort: 9090, certificateWorkflowState: .ready, certificateStatusGuidance: "",
+                httpsProxyMode: .intercepting, hasCustomHTTPSRules: true, captureHealth: health,
+                lastErrorMessage: nil, suggestedHelpTopicTitle: "Help", textScale: size.fontScale,
+                systemProxyIndicator: AnyView(Label("Mac routing: off", systemImage: "network.slash")
+                    .appFont(.caption, scale: size.fontScale)),
+                toggleProxy: {}, openProxyHelp: {}, openCertificateSetup: {}, openHTTPSRules: {},
+                openContextualHelp: {}, mcpPipelineStatus: MCPPipelineStatus(
+                    isVisible: true, label: "MCP running", detail: nil, systemImage: "network",
+                    tone: .healthy, badgeCount: 0, shouldPulse: false, managementDestination: .overview)
+            )
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: width)
+        }
+        let host = NSHostingView(rootView: toolbar(width: 2400, size: .standard))
+        let singleRowHeight = host.fittingSize.height
+        XCTAssertGreaterThan(singleRowHeight, 20)
+        for size in AppTextSize.allCases {
+            for width: CGFloat in [1200, 760, 1200] {
+                host.rootView = toolbar(width: width, size: size)
+                host.layoutSubtreeIfNeeded()
+                XCTAssertLessThan(host.fittingSize.height, 3 * singleRowHeight + 20,
+                                  "Toolbar expanded vertically at width \(width), size \(size)")
+            }
+        }
+    }
+
     func testLargerReadingTextChoosesAHeaderLayoutWithRoomForItsMetrics() {
         XCTAssertEqual(MainTitleBarLayoutMode(width: 1_200), .full)
         XCTAssertEqual(MainTitleBarLayoutMode(width: 1_200, textScale: AppTextSize.accessibility.fontScale), .compact)

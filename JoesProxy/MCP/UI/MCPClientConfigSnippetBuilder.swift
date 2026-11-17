@@ -26,13 +26,28 @@ enum MCPClientConfigSnippetBuilder {
         endpointURL: URL,
         appBundleURL: URL = Bundle.main.bundleURL
     ) -> String {
-        let executableURL = appBundleURL
-            .appendingPathComponent("Contents", isDirectory: true)
-            .appendingPathComponent("MacOS", isDirectory: true)
-            .appendingPathComponent("joesproxyctl", isDirectory: false)
-        let quotedPath = "'\(executableURL.path.replacingOccurrences(of: "'", with: "'\\''"))'"
-        let quotedEndpoint = "'\(endpointURL.absoluteString.replacingOccurrences(of: "'", with: "'\\''"))'"
-        return "\(quotedPath) auth login --endpoint \(quotedEndpoint)"
+        "\(cliExecutableWord(appBundleURL)) auth login\(cliEndpointOption(endpointURL))"
+    }
+
+    static func cliVerificationCommands(endpointURL: URL, appBundleURL: URL = Bundle.main.bundleURL) -> String {
+        let executable = cliExecutableWord(appBundleURL)
+        let endpoint = cliEndpointOption(endpointURL)
+        return "\(executable) auth status\(endpoint) && \(executable) status\(endpoint)"
+    }
+
+    private static func cliEndpointOption(_ endpoint: URL) -> String {
+        if endpoint.absoluteString == "http://127.0.0.1:\(NetworkConstants.mcpDefaultPort)\(MCPNetworkConstants.endpointPath)" { return "" }
+        return " --endpoint \(shellWord(endpoint.absoluteString))"
+    }
+
+    private static func cliExecutableWord(_ bundle: URL) -> String {
+        shellWord(bundle.appendingPathComponent("Contents/MacOS/joesproxyctl").path)
+    }
+
+    private static func shellWord(_ value: String) -> String {
+        let safe = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/._-:")
+        if !value.isEmpty && value.unicodeScalars.allSatisfy(safe.contains) { return value }
+        return "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 
     static func codexConfig(

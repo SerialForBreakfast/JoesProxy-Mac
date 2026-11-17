@@ -431,7 +431,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
         )
 
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, let host, let port, let scheme, _) = decision else {
+        guard case .mapRemote(_, let host, let port, let scheme, _, _, _) = decision else {
             XCTFail("Expected .mapRemote, got \(decision)")
             return
         }
@@ -449,7 +449,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
         )
 
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, _, let port, _, _) = decision else {
+        guard case .mapRemote(_, _, let port, _, _, _, _) = decision else {
             XCTFail("Expected .mapRemote")
             return
         }
@@ -465,7 +465,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
         )
 
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, _, let port, let scheme, _) = decision else {
+        guard case .mapRemote(_, _, let port, let scheme, _, _, _) = decision else {
             XCTFail("Expected .mapRemote")
             return
         }
@@ -707,7 +707,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
         try await restored.loadPersistedData(data)
 
         let decision = try await restored.ruleDecision(for: request)
-        guard case .mapRemote(_, let host, let port, let scheme, _) = decision else {
+        guard case .mapRemote(_, let host, let port, let scheme, _, _, _) = decision else {
             XCTFail("Expected .mapRemote after round-trip, got \(decision)")
             return
         }
@@ -730,7 +730,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
         try await restored.loadPersistedData(data)
 
         let decision = try await restored.ruleDecision(for: request)
-        guard case .mapRemote(_, _, _, _, let requestTarget) = decision else {
+        guard case .mapRemote(_, _, _, _, let requestTarget, _, _) = decision else {
             XCTFail("Expected .mapRemote after round-trip, got \(decision)")
             return
         }
@@ -769,7 +769,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
 
         let request = makeRequest()
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, _, _, _, let requestTarget) = decision else {
+        guard case .mapRemote(_, _, _, _, let requestTarget, _, _) = decision else {
             XCTFail("Expected .mapRemote, got \(decision)")
             return
         }
@@ -785,7 +785,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
             remotePath: "/v2/items", remoteQueryPolicy: .replace, remoteQuery: "y=2"
         )
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, _, _, _, let requestTarget) = decision else {
+        guard case .mapRemote(_, _, _, _, let requestTarget, _, _) = decision else {
             XCTFail("Expected .mapRemote, got \(decision)")
             return
         }
@@ -801,7 +801,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
             remotePath: "/v2/items", remoteQueryPolicy: .drop
         )
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, _, _, _, let requestTarget) = decision else {
+        guard case .mapRemote(_, _, _, _, let requestTarget, _, _) = decision else {
             XCTFail("Expected .mapRemote, got \(decision)")
             return
         }
@@ -816,7 +816,7 @@ final class ResponseOverrideStoreTests: XCTestCase {
             remoteHost: "staging.example.com", remotePort: nil, remoteScheme: .https
         )
         let decision = try await store.ruleDecision(for: request)
-        guard case .mapRemote(_, _, _, _, let requestTarget) = decision else {
+        guard case .mapRemote(_, _, _, _, let requestTarget, _, _) = decision else {
             XCTFail("Expected .mapRemote, got \(decision)")
             return
         }

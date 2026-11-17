@@ -338,12 +338,23 @@ final class CLIApplication {
             if let label = invocation.options["label"] { arguments["label"] = label }
             return success(commandName, try await runTool(client, name: "capture_marker_create", arguments: arguments, invocation: invocation))
         case ["capture", "activity"]:
-            guard let markerSessionID = invocation.options["since-marker"], !markerSessionID.isEmpty else {
+            let markerSessionID = invocation.options["since-marker"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let sinceSequenceText = invocation.options["since-sequence"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hasMarker = markerSessionID?.isEmpty == false
+            let hasSequence = sinceSequenceText?.isEmpty == false
+            guard hasMarker != hasSequence else {
                 throw CLIError.invalidArguments(
-                    "capture activity requires --since-marker <session-id> (from `capture marker`'s own result)."
+                    "capture activity requires either --since-marker <session-id> or --since-sequence <seq>."
                 )
             }
-            var activityArguments: [String: Any] = ["markerSessionID": markerSessionID]
+            var activityArguments: [String: Any] = [:]
+            if let markerSessionID, hasMarker {
+                activityArguments["markerSessionID"] = markerSessionID
+            } else if let sinceSequenceText, let seqValue = UInt64(sinceSequenceText) {
+                activityArguments["sinceSequence"] = seqValue
+            } else {
+                throw CLIError.invalidArguments("capture activity --since-sequence must be a non-negative integer.")
+            }
             if let overrideID = invocation.options["rule"], !overrideID.isEmpty {
                 activityArguments["overrideID"] = overrideID
             }
@@ -401,6 +412,15 @@ final class CLIApplication {
             var arguments: [String: Any] = ["sessionID": command[2]]
             if let pointer = invocation.options["selection-pointer"] { arguments["selectionPointer"] = pointer }
             if invocation.flags.contains("include-structure") { arguments["includeStructure"] = true }
+            if let pointers = invocation.options["field-pointers"] {
+                arguments["fieldPointers"] = pointers.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+            }
+            if let rowLimitText = invocation.options["row-limit"] {
+                guard let rowLimit = Int(rowLimitText), (1...50).contains(rowLimit) else {
+                    throw CLIError.invalidArguments("session brief --row-limit must be 1...50.")
+                }
+                arguments["rowLimit"] = rowLimit
+            }
             if let digest = invocation.options["if-brief-digest"] { arguments["ifBriefDigest"] = digest }
             return success(commandName, try await runTool(client, name: "response_evidence_brief", arguments: arguments, invocation: invocation))
         case ["investigate", "compare"]:
@@ -412,6 +432,10 @@ final class CLIApplication {
                 "candidateSessionIDs": candidate.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
             ]
             if let pointer = invocation.options["selection-pointer"] { arguments["selectionPointer"] = pointer }
+            if invocation.flags.contains("include-value-diff") { arguments["includeValueDiff"] = true }
+            if let ignore = invocation.options["ignore-pointers"] {
+                arguments["ignorePointers"] = ignore.split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+            }
             if let digest = invocation.options["if-brief-digest"] { arguments["ifBriefDigest"] = digest }
             return success(commandName, try await runTool(client, name: "investigation_compare_brief", arguments: arguments, invocation: invocation))
         case _ where command.count == 3 && command[0] == "session" && command[1] == "show":
@@ -1942,6 +1966,98 @@ final class CLIApplication {
                 }
             }
             return success(commandName, guided)
+        case ["response", "map-remote", "prepare"]:
+            guard let method = invocation.options["method"], !method.isEmpty,
+                  let host = invocation.options["host"], !host.isEmpty,
+                  let path = invocation.options["path"], !path.isEmpty,
+                  let remoteHost = invocation.options["remote-host"], !remoteHost.isEmpty else {
+                throw CLIError.invalidArguments(
+                    "response map-remote prepare requires --method, --host, --path, and --remote-host."
+                )
+            }
+            var arguments: [String: Any] = [
+                "method": method,
+                "scheme": invocation.options["scheme"] ?? "https",
+                "host": host,
+                "path": path,
+                "matchMode": invocation.options["match-mode"] ?? "exactPath",
+                "remoteHost": remoteHost,
+                "remoteScheme": invocation.options["remote-scheme"] ?? "https"
+            ]
+            if let port = invocation.options["port"] {
+                guard let portValue = Int(port) else {
+                    throw CLIError.invalidArguments("--port must be an integer.")
+                }
+                arguments["port"] = portValue
+            }
+            if let remotePort = invocation.options["remote-port"] {
+                guard let remotePortValue = Int(remotePort) else {
+                    throw CLIError.invalidArguments("--remote-port must be an integer.")
+                }
+                arguments["remotePort"] = remotePortValue
+            }
+            if let remotePath = invocation.options["remote-path"], !remotePath.isEmpty {
+                arguments["remotePath"] = remotePath
+            }
+            if let queryPolicy = invocation.options["remote-query-policy"], !queryPolicy.isEmpty {
+                arguments["remoteQueryPolicy"] = queryPolicy
+            }
+            if let remoteQuery = invocation.options["remote-query"] {
+                arguments["remoteQuery"] = remoteQuery
+            }
+            if let label = invocation.options["label"], !label.isEmpty {
+                arguments["label"] = label
+            }
+            if let sourceClientAddress = invocation.options["source-client-address"] {
+                arguments["sourceClientAddress"] = sourceClientAddress
+            }
+            if let queryKey = invocation.options["match-query-key"] {
+                arguments["matchQueryKey"] = queryKey
+            }
+            if let queryValue = invocation.options["match-query-value"] {
+                arguments["matchQueryValue"] = queryValue
+            }
+            if let opName = invocation.options["graphql-operation-name"] {
+                arguments["graphqlOperationName"] = opName
+            }
+            if invocation.flags.contains("allow-loopback") {
+                arguments["allowLoopbackDestination"] = true
+            }
+            if invocation.flags.contains("preserve-host") {
+                arguments["preserveHostHeader"] = true
+            }
+            let proposal = try await runTool(
+                client,
+                name: "propose_create_map_remote",
+                arguments: arguments,
+                invocation: invocation,
+                retryOnStaleSession: false
+            )
+            return success(commandName, [
+                "proposal": payloadObject(proposal) ?? [:],
+                "nextCommand": "joesproxyctl response map-remote apply <proposal-token> --wait-for-approval"
+            ])
+        case _ where command.count == 4 && command[0] == "response" && command[1] == "map-remote" && command[2] == "apply":
+            let created = try await runTool(
+                client,
+                name: "apply_create_map_remote",
+                arguments: ["proposalToken": command[3]],
+                invocation: invocation,
+                retryOnStaleSession: false
+            )
+            var result = payloadObject(created) ?? [:]
+            if let targetID = result["targetID"] as? String {
+                result["nextCommand"] = "joesproxyctl response map-remote activate \(targetID) --wait-for-approval"
+            }
+            return success(commandName, result)
+        case _ where command.count == 4 && command[0] == "response" && command[1] == "map-remote" && command[2] == "activate":
+            return success(commandName, try await runTool(
+                client,
+                name: "activate_map_remote",
+                arguments: ["overrideID": command[3]],
+                invocation: invocation,
+                retryOnStaleSession: false
+            ))
         default:
             throw CLIError.invalidArguments("Unknown command. Run `joesproxyctl help` for available commands.")
         }
@@ -2383,10 +2499,15 @@ final class CLIApplication {
             ))
 
         case ["lineage", "trace"]:
-            guard let targetValue = invocation.options["target-value"] else {
-                throw CLIError.invalidArguments("lineage trace requires --target-value <text>.")
+            var arguments: [String: Any] = [:]
+            if invocation.flags.contains("auth-chain") || invocation.options["mode"] == "authChain" {
+                arguments["mode"] = "authChain"
+            } else {
+                guard let targetValue = invocation.options["target-value"] else {
+                    throw CLIError.invalidArguments("lineage trace requires --target-value <text> or --auth-chain.")
+                }
+                arguments["targetValue"] = targetValue
             }
-            var arguments: [String: Any] = ["targetValue": targetValue]
             if let candidates = invocation.options["candidate-sessions"] {
                 arguments["candidateSessionIDs"] = candidates.split(separator: ",").map(String.init)
             }
@@ -2677,7 +2798,7 @@ final class CLIApplication {
     private func doctorFailure(for error: CLIError) -> (state: String, recommendedCommand: String) {
         switch error {
         case .authenticationFailed:
-            return ("authentication_required", "joesproxyctl auth login")
+            return ("authentication_required", "Verify the configured endpoint and retry joesproxyctl doctor after Keychain access returns. Review enrollment if rejection persists.")
         case .policyDenied:
             return ("policy_action_required", "Review this CLI client in JoesProxy MCP Management.")
         case .rateLimited:
@@ -3377,6 +3498,31 @@ final class CLIApplication {
         if let path = invocation.options["path"] { arguments["path"] = path }
         if let since = invocation.options["since"] { arguments["startedAfter"] = since }
         if let until = invocation.options["until"] { arguments["startedBefore"] = until }
+        if let statusText = invocation.options["status-code"], let status = Int(statusText) {
+            arguments["statusCode"] = status
+        }
+        if let statusClass = invocation.options["status-class"] {
+            arguments["statusClass"] = statusClass
+        }
+        if let minDurText = invocation.options["min-duration-ms"], let minDur = Double(minDurText) {
+            arguments["minDurationMs"] = minDur
+        }
+        if invocation.flags.contains("has-override-hit") {
+            arguments["hasOverrideHit"] = true
+        } else if invocation.flags.contains("no-override-hit") {
+            arguments["hasOverrideHit"] = false
+        }
+        if invocation.flags.contains("body-available") {
+            arguments["bodyAvailable"] = true
+        } else if invocation.flags.contains("no-body-available") {
+            arguments["bodyAvailable"] = false
+        }
+        if let dedup = invocation.options["deduplicate-by"] {
+            arguments["deduplicateBy"] = dedup
+        }
+        if invocation.flags.contains("include-auth-chain") {
+            arguments["includeAuthChain"] = true
+        }
         return arguments
     }
 
@@ -3461,7 +3607,7 @@ final class CLIApplication {
         case .serverUnavailable:
             recommendedAction = "Run joesproxyctl doctor with the same endpoint. Start MCP only if stopped. If an apply was interrupted, inspect its status before retrying; do not assume it failed or create a replacement proposal."
         case .authenticationFailed:
-            recommendedAction = "Rotate or reenroll the JoesProxy CLI client, then run joesproxyctl auth login."
+            recommendedAction = "Check the endpoint and retry a read after Keychain access returns. If the credential is revoked or the current verifier is permanently missing, review enrollment in MCP Management."
         case .policyDenied:
             recommendedAction = "Review the client profile, Runtime Control grant, and cleanup state in MCP Management."
         case .rateLimited:
@@ -3563,16 +3709,17 @@ final class CLIApplication {
       joesproxyctl capture rolling-status
       joesproxyctl capture restore-rolling
       joesproxyctl capture marker --name <marker-name> [--detail <text>] [--label <text>]
-      joesproxyctl capture activity --since-marker <session-id> [--rule <override-id>] [--limit <n>]
-      joesproxyctl sessions list|search [filters]
+      joesproxyctl capture activity (--since-marker <session-id> | --since-sequence <n>) [--rule <override-id>] [--limit <n>]
+      joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--include-auth-chain]
       joesproxyctl device list
       joesproxyctl device alias <ip-address> (--name <friendly-name> | --clear)
       joesproxyctl session show <session-id>
         [--include-headers] [--include-response-headers] [--include-body]
         [--body-source response|request] [--header-source both|request|response]
-      joesproxyctl session brief <session-id> [--selection-pointer /items] [--include-structure]
-      joesproxyctl capture calculate --session-ids <id,id> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode
-      joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items --operation numericSummary --field-pointer /price
+      joesproxyctl session brief <session-id> [--selection-pointer /items] [--include-structure] [--field-pointers /p1,/p2] [--row-limit <1...50>]
+      joesproxyctl capture calculate --started-after <ISO8601> --started-before <ISO8601> [--method GET] [--domain <text>] [--path-contains <text>] --dataset sessionMetadata --operation rowCount
+      joesproxyctl capture calculate --session-ids <id,id> --dataset sessionMetadata --operation groupCount --field-pointer /statusCode [--where-pointer <p> --where-op <op> [--where-value <v>]]
+      joesproxyctl capture calculate --session-ids <id> --dataset responseJSON --selection-pointer /items (--operation numericSummary --field-pointer /price | --operations-json <json-array>)
       joesproxyctl artifact brief --handle <handle> --snapshot-revision <revision> --record-index <ordinal> [--selection-pointer /items] [--include-structure]
       joesproxyctl artifact compare --baseline-handle <id> --baseline-revision <id> --baseline-record <n> --candidate-handle <id> --candidate-revision <id> --candidate-record <n> [--selection-pointer /items] [--wait-for-approval]
       joesproxyctl artifact inventory --handle <handle> --snapshot-revision <revision> [--method GET] [--status-code 503]
@@ -3581,8 +3728,8 @@ final class CLIApplication {
       joesproxyctl artifact source status --request-key <uuid>
       joesproxyctl artifact source inspect --handle <handle>
       joesproxyctl artifact source release --handle <handle>
-      joesproxyctl artifact calculate --handle <handle> --snapshot-revision <revision> --dataset json --selection-pointer /items --operation rowCount
-      joesproxyctl investigate compare --baseline-sessions <id,id> --candidate-sessions <id,id> [--selection-pointer /items]
+      joesproxyctl artifact calculate --handle <handle> --snapshot-revision <revision> --dataset json --selection-pointer /items (--operation rowCount | --operations-json <json-array>)
+      joesproxyctl investigate compare --baseline-sessions <id,id> --candidate-sessions <id,id> [--selection-pointer /items] [--include-value-diff] [--ignore-pointers /p1,/p2]
       joesproxyctl media readiness|summary|manifest|related <session-id>
       joesproxyctl response context|search|read <session-id>
         search: --text <literal> [--include-context]
@@ -3606,6 +3753,13 @@ final class CLIApplication {
         [--graphql-operation-name <name>]) [--source-client-address <ip>]
         [--match-query-key <key> --match-query-value <value>] [--enable-after]
       joesproxyctl response map-local apply <proposal-token> [--enable-after] [--wait-for-approval]
+      joesproxyctl response map-remote prepare --method <verb> --host <host> --path <path> --remote-host <host> [--remote-port <n>] [--remote-scheme http|https]
+        [--scheme http|https] [--match-mode exactPath|pathPrefix|pathSuffix|ignoreQuery|filename] [--port <n>]
+        [--remote-path <path>] [--remote-query-policy preserve|replace|drop] [--remote-query <query>]
+        [--allow-loopback] [--preserve-host] [--label <label>] [--source-client-address <ip>]
+        [--match-query-key <key> --match-query-value <value>] [--graphql-operation-name <name>] [--idempotency-key <key>]
+      joesproxyctl response map-remote apply <proposal-token> [--wait-for-approval] [--idempotency-key <key>]
+      joesproxyctl response map-remote activate <override-id> [--wait-for-approval] [--idempotency-key <key>]
       joesproxyctl rule list [--limit <n>] [--cursor <token>] [--projection minimal|summary|full] [--source-kind <kind>]
       joesproxyctl rule get <override-id>
       joesproxyctl rule enable|disable|delete <override-id>
@@ -3781,7 +3935,7 @@ final class CLIApplication {
         test: --query <text> [--target-url <url>]  delete: --rule-id <uuid>
       joesproxyctl contract diff --live-session <uuid> --baseline-session <uuid>
       joesproxyctl contract regression --live-sessions <id,id> --baseline-sessions <id,id>
-      joesproxyctl lineage trace --target-value <text> [--candidate-sessions <id,id>]
+      joesproxyctl lineage trace (--target-value <text> | --auth-chain) [--candidate-sessions <id,id>]
       joesproxyctl lineage attribution --sink-session <uuid> [--candidate-sessions <id,id>]
       joesproxyctl lineage watermark propose --name <text> --url-pattern <pattern> --strategy <text>
         [--target-keypaths <k1,k2>] (preview only — nothing is registered or persisted)

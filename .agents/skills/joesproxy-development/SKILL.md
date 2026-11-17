@@ -26,11 +26,14 @@ exported MCP operating skill. Paths in commands are relative to the repository r
    composition; app presentation belongs in existing presentation/window routes. Swift files in
    synchronized target folders need no manual project-file entries.
 
+For release documentation, distinguish the currently published version, the exact signed candidate and later source edits. Record the stapled installer checksum and independent installation outcome. Report autonomous accuracy across all attempts and paired token savings only where both answers meet the same rubric.
+
 ## Choose the workflow
 
 - Builds/tests, including resuming an interrupted run: read [validation.md](references/validation.md).
 - UI fixes, screenshots or export failures: also read [ui-and-artifacts.md](references/ui-and-artifacts.md).
 - Hangs, memory, streaming or performance claims: also read [investigation.md](references/investigation.md).
+- HLS conformance & direct-vs-remapped `mediastreamvalidator` / `msvsummary` runs: also read [hls-validation.md](references/hls-validation.md).
 - Release work: read the repository's [RELEASE.md](../../../RELEASE.md) before acting. This skill
   grants no release, dependency, signing or git-write authority.
 - Documentation/skill reconciliation: preserve the currently tested package. Correct mirrored

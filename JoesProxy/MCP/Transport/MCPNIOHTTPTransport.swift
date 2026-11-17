@@ -81,6 +81,7 @@ final class MCPNIOHTTPTransport: @unchecked Sendable {
     private let protocolService: MCPProtocolService
     private let idleTimeout: TimeInterval
     private var serverChannel: Channel?
+    private var listenerReservation: ReservedListenerRegistry.ReservationToken?
     private let state = ConnectionState()
 
     init(
@@ -119,11 +120,28 @@ final class MCPNIOHTTPTransport: @unchecked Sendable {
                 }
             }
 
+        if port > 0 {
+            listenerReservation = ReservedListenerRegistry.shared.reserve(
+                owner: "MCPNIOHTTPTransport",
+                port: port,
+                boundHost: "127.0.0.1"
+            )
+        }
         do {
             let channel = try await bootstrap.bind(host: "127.0.0.1", port: Int(port)).get()
             serverChannel = channel
+            if listenerReservation == nil,
+               let bound = channel.localAddress?.port.flatMap(UInt16.init(exactly:)) {
+                listenerReservation = ReservedListenerRegistry.shared.reserve(
+                    owner: "MCPNIOHTTPTransport",
+                    port: bound,
+                    boundHost: "127.0.0.1"
+                )
+            }
             MCPLog.lifecycle.info("MCP transport bound on 127.0.0.1:\(port, privacy: .public).")
         } catch {
+            ReservedListenerRegistry.shared.release(listenerReservation)
+            listenerReservation = nil
             try? await group.shutdownGracefully()
             MCPLog.lifecycle.error("MCP transport failed to bind on port \(port, privacy: .public): \(String(describing: error), privacy: .public)")
             throw TransportError.bindFailed(String(describing: error))
@@ -133,6 +151,8 @@ final class MCPNIOHTTPTransport: @unchecked Sendable {
     func stop() async {
         try? await serverChannel?.close()
         serverChannel = nil
+        ReservedListenerRegistry.shared.release(listenerReservation)
+        listenerReservation = nil
         MCPLog.lifecycle.info("MCP transport stopped.")
     }
 

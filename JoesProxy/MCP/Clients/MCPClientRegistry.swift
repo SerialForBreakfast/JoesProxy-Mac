@@ -27,8 +27,15 @@ struct MCPClientRecord: Equatable, Sendable, Codable, Identifiable {
 protocol MCPClientCredentialStoring: Sendable {
     func saveVerifier(clientID: String, generation: Int, verifier: Data) throws
     func loadVerifier(clientID: String, generation: Int) throws -> Data?
+    func unlockVerifier(clientID: String, generation: Int) throws -> Data?
     func deleteVerifier(clientID: String, generation: Int) throws
     func deleteAllVerifiers(clientID: String) throws
+}
+
+extension MCPClientCredentialStoring {
+    func unlockVerifier(clientID: String, generation: Int) throws -> Data? {
+        try loadVerifier(clientID: clientID, generation: generation)
+    }
 }
 
 /// Application Support JSON persistence for MCP client records.
@@ -55,6 +62,8 @@ final class MCPClientRegistry {
     private let credentialStore: any MCPClientCredentialStoring
     private let fileManager: FileManager
     private var clientIDByVerifier: [Data: String] = [:]
+    private(set) var clientsRequiringUnlock: Set<String> = []
+    private var nextVerifierRefresh = ContinuousClock.now
     private var lastSeenPersistenceTask: Task<Void, Never>?
 
     init(
@@ -71,6 +80,7 @@ final class MCPClientRegistry {
         guard fileManager.fileExists(atPath: persistenceURL.path) else {
             clients = []
             clientIDByVerifier = [:]
+            clientsRequiringUnlock.removeAll()
             try persist()
             return
         }
@@ -127,6 +137,7 @@ final class MCPClientRegistry {
         try credentialStore.deleteVerifier(clientID: clientID, generation: nextGeneration - 1)
         clientIDByVerifier = clientIDByVerifier.filter { $0.value != clientID }
         clientIDByVerifier[verifier] = clientID
+        clientsRequiringUnlock.remove(clientID)
         return EnrollmentResult(client: clients[index], plaintextCredential: credential)
     }
 
@@ -144,6 +155,7 @@ final class MCPClientRegistry {
             throw MCPClientRegistryError.clientNotFound
         }
         clients[index].credentialState = .revoked
+        clientsRequiringUnlock.remove(clientID)
         try persist()
         try credentialStore.deleteAllVerifiers(clientID: clientID)
         clientIDByVerifier = clientIDByVerifier.filter { $0.value != clientID }
@@ -164,6 +176,7 @@ final class MCPClientRegistry {
         }
         try persist()
         clientIDByVerifier.removeAll()
+        clientsRequiringUnlock.removeAll()
         for client in clients {
             try? credentialStore.deleteAllVerifiers(clientID: client.id)
         }
@@ -176,6 +189,7 @@ final class MCPClientRegistry {
     func remove(clientIDs: Set<String>) throws {
         guard !clientIDs.isEmpty else { return }
         clients.removeAll { clientIDs.contains($0.id) }
+        clientsRequiringUnlock.subtract(clientIDs)
         clientIDByVerifier = clientIDByVerifier.filter { !clientIDs.contains($0.value) }
         try persist()
         for clientID in clientIDs {
@@ -192,6 +206,17 @@ final class MCPClientRegistry {
     /// requires is negligible.
     func authenticate(bearerToken: String) throws -> MCPClientRecord {
         let digest = Self.verifier(for: bearerToken)
+        if clients.contains(where: { $0.credentialState == .needsRotation }), ContinuousClock.now >= nextVerifierRefresh {
+            nextVerifierRefresh = .now.advanced(by: .seconds(30))
+            for index in clients.indices where clients[index].credentialState == .needsRotation {
+                let record = clients[index]
+                guard !clientsRequiringUnlock.contains(record.id) else { continue }
+                guard let verifier = try? credentialStore.loadVerifier(clientID: record.id, generation: record.credentialGeneration) else { continue }
+                clients[index].credentialState = .active
+                clientIDByVerifier[verifier] = record.id
+                scheduleLastSeenPersistence()
+            }
+        }
         guard let clientID = clientIDByVerifier.first(where: { MCPConstantTimeCompare.equal($0.key, digest) })?.value,
               let index = clients.firstIndex(where: { $0.id == clientID }),
               clients[index].credentialState == .active else {
@@ -202,25 +227,56 @@ final class MCPClientRegistry {
         return clients[index]
     }
 
-    /// Removes orphan Keychain verifiers and marks clients missing verifiers for rotation.
+    /// Restore available current-generation verifiers without prompting during bootstrap.
     func reconcileKeychainVerifiers() throws {
         clientIDByVerifier = [:]
+        clientsRequiringUnlock.removeAll()
         for index in clients.indices {
             let record = clients[index]
             if record.credentialState == .revoked {
-                try credentialStore.deleteAllVerifiers(clientID: record.id)
                 continue
             }
-            let verifier = try credentialStore.loadVerifier(
-                clientID: record.id,
-                generation: record.credentialGeneration
-            )
+            let verifier: Data?
+            do {
+                verifier = try credentialStore.loadVerifier(
+                    clientID: record.id,
+                    generation: record.credentialGeneration
+                )
+            } catch {
+                clientsRequiringUnlock.insert(record.id)
+                continue
+            }
             if verifier == nil {
                 clients[index].credentialState = .needsRotation
             } else if let verifier {
+                clients[index].credentialState = .active
                 clientIDByVerifier[verifier] = record.id
             }
         }
+        try persist()
+    }
+
+    /// Only the local Clients panel calls this interactive read, for the selected generation.
+    func unlockClient(_ id: String) async throws {
+        guard clientsRequiringUnlock.contains(id),
+              let client = clients.first(where: { $0.id == id && $0.credentialState != .revoked })
+        else { return }
+        let generation = client.credentialGeneration
+        let verifier = try await Task.detached(priority: .userInitiated) { [credentialStore] in
+            try credentialStore.unlockVerifier(clientID: id, generation: generation)
+        }.value
+        guard clientsRequiringUnlock.contains(id),
+              let index = clients.firstIndex(where: {
+                  $0.id == id && $0.credentialGeneration == generation && $0.credentialState != .revoked
+              })
+        else { return }
+        if let verifier {
+            clientIDByVerifier[verifier] = id
+            clients[index].credentialState = .active
+        } else {
+            clients[index].credentialState = .needsRotation
+        }
+        clientsRequiringUnlock.remove(id)
         try persist()
     }
 

@@ -16,6 +16,24 @@ final class MCPClientRegistryTests: XCTestCase {
         XCTAssertEqual(authenticated.id, enrollment.client.id)
     }
 
+    func testReturningCurrentVerifierRecoversEnrollmentWithoutRotation() throws {
+        let store = MCPInMemoryCredentialStore()
+        let url = temporaryURL(named: "recover.json")
+        let registry = MCPClientRegistry(persistenceURL: url, credentialStore: store)
+        try registry.load()
+        let enrollment = try registry.enroll(displayName: "Synthetic CLI")
+        let record = enrollment.client
+        let verifier = try XCTUnwrap(store.loadVerifier(clientID: record.id, generation: record.credentialGeneration))
+        try store.deleteVerifier(clientID: record.id, generation: record.credentialGeneration)
+        try registry.load()
+        XCTAssertEqual(registry.client(id: record.id)?.credentialState, .needsRotation)
+        try store.saveVerifier(clientID: record.id, generation: record.credentialGeneration, verifier: verifier)
+        XCTAssertThrowsError(try registry.authenticate(bearerToken: "incorrect"))
+        XCTAssertEqual(try registry.authenticate(bearerToken: enrollment.plaintextCredential).id, record.id)
+        try registry.load()
+        XCTAssertEqual(try registry.authenticate(bearerToken: enrollment.plaintextCredential).credentialGeneration, record.credentialGeneration)
+    }
+
     func testRevokedCredentialFails() throws {
         let store = MCPInMemoryCredentialStore()
         let registry = MCPClientRegistry(
@@ -79,6 +97,63 @@ final class MCPClientRegistryTests: XCTestCase {
         _ = try registry.authenticate(bearerToken: keep.plaintextCredential)
     }
 
+    func testDeniedVerifierIsRetriedOnlyByLocalUnlockAndThenCached() async throws {
+        let store = MCPCountingCredentialStore()
+        let registry = MCPClientRegistry(persistenceURL: temporaryURL(named: "unlock.json"), credentialStore: store)
+        try registry.load()
+        let locked = try registry.enroll(displayName: "Locked")
+        let available = try registry.enroll(displayName: "Available")
+        store.lockedID = locked.client.id
+        try registry.load()
+        XCTAssertEqual(registry.clientsRequiringUnlock, [locked.client.id])
+        XCTAssertEqual(try registry.authenticate(bearerToken: available.plaintextCredential).id, available.client.id)
+        do {
+            try await registry.unlockClient(locked.client.id)
+            XCTFail("Expected the simulated Keychain denial")
+        } catch let error as CocoaError {
+            XCTAssertEqual(error.code, .userCancelled)
+        }
+        for _ in 0..<3 {
+            XCTAssertThrowsError(try registry.authenticate(bearerToken: locked.plaintextCredential))
+        }
+        XCTAssertEqual(store.interactiveReads, 1)
+        store.allowUnlock = true
+        try await registry.unlockClient(locked.client.id)
+        try await registry.unlockClient(locked.client.id)
+        XCTAssertEqual(try registry.authenticate(bearerToken: locked.plaintextCredential).id, locked.client.id)
+        XCTAssertEqual(store.interactiveReads, 2)
+        try registry.revoke(clientID: locked.client.id)
+        try await registry.unlockClient(locked.client.id)
+        XCTAssertThrowsError(try registry.authenticate(bearerToken: locked.plaintextCredential))
+        XCTAssertEqual(store.interactiveReads, 2)
+    }
+
+    func testRevocationWinsWhileKeychainUnlockIsPending() async throws {
+        let store = MCPCountingCredentialStore()
+        let registry = MCPClientRegistry(persistenceURL: temporaryURL(named: "pending-unlock.json"), credentialStore: store)
+        try registry.load()
+        let enrollment = try registry.enroll(displayName: "Pending")
+        let id = enrollment.client.id
+        store.lockedID = id
+        store.allowUnlock = true
+        try registry.load()
+
+        let started = expectation(description: "Keychain has read the verifier")
+        let release = DispatchSemaphore(value: 0)
+        store.beforeReturningVerifier = {
+            started.fulfill()
+            XCTAssertEqual(release.wait(timeout: .now() + 5), .success)
+        }
+        let unlock = Task { try await registry.unlockClient(id) }
+        await fulfillment(of: [started], timeout: 3)
+        try registry.revoke(clientID: id)
+        release.signal()
+        try await unlock.value
+
+        XCTAssertEqual(registry.clients.first?.credentialState, .revoked)
+        XCTAssertThrowsError(try registry.authenticate(bearerToken: enrollment.plaintextCredential))
+    }
+
     private func temporaryURL(named: String) -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + named)
     }
@@ -88,6 +163,10 @@ private final class MCPCountingCredentialStore: MCPClientCredentialStoring, @unc
     private let lock = NSLock()
     private var verifiers: [String: Data] = [:]
     private(set) var loadCount = 0
+    var lockedID: String?
+    var allowUnlock = false
+    private(set) var interactiveReads = 0
+    var beforeReturningVerifier: (@Sendable () -> Void)?
 
     func saveVerifier(clientID: String, generation: Int, verifier: Data) throws {
         lock.withLock {
@@ -96,10 +175,21 @@ private final class MCPCountingCredentialStore: MCPClientCredentialStoring, @unc
     }
 
     func loadVerifier(clientID: String, generation: Int) throws -> Data? {
-        lock.withLock {
+        try lock.withLock {
             loadCount += 1
+            if lockedID == clientID { throw CocoaError(.fileReadNoPermission) }
             return verifiers["\(clientID)#\(generation)"]
         }
+    }
+
+    func unlockVerifier(clientID: String, generation: Int) throws -> Data? {
+        let verifier = try lock.withLock {
+            interactiveReads += 1
+            guard allowUnlock else { throw CocoaError(.userCancelled) }
+            return verifiers["\(clientID)#\(generation)"]
+        }
+        beforeReturningVerifier?()
+        return verifier
     }
 
     func deleteVerifier(clientID: String, generation: Int) throws {

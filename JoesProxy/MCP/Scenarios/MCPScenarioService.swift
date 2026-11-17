@@ -38,6 +38,7 @@ final class MCPScenarioService {
     private let auditStore: MCPAuditStore
     private let validationRunID: MCPValidationRunID?
     private let policyEvaluator: MCPPolicyEvaluator
+    private let loopbackPolicyReader: () -> LoopbackDestinationPolicy
     private let encoder: JSONEncoder
 
     init(
@@ -48,7 +49,8 @@ final class MCPScenarioService {
         grantStore: MCPClientGrantStore? = nil,
         approvalStore: MCPApprovalStore,
         auditStore: MCPAuditStore,
-        validationRunID: MCPValidationRunID? = nil
+        validationRunID: MCPValidationRunID? = nil,
+        loopbackPolicyReader: @escaping () -> LoopbackDestinationPolicy = { .disabled }
     ) {
         self.lifecycleCoordinator = lifecycleCoordinator
         self.scenarioStore = scenarioStore
@@ -60,6 +62,7 @@ final class MCPScenarioService {
         self.auditStore = auditStore
         self.validationRunID = validationRunID
         self.policyEvaluator = MCPPolicyEvaluator(policyStore: policyStore, grantStore: resolvedGrantStore)
+        self.loopbackPolicyReader = loopbackPolicyReader
         self.encoder = MCPScenarioJSONCodec.makeEncoder()
     }
 
@@ -127,7 +130,10 @@ final class MCPScenarioService {
                 message: "validate_test_scenario requires a scenario in draft phase."
             )
         }
-        let result = try lifecycleCoordinator.validate(scenarioID: scenarioID)
+        let result = try lifecycleCoordinator.validate(
+            scenarioID: scenarioID,
+            loopbackPolicy: loopbackPolicyReader()
+        )
         auditScenarioEvent(client: client, reason: "validate_test_scenario", detail: scenarioID.rawValue)
         return result
     }
@@ -138,7 +144,10 @@ final class MCPScenarioService {
     ) throws -> MCPScenarioValidationResultDTO {
         try requireScenarioAccess(client: client)
         let draft = try parseDraft(from: arguments, client: client)
-        return try MCPScenarioValidationService.validate(draft: draft)
+        return try MCPScenarioValidationService.validate(
+            draft: draft,
+            loopbackPolicy: loopbackPolicyReader()
+        )
     }
 
     private func getObservations(
@@ -268,6 +277,11 @@ final class MCPScenarioService {
             capability: capability,
             record: record,
             mcpSessionID: arguments["__mcpInternalSessionID"] as? String
+        )
+        _ = try MCPScenarioCompiler.compile(
+            draft: MCPScenarioDraftInput.fromDefinition(record.definition),
+            now: record.definition.createdAt,
+            loopbackPolicy: loopbackPolicyReader()
         )
         guard let runtime = runtimeServiceProvider() else {
             throw MCPStructuredError(code: .internalFailure, message: "Scenario runtime unavailable.")

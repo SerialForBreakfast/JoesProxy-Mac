@@ -107,16 +107,7 @@ struct macOSSetupWalkthroughView: View {
                 Button("Done") { isPresented = false }
             }
         }
-        .alert(item: $viewModel.trustAlertContext) { context in
-            Alert(
-                title: Text(context.title),
-                message: Text(context.message),
-                primaryButton: .default(Text("OK")) { viewModel.dismissTrustAlert() },
-                secondaryButton: context.primaryAction == .resetCertificateState
-                    ? .destructive(Text("Reset Certificate State")) { viewModel.confirmResetCertificateState() }
-                    : .cancel(Text("Cancel")) { viewModel.dismissTrustAlert() }
-            )
-        }
+        .certificateTrustAlert(viewModel)
         .onChange(of: hasRootCA) { _, has in
             if has { stepCompletedAt[1] = stepCompletedAt[1] ?? Date() }
         }
@@ -180,6 +171,12 @@ struct macOSSetupWalkthroughView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             switch viewModel.certificateWorkflowState {
+            case .notSetUp where viewModel.certificateAuthorityNeedsUnlock:
+                Text(viewModel.certificateUnlockWarning)
+                KeychainSetupExample(step: .unlock)
+                Button("Unlock Certificate Authority", action: viewModel.unlockCertificateAuthority)
+                    .disabled(viewModel.isUnlockingCertificateAuthority)
+                if let message = viewModel.certificateUnlockMessage { Text(message) }
             case .notSetUp where viewModel.rootCertificate == nil:
                 Button("Create Root CA") {
                     viewModel.createOrLoadRootCertificate()
@@ -192,7 +189,6 @@ struct macOSSetupWalkthroughView: View {
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                     Button(viewModel.certificateSetupEntryPointTitle) {
-                        isPresented = false
                         presentationState.presentCertificateSetup()
                     }
                     .buttonStyle(.borderedProminent)
@@ -230,7 +226,6 @@ struct macOSSetupWalkthroughView: View {
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                     Button(viewModel.certificateSetupEntryPointTitle) {
-                        isPresented = false
                         presentationState.presentCertificateSetup()
                     }
                     .buttonStyle(.borderedProminent)
@@ -297,12 +292,15 @@ struct macOSSetupWalkthroughView: View {
 
             DisclosureGroup("Trust manually (Keychain Access)") {
                 VStack(alignment: .leading, spacing: 6) {
-                    instructionStep(1, "Open Keychain Access (Spotlight → Keychain Access).")
+                    OpenKeychainAccessButton()
+                    instructionStep(1, "In Keychain Access, use the steps below to trust this root.")
                     instructionStep(2, "Select the login keychain in the sidebar.")
                     instructionStep(3, "Find \(viewModel.configuration.certificateLabel) in the list.")
+                    KeychainSetupExample(step: .findCertificate)
                     instructionStep(4, "Double-click the certificate.")
                     instructionStep(5, "Expand the Trust section.")
                     instructionStep(6, "Set When using this certificate to Always Trust.")
+                    KeychainSetupExample(step: .trustCertificate)
                     instructionStep(7, "Close the window. macOS may prompt to confirm.")
                     instructionStep(8, "Return here and tap Refresh Status above.")
                 }

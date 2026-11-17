@@ -28,6 +28,8 @@ JoesProxy capture via joesproxyctl ┘
 
 ## Workflow
 
+For a status spike, use the same inclusive UTC window in the capture calculation and console timeline. Record missing responses, capture gaps and one matching request ID before attributing a failure to the client.
+
 Revision 2026-09-15: preserve build identity and distinguish passive evidence from active recovery.
 Before collecting, record the actual JoesProxy app/CLI paths, versions, endpoint and target process.
 Use the CLI bundled with the intended app when available; do not silently launch a second build.

@@ -51,6 +51,29 @@ final class MCPDataLineageService {
         )
     }
 
+    func traceAuthChain(
+        candidateSessionIDs: [UUID] = [],
+        disclosure: MCPDisclosureSerializer,
+        policyRevision: MCPPolicyRevision
+    ) throws -> MCPDataLineageSearchResultDTO {
+        let candidates: [SessionRecord]
+        if candidateSessionIDs.isEmpty {
+            candidates = sessionStore.sessions
+        } else {
+            let idSet = Set(candidateSessionIDs)
+            candidates = sessionStore.sessions.filter { idSet.contains($0.id) }
+        }
+        let report = AuthChainBrief.analyze(records: candidates, disclosure: disclosure)
+        return MCPDataLineageSearchResultDTO(
+            targetQuery: "authChain",
+            candidateSessionsInspected: report.inspectedSessionCount,
+            matchingFlowsCount: report.tokens.count,
+            flows: [],
+            authChain: report,
+            disclosure: makeDisclosure(policyRevision: policyRevision)
+        )
+    }
+
     // MARK: - Audit Analytics Attribution
 
     func auditAnalyticsAttribution(

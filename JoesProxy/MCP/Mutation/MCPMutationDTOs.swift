@@ -48,6 +48,8 @@ struct MCPOverrideSummaryDTO: Equatable, Sendable, Codable {
     var mapRemotePath: String?
     var mapRemoteQueryPolicy: String?
     var mapRemoteQuery: String?
+    var allowLoopbackDestination: Bool? = nil
+    var preserveHostHeader: Bool? = nil
     var bookmarkRewriteMethod: String?
     var bookmarkRewriteHost: String?
     var bookmarkRewritePath: String?
@@ -118,6 +120,8 @@ struct MCPOverrideContextDTO: Equatable, Sendable, Codable {
     var mapRemoteScheme: String?
     var mapRemotePath: String?
     var mapRemoteQueryPolicy: String?
+    var allowLoopbackDestination: Bool? = nil
+    var preserveHostHeader: Bool? = nil
     var liveRewritePaths: [String]?
     var fixtureRunID: String?
     /// `.localDirectory` only: last path component of the chosen folder (never a full path).
@@ -216,6 +220,8 @@ struct MCPMutationPlan: Equatable, Sendable {
     var mapRemotePath: String?
     var mapRemoteQueryPolicy: MapRemoteQueryPolicy = .preserve
     var mapRemoteQuery: String?
+    var mapRemoteAllowLoopback: Bool = false
+    var mapRemotePreserveHostHeader: Bool = false
     /// Exact Map Local body bytes. Preview-derived plans store server-retained `Data`; manually
     /// authored `bodyText` is UTF-8-encoded into this field at propose time so persistence never
     /// re-decodes through `String`.
