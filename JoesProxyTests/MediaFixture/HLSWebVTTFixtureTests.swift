@@ -170,7 +170,10 @@ final class HLSWebVTTFixtureTests: XCTestCase {
         let firstVariant = try XCTUnwrap(master.components(separatedBy: "\n").first { $0.hasPrefix("#EXT-X-STREAM-INF:") })
         let bandwidthText = try XCTUnwrap(firstVariant.components(separatedBy: ",").first)
         let bandwidth = try XCTUnwrap(Int(bandwidthText.replacingOccurrences(of: "#EXT-X-STREAM-INF:BANDWIDTH=", with: "")))
-        XCTAssertGreaterThan(bandwidth, 928000, "Declared bandwidth must account for selectable text")
+        let base = directory.deletingLastPathComponent().appendingPathComponent("player-qa-widescreen-v1/master.m3u8")
+        let baseMaster = HLSParser.parse(try String(contentsOf: base, encoding: .utf8))
+        XCTAssertGreaterThan(bandwidth, try XCTUnwrap(baseMaster.variants.first?.bandwidth),
+                             "Declared bandwidth must account for selectable text")
     }
 
     func testCrossBoundarySilentForcedAndUnicodeCuesKeepExactTiming() throws {

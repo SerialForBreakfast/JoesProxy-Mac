@@ -67,9 +67,9 @@ write_master_lang_en_es() {
 #EXT-X-VERSION:3
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="English",LANGUAGE="en",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="audio-en/stream.m3u8"
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Spanish",LANGUAGE="es",DEFAULT=NO,AUTOSELECT=YES,CHANNELS="2",URI="audio-es/stream.m3u8"
-#EXT-X-STREAM-INF:BANDWIDTH=896000,AVERAGE-BANDWIDTH=800000,RESOLUTION=640x360,CODECS="avc1.42001e,mp4a.40.2",AUDIO="aud"
+#EXT-X-STREAM-INF:BANDWIDTH=896000,AVERAGE-BANDWIDTH=800000,RESOLUTION=640x360,CODECS="avc1.42001e,mp4a.40.2",AUDIO="aud",CLOSED-CAPTIONS=NONE
 video-lo/stream.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=1568000,AVERAGE-BANDWIDTH=1400000,RESOLUTION=960x540,CODECS="avc1.42001e,mp4a.40.2",AUDIO="aud"
+#EXT-X-STREAM-INF:BANDWIDTH=1568000,AVERAGE-BANDWIDTH=1400000,RESOLUTION=960x540,CODECS="avc1.42001e,mp4a.40.2",AUDIO="aud",CLOSED-CAPTIONS=NONE
 video-hi/stream.m3u8
 EOF
 }
@@ -115,6 +115,7 @@ if should_run "param-lang-en-es"; then
   rm -rf "$DEST/audio-ad"
   rsync -a "$ROOT/baseline-aligned-codecs/audio-en/" "$DEST/audio-es/"
   write_master_lang_en_es "$DEST"
+  python3 "$ROOT/variant-rates.py" "$DEST"
   emit_hashes "$DEST" \
     "Parameter profile: distinct LANGUAGE=en and LANGUAGE=es audio renditions." \
     "Spanish track reuses English media bytes; master tags es for language-switch trials."

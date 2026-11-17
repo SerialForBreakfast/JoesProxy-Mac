@@ -98,6 +98,14 @@ validate_audio_stream() {
       ' >/dev/null
 }
 
+awk '/^#EXT-X-STREAM-INF:/ {
+  variants++
+  if ($0 !~ /,CLOSED-CAPTIONS=NONE(,|$)/) missing++
+} END { exit !(variants == 3 && !missing) }' "$PROFILE/master.m3u8" || {
+  echo "Expected three caption-free variants with CLOSED-CAPTIONS=NONE" >&2
+  exit 1
+}
+
 for rendition in video-360 video-720 video-1080 audio-en; do
   validate_playlist_shape "$PROFILE/$rendition/stream.m3u8"
 done

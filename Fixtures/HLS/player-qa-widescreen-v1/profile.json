@@ -5,9 +5,9 @@
   "purpose": "16:9 adaptive test pattern with multilingual and audio-description rendition switching.",
   "featureTags": ["player-qa", "16:9", "abr", "test-pattern", "timecode", "tone", "alternate-audio", "multilingual", "audio-description"],
   "renditions": [
-    {"width": 640, "height": 360, "bandwidth": 800000, "codecs": "avc1.64001f,mp4a.40.2"},
-    {"width": 1280, "height": 720, "bandwidth": 2200000, "codecs": "avc1.640028,mp4a.40.2"},
-    {"width": 1920, "height": 1080, "bandwidth": 4500000, "codecs": "avc1.640029,mp4a.40.2"}
+    {"width": 640, "height": 360, "bandwidth": 771808, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": 1064712, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": 1419656, "codecs": "avc1.640029,mp4a.40.2"}
   ],
   "audioRenditions": [
     {"name": "English Program", "language": "en", "associatedLanguage": null, "channels": "2", "isDefault": true, "isAutoSelect": true, "characteristics": [], "audibleSignature": "440 Hz"},
