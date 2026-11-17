@@ -1,0 +1,11 @@
+{
+  "fixture": "testSlowestFailureWorkflowAgainstTwoReadControl",
+  "question": "Which endpoints failed during the first five minutes of the capture, how many times, and which matching request was slowest?",
+  "expectedGroups": 1,
+  "expectedFailures": 300,
+  "slowestSessionID": "00000000-0000-4000-8000-000000000149",
+  "slowestSeconds": 3,
+  "control": "Request whole-window endpoint groups and then search at the reported maximum duration.",
+  "candidate": "Request endpoint groups with endpointExample=slowest.",
+  "grading": "Grade count, endpoint identity, example ID and completed calls before comparing bytes. The local control exercises build-28-compatible calls on the candidate dispatcher."
+}

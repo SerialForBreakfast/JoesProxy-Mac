@@ -726,6 +726,45 @@ final class ProxyServerTests: XCTestCase {
         await second.stop()
     }
 
+    @MainActor
+    func testSynthesizedUpstream502IsStoredAndCounted() async throws {
+        let mcp = MCPResponseDisclosureIntegrationTests()
+        let stack = try await mcp.makeStack()
+        stack.sessionStore.clear()
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let upstream = SimpleHTTPTestServer()
+        try await upstream.start()
+        let closedPort = upstream.port
+        let server = makeServer(sessionStore: stack.sessionStore)
+        do { try await server.start() } catch { await upstream.stop(); throw error }
+        await upstream.stop()
+        do {
+            let connection = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: server.port)!, using: .tcp)
+            defer { connection.cancel() }
+            try await NetworkConnectionIO.start(connection, on: DispatchQueue(label: "synthetic.502"))
+            let address = "127.0.0.1:\(closedPort)"
+            let request = "GET http://\(address)/failure HTTP/1.1\r\nHost: \(address)\r\n\r\n"
+            try await NetworkConnectionIO.send(Data(request.utf8), on: connection)
+            let bytes = try await withTimeout(seconds: 5) { try await NetworkConnectionIO.receive(on: connection).0 }
+            XCTAssertTrue(String(decoding: bytes, as: UTF8.self).hasPrefix("HTTP/1.1 502"))
+            let deadline = ContinuousClock.now + .seconds(3)
+            while stack.sessionStore.sessions.first?.response == nil && ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            XCTAssertEqual(stack.sessionStore.sessions.first?.response?.statusCode, 502)
+            XCTAssertEqual(stack.sessionStore.sessions.first?.response?.source, .proxyError)
+            let payload = try mcp.summaryPayload(from: await mcp.callSessionSummary(stack: stack, toolName: "capture_calculate",
+                toolArguments: ["dataset": "sessionMetadata", "selectionPointer": "",
+                    "filter": ["path": "/failure", "startedAfter": "1970-01-01T00:00:00Z", "startedBefore": "2099-01-01T00:00:00Z"],
+                    "operation": ["kind": "groupCount", "fieldPointer": "/statusCode"]]))
+            let groups = try XCTUnwrap((payload["result"] as? [String: Any])?["groups"] as? [[String: Any]])
+            XCTAssertEqual(groups.count, 1)
+            XCTAssertEqual((groups.first?["key"] as? [String: String])?["value"], "502")
+            XCTAssertEqual(groups.first?["count"] as? Int, 1)
+        } catch { await server.stop(); throw error }
+        await server.stop()
+    }
+
     func testHTTPProxyForwardsResponseAndRecordsSession() async throws {
         let upstreamServer = SimpleHTTPTestServer()
         try await upstreamServer.start()

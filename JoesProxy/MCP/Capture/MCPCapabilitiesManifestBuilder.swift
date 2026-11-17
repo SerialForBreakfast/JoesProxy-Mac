@@ -14,7 +14,7 @@ enum MCPCapabilitiesManifestBuilder {
         case "capture_calculate", "artifact_calculate":
             return .init(inputKind: "explicit_live_or_approved_saved_selection", method: "deterministic_exact_decimal_calculations",
                 limits: ["inputBytes": 1_048_576, "rows": 10_000, "groups": 256, "outputBytes": 16_384, "fractionalDigits": 6],
-                coverage: name == "capture_calculate" ? "Filtered metadata scans up to 50,000 retained sessions with search permission. Explicit IDs require body authority. Group omissions are reported." : "Group omissions are reported. Saved sources require calculations-v1 consent.",
+                coverage: name == "capture_calculate" ? "Deadline-bounded retained metadata scan with search permission. Explicit IDs require body authority. Group omissions are reported." : "Group omissions are reported. Saved sources require calculations-v1 consent.",
                 nextAction: "Review counts and source identity before requesting selected source detail. No automatic retry or cache.")
         case "artifact_compare_responses":
             return .init(inputKind: "two_approved_saved_responses", method: "explicit_ordered_structure_diff",
@@ -42,7 +42,7 @@ enum MCPCapabilitiesManifestBuilder {
             return .init(inputKind: "retained_image_response", method: "exact_metadata_and_sampled_pixel_heuristics",
                 limits: ["encodedBytes": ImageInspectionPreflight.maximumEncodedBytes, "pixels": ImageInspectionPreflight.maximumPixels,
                     "frames": ImageInspectionPreflight.maximumFrames, "decodedBytes": ImageInspectionPreflight.maximumDecodedBytes, "inspectedFrames": 1],
-                coverage: "Frame zero only; palette/blank-image findings are sampled heuristics. No OCR or semantic recognition.", nextAction: "Review source metadata and qualified image evidence.")
+                coverage: "Frame zero. Optional body-approved JPEG crop or heuristic OCR. Palette findings are sampled.", nextAction: "Request pixels only when metadata or OCR is insufficient.")
         default: return nil
         }
     }
@@ -62,7 +62,7 @@ enum MCPCapabilitiesManifestBuilder {
 
     /// Production MCP tools mirrored by ``MCPProtocolService/handleToolsList``.
     static let productionTools: [ProductionTool] = [
-        ProductionTool(name: "capture_calculate", description: "For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Filtered metadata uses search permissions and reports its snapshot revision. Explicit session IDs require sensitive-read approval.", capability: .sessionSearch),
+        ProductionTool(name: "capture_calculate", description: "Count by HTTP status (status histogram) in one call: filter startedAfter/startedBefore, dataset sessionMetadata, empty selectionPointer, groupCount on /statusCode. Includes missing status. Check omitted groups and capture coverage.", capability: .sessionSearch),
         ProductionTool(name: "artifact_source_register", description: "Request local file selection and review of one immutable temporary source. No remote path input. The local user selects and shares; retry the same request key after approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_status", description: "Owner-only pending source state; no selected-file metadata before approval.", capability: .artifactSourceAccess),
         ProductionTool(name: "artifact_source_inspect", description: "Inspect an owned unexpired source descriptor. No raw content or local filenames.", capability: .artifactSourceAccess),
@@ -71,26 +71,28 @@ enum MCPCapabilitiesManifestBuilder {
         ProductionTool(name: "artifact_search", description: "Find exact UTF-8 byte ranges in one reviewed snapshot with search-v1 consent. Returns references, coverage and a cursor.", capability: .artifactSearch),
         ProductionTool(name: "artifact_compare_responses", description: "Compare two explicitly selected saved responses after local Compare once approval.", capability: .artifactCompare),
         ProductionTool(name: "artifact_response_brief", description: "Describe fields, counts and optional nested structure for one locally approved saved JSON response.", capability: .artifactBrief),
-        ProductionTool(name: "artifact_calculate", description: "Run six typed calculations over one approved saved source. Requires calculations-v1 consent and current shareable policy. Complete-domain exact results, bounded group output; no arbitrary code, approximate counts or file writes.", capability: .artifactCalculate),
+        ProductionTool(name: "artifact_calculate", description: "Run exact typed calculations on an approved saved source with calculations-v1 consent. Check group omissions.", capability: .artifactCalculate),
         ProductionTool(name: "documentation_list", description: "List bundled documentation topics with bounded pagination. Read-only; no runtime readiness claim.", capability: .agentResource),
         ProductionTool(name: "documentation_search", description: "Search bundled Help and workflows before requesting detailed sections. No traffic access.", capability: .agentResource),
         ProductionTool(name: "documentation_read", description: "Read a documentation topic or section. Follow continuation before treating instructions as complete.", capability: .agentResource),
-        ProductionTool(name: "agent_toolset_status", description: "Report the current discovery toolset and full policy-available tool count.", capability: .agentResource),
+        ProductionTool(name: "agent_toolset_status", description: "Selected toolset and available tool count.", capability: .agentResource),
+        ProductionTool(name: "tool_find", description: "Find policy-visible tools by keywords without listing schemas.", capability: .agentResource),
         ProductionTool(name: "agent_toolset_select", description: "Select a compact tools/list catalog. Discovery only; policy-permitted tools remain callable.", capability: .agentResource),
         ProductionTool(name: "sessions_list", description: "List individual capture sessions in pages, minimal by default. For counts by status within a time window, use capture_calculate.", capability: .sessionList),
         ProductionTool(name: "sessions_search", description: "Find individual matching requests in pages. For totals or a status histogram over a time window, use capture_calculate.", capability: .sessionSearch),
         ProductionTool(name: "capture_digest", description: "Compact capture state for conditional follow-up reads.", capability: .captureResource),
+        ProductionTool(name: "capture_wait", description: "Wait for new matching requests without polling.", capability: .sessionSearch),
         ProductionTool(name: "audit_cache_efficiency", description: "Audits captured sessions for caching inefficiencies, duplicate un-cached requests, conflicting headers, and bandwidth waste.", capability: .captureResource),
         ProductionTool(name: "investigation_snapshot", description: "Bounded recent traffic decision surface with client-scoped evidence references.", capability: .captureResource),
         ProductionTool(name: "evidence_get", description: "Resolve one unexpired client-scoped evidence reference without expanding its original disclosure.", capability: .sessionSummary),
         ProductionTool(name: "read_batch", description: "Run up to eight bounded read-only tools and return structured results in one response.", capability: .captureResource),
         ProductionTool(name: "capture_marker_create", description: "Insert a named timeline marker into the capture stream without upstream traffic.", capability: .captureResource),
         ProductionTool(name: "capture_restore_rolling", description: "Restore the latest rolling auto-save snapshot into the live capture store.", capability: .captureResource),
-        ProductionTool(name: "session_summary", description: "Summary for one session ID, including body availability and bounded transportDiagnostic reasons, read-only recovery checks and verification under existing disclosure policy. Missing bodies do not establish device profile or trust failure. Guidance never authorizes replay or routing changes.", capability: .sessionSummary),
+        ProductionTool(name: "session_summary", description: "Inspect one session, body availability and bounded transport diagnostics. Sensitive fields require approval.", capability: .sessionSummary),
         ProductionTool(name: "list_discovered_devices", description: "List locally discovered proxy clients with aliases and capture counts.", capability: .deviceInspect),
         ProductionTool(name: "set_device_alias", description: "Set or clear a local friendly alias for a discovered client IP address.", capability: .deviceAliasManage),
-        ProductionTool(name: "response_evidence_brief", description: "Deterministic counts and immediate field types/null/missing counts for one complete retained JSON response or explicit pointer. Requires body-read approval. No scalar values, inference or automatic refetch. Coverage and source digest accompany results.", capability: .sessionSummary),
-        ProductionTool(name: "investigation_compare_brief", description: "Compare explicit baseline and candidate session selections with bounded request alignment and observed JSON structure changes. Requires structural metadata and body-read approval. Missing sources and analysis limits remain incomplete; no target-outcome or cleanup claim.", capability: .sessionSummary),
+        ProductionTool(name: "response_evidence_brief", description: "Count and project fields from one complete retained JSON response or pointer with body-read approval. Returns source digest and coverage.", capability: .sessionSummary),
+        ProductionTool(name: "investigation_compare_brief", description: "Compare selected baseline and candidate requests and JSON changes with body-read approval. Check missing sources and alignment coverage.", capability: .sessionSummary),
         ProductionTool(name: "sessions_export", description: "Bulk session export as JSON, NDJSON, or HAR. Use deliverFile for full-capture file delivery (CLI --output / GUI Export All parity). Headers/bodies require the same approval as session_summary.", capability: .sessionSummary),
         ProductionTool(name: "repro_export_package", description: "Export a privacy-sanitized reproduction package to a managed local file.", capability: .sessionSummary),
         ProductionTool(name: "repro_inspect_package", description: "Inspect a bounded base64-encoded reproduction package without replaying it.", capability: .sessionSummary),

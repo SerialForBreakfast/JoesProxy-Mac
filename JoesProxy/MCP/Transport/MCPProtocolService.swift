@@ -452,14 +452,14 @@ final class MCPProtocolService {
             client = try clientRegistry.authenticate(bearerToken: token)
         } catch {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "authorization_invalid")
             return unauthorizedResponse()
         }
         guard client.credentialState == .active else {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "credential_inactive")
             return unauthorizedResponse()
@@ -468,7 +468,7 @@ final class MCPProtocolService {
               rateLimiter.allowFingerprintRequest(fingerprint, rateClass: rateClass),
               rateLimiter.allowClientRequest(clientID: client.id, rateClass: rateClass) else {
             MCPLog.auth.notice("Rate limited client \(client.id, privacy: .public).")
-            return rateLimitedResponse()
+            return rateLimitedResponse(fingerprint: fingerprint, clientID: client.id, rateClass: rateClass)
         }
         guard beginInFlight(clientID: client.id) else {
             MCPLog.protocolLog.notice("Rejected request: client in-flight limit reached for \(client.id, privacy: .public).")
@@ -498,14 +498,14 @@ final class MCPProtocolService {
             client = try clientRegistry.authenticate(bearerToken: token)
         } catch {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "authorization_invalid")
             return unauthorizedResponse()
         }
         guard client.credentialState == .active else {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "credential_inactive")
             return unauthorizedResponse()
@@ -513,7 +513,7 @@ final class MCPProtocolService {
         guard rateLimiter.allowGlobalRequest(rateClass: .controlPlane),
               rateLimiter.allowFingerprintRequest(fingerprint, rateClass: .controlPlane),
               rateLimiter.allowClientRequest(clientID: client.id, rateClass: .controlPlane) else {
-            return rateLimitedResponse()
+            return rateLimitedResponse(fingerprint: fingerprint, clientID: client.id, rateClass: .controlPlane)
         }
         guard beginInFlight(clientID: client.id) else {
             return busyResponse()
@@ -623,14 +623,14 @@ final class MCPProtocolService {
             client = try clientRegistry.authenticate(bearerToken: token)
         } catch {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return .rejected(response: rateLimitedResponse())
+                return .rejected(response: rateLimitedResponse(fingerprint: fingerprint))
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "authorization_invalid")
             return .rejected(response: unauthorizedResponse())
         }
         guard client.credentialState == .active else {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return .rejected(response: rateLimitedResponse())
+                return .rejected(response: rateLimitedResponse(fingerprint: fingerprint))
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "credential_inactive")
             return .rejected(response: unauthorizedResponse())
@@ -638,7 +638,7 @@ final class MCPProtocolService {
         guard rateLimiter.allowGlobalRequest(rateClass: .controlPlane),
               rateLimiter.allowFingerprintRequest(fingerprint, rateClass: .controlPlane),
               rateLimiter.allowClientRequest(clientID: client.id, rateClass: .controlPlane) else {
-            return .rejected(response: rateLimitedResponse())
+            return .rejected(response: rateLimitedResponse(fingerprint: fingerprint, clientID: client.id, rateClass: .controlPlane))
         }
         let context = RequestContext(headers: normalizedHeaders, remoteAddress: nil)
         if let rejection = sessionHTTPRejection(for: "GET", id: nil, client: client, context: context) {
@@ -1226,6 +1226,27 @@ final class MCPProtocolService {
             )
         )
         switch name {
+        case "tool_find":
+            guard let query = arguments["query"] as? String, query.utf8.count <= 128,
+                  Set(arguments.keys) == ["query"] else {
+                return structuredErrorJSONRPC(id: id, error: .malformedRequest(message: "Supply a query of up to 128 UTF-8 bytes."))
+            }
+            let terms = query.lowercased().split(whereSeparator: { $0.isWhitespace })
+            guard !terms.isEmpty else {
+                return structuredErrorJSONRPC(id: id, error: .malformedRequest(message: "Supply at least one keyword."))
+            }
+            let matches = policyAvailableProductionTools(for: client).filter { tool in
+                let searchable = "\(tool.name) \(tool.description)".lowercased()
+                return terms.allSatisfy { searchable.contains(String($0)) }
+            }.sorted { left, right in
+                let leftExact = left.name == terms.joined(separator: "_")
+                let rightExact = right.name == terms.joined(separator: "_")
+                return leftExact != rightExact ? leftExact : left.name < right.name
+            }
+            return toolStructuredResult(id: id, payload: [
+                "tools": matches.prefix(8).map { ["name": $0.name, "description": $0.description] },
+                "matchCount": matches.count
+            ])
         case "agent_toolset_status":
             return toolsetStatusTool(id: id, client: client, relistRequired: false)
         case "agent_toolset_select":
@@ -1242,6 +1263,35 @@ final class MCPProtocolService {
             )
         case "capture_digest":
             return captureDigestTool(id: id, arguments: arguments)
+        case "capture_wait":
+            do {
+                struct Wait: Decodable { let count: Int?; let seconds: Int?; let method: String?; let statusClass: String? }
+                guard Set(arguments.keys).isSubset(of: ["count", "seconds", "method", "statusClass"]),
+                      let wait = try? JSONDecoder().decode(Wait.self, from: JSONSerialization.data(withJSONObject: arguments)),
+                      (1...100).contains(wait.count ?? 1), (1...5).contains(wait.seconds ?? 3),
+                      wait.method.map({ !$0.isEmpty && $0.utf8.count <= 32 }) ?? true,
+                      wait.statusClass.map({ ["2xx", "3xx", "4xx", "5xx", "error", "non200"].contains($0) }) ?? true
+                else { throw MCPStructuredError.malformedRequest(message: "Use count 1...100, seconds 1...5 and optional method or statusClass.") }
+                let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
+                guard (wait.method == nil || profile.allowedFieldClasses.contains(.method)),
+                      (wait.statusClass == nil || profile.allowedFieldClasses.contains(.statusCode)) else {
+                    throw ArtifactAnalysisFailure.sourceUnavailable
+                }
+                let policy = policyStore.policyRevision
+                let epoch = snapshotService.captureEpoch
+                let wanted = wait.count ?? 1
+                let matched = try await snapshotService.waitForMatches(wanted, seconds: wait.seconds ?? 3,
+                    filter: .init(method: wait.method, statusClass: wait.statusClass), disclosure: disclosureSerializer)
+                guard let current = clientRegistry.client(id: client.id), current.credentialGeneration == client.credentialGeneration,
+                      current.credentialState == .active, current.assignedProfileID == client.assignedProfileID,
+                      policy == policyStore.policyRevision, policyEvaluator.effectiveAllows(capability: .sessionSearch, client: current)
+                else { throw ArtifactAnalysisFailure.sourceUnavailable }
+                guard epoch == snapshotService.captureEpoch else { throw ArtifactAnalysisFailure.sourceChanged }
+                return toolStructuredResult(id: id, payload: ["outcome": matched == wanted ? "matched" : "timeout",
+                    "matched": matched, "captureEpoch": epoch.rawValue, "latestSequence": snapshotService.highWaterSequence])
+            } catch let error as MCPStructuredError {
+                return structuredErrorJSONRPC(id: id, error: error)
+            } catch { return artifactAnalysisError(id: id, error: error) }
         case "documentation_list", "documentation_search", "documentation_read":
             do {
                 let query = try DocumentationCatalog.Query(operation: String(name.dropFirst("documentation_".count)), arguments: arguments)
@@ -1254,6 +1304,9 @@ final class MCPProtocolService {
                 return structuredErrorJSONRPC(id: id, error: MCPStructuredError(code: .internalFailure, message: "Documentation is unavailable."))
             }
         case "audit_cache_efficiency":
+            if arguments["includeImageIdentity"] as? Bool == true {
+                return await repeatedImageAudit(id: id, arguments: arguments, client: client, context: context)
+            }
             return auditCacheEfficiencyTool(id: id)
         case "investigation_snapshot":
             return investigationSnapshotTool(id: id, arguments: arguments, client: client)
@@ -1426,6 +1479,9 @@ final class MCPProtocolService {
         case "cmcd_telemetry_inspection", "webvtt_subtitle_inspection", "drm_handshake_inspection",
              "byte_range_efficiency_inspection", "streaming_waterfall_inspection",
              "visual_asset_inspection", "scte35_ad_break_inspection":
+            if name == "visual_asset_inspection", arguments["view"] != nil {
+                return await imageView(id: id, arguments: arguments, client: client, context: context)
+            }
             return await advancedMediaInspectionTool(id: id, name: name, arguments: arguments, client: client)
         case "list_synthetic_assets", "propose_inject_synthetic_item", "list_synthetic_injection_plans",
              "remove_synthetic_injection_plan":
@@ -1485,7 +1541,10 @@ final class MCPProtocolService {
             if available.contains(tool.name) { status.analysis[tool.name] = analysis }
             else { status.unavailableAnalyses.append(tool.name) }
         }
-        status.unavailableAnalyses += ["vision_ocr", "semantic_artifact_search"]
+        status.unavailableAnalyses.append("semantic_artifact_search")
+        if !available.contains("visual_asset_inspection") || !policyEvaluator.effectiveAllows(capability: .bodyRead, client: client) {
+            status.unavailableAnalyses.append("vision_ocr")
+        }
         do {
             return try encodedToolResult(id: id, payload: MCPDTOEnvelope(payload: status))
         } catch {
@@ -1582,6 +1641,27 @@ final class MCPProtocolService {
             } else {
                 deduplicateBy = nil
             }
+            let example: MCPSessionSnapshotService.EndpointExample?
+            let statistics = arguments["includeEndpointStatistics"] as? Bool ?? false
+            if statistics {
+                guard deduplicateBy == "endpoint" else { throw MCPStructuredError.malformedRequest(message: "Endpoint statistics require endpoint grouping.") }
+                guard profile.allowedFieldClasses.contains(.duration),
+                      policyEvaluator.effectiveAllows(capability: .captureResource, client: client) else {
+                    throw MCPStructuredError(code: .policyDenied, message: "Endpoint statistics require duration and capture audit access.")
+                }
+            }
+            if let raw = arguments["endpointExample"] {
+                guard deduplicateBy == "endpoint", let text = raw as? String,
+                      let selection = MCPSessionSnapshotService.EndpointExample(rawValue: text) else {
+                    throw MCPStructuredError.malformedRequest(message: "endpointExample requires endpoint grouping and first, latest or slowest.")
+                }
+                if selection == .slowest, !profile.allowedFieldClasses.contains(.duration) {
+                    throw MCPStructuredError(code: .policyDenied, message: "Slowest example requires duration disclosure.")
+                }
+                example = selection
+            } else {
+                example = nil
+            }
             let includeAuthChain: Bool
             if let rawAuth = arguments["includeAuthChain"] {
                 guard let flag = rawAuth as? Bool else {
@@ -1607,24 +1687,38 @@ final class MCPProtocolService {
             let page = try snapshotService.page(
                 request: .init(limit: requestedLimit, cursor: cursor, queryDigest: effectiveQueryDigest,
                                orderingDigest: "sequence_asc", filter: filter, minimumSequenceExclusive: sinceSequence,
-                               includeAggregateInput: deduplicateBy != nil || includeAuthChain),
+                               includeAggregateInput: includeAuthChain),
                 clientID: client.id, policyRevision: policyRevision)
             var endpointGroups: [MCPEndpointGroupDTO]?
+            var matchCount = page.aggregateInput?.count
+            var omittedGroups: Int?
             var authChain: AuthChainBrief.Report?
-            if let matches = page.aggregateInput {
+            if deduplicateBy != nil || includeAuthChain {
                 // Capture membership and page rows together on the main actor. Hash headers only on
                 // the analysis worker, then revalidate access before releasing either result.
                 let serializer = disclosureSerializer
                 guard !artifactWorker.busy else {
                     throw MCPStructuredError(code: .busy, message: "Another analysis is running. Retry this search.")
                 }
-                (endpointGroups, authChain) = try await artifactWorker.perform {
-                    let groups = deduplicateBy == "endpoint" ? MCPSessionSnapshotService.deduplicateEndpoints(
-                        items: matches, profile: profile, disclosure: serializer) : nil
-                    let chain = includeAuthChain ? AuthChainBrief.analyze(records: matches.map(\.record),
-                        disclosure: serializer, inspectionLimit: matches.count) : nil
+                let snapshot = snapshotService.endpointSnapshot
+                let (report, chain) = try await artifactWorker.perform {
+                    let match = { (record: SessionRecord) -> MCPSessionSnapshotService.IndexedSession? in
+                        guard let sequence = snapshot.sequences[record.id], sequence > sinceSequence,
+                              sequence <= page.highWaterSequence,
+                              MCPSessionSnapshotService.matchesFilter(record, filter: filter, disclosure: nil) else { return nil }
+                        return .init(record: record, captureSequence: sequence)
+                    }
+                    let groups = deduplicateBy == "endpoint" ? try MCPSessionSnapshotService.deduplicateEndpoints(
+                        items: snapshot.records, indexedMatch: match, profile: profile, disclosure: serializer,
+                        example: example, includeStatistics: statistics) : nil
+                    let chain = page.aggregateInput.map { AuthChainBrief.analyze(records: $0.map(\.record),
+                        disclosure: serializer, inspectionLimit: $0.count) }
                     return (groups, chain)
                 }
+                endpointGroups = report?.groups
+                omittedGroups = report?.omittedGroups
+                matchCount = report?.matches ?? matchCount
+                authChain = chain
                 guard let current = clientRegistry.client(id: client.id), current.credentialState == .active,
                       current.credentialGeneration == client.credentialGeneration,
                       current.assignedProfileID == client.assignedProfileID, policyStore.policyRevision == policyRevision,
@@ -1670,8 +1764,9 @@ final class MCPProtocolService {
                     projection: projection,
                     latestSequence: latestSequence,
                     stateToken: stateToken,
-                    aggregateScope: page.aggregateInput == nil ? nil : "allMatches",
-                    aggregateMatchCount: page.aggregateInput?.count,
+                    aggregateScope: matchCount == nil ? nil : "allMatches",
+                    aggregateMatchCount: matchCount,
+                    omittedEndpointGroupCount: omittedGroups,
                     endpointGroups: endpointGroups,
                     authChain: authChain
                 )
@@ -1852,6 +1947,84 @@ final class MCPProtocolService {
             return structuredErrorJSONRPC(id: id, error: error)
         } catch {
             return MCPHTTPResponse.jsonRPCObject(id: id, error: (-32002, "investigation_snapshot failed."))
+        }
+    }
+
+    private func imageView(id: Any?, arguments: [String: Any], client: MCPClientRecord, context: RequestContext) async -> [String: Any] {
+        do {
+            let sessionID = try requiredUUID(arguments["sessionID"], name: "sessionID")
+            guard let view = arguments["view"] as? [String: Any],
+                  Set(view.keys).isSubset(of: ["mode", "maxEdge", "crop", "grayscale", "quality", "includeBoxes"]),
+                  let options = try? JSONDecoder().decode(AgentImageView.Options.self, from: JSONSerialization.data(withJSONObject: view)) else {
+                throw MCPStructuredError.malformedRequest(message: "Supply valid image view options and a preview or ocr mode.")
+            }
+            try options.validate()
+            guard !artifactWorker.busy else { throw ArtifactAnalysisFailure.busy }
+            _ = try resolveSensitiveReadApproval(toolName: "visual_asset_inspection", arguments: arguments, client: client,
+                capability: .bodyRead, mcpSessionID: context.headers[MCPNetworkConstants.sessionIDHeader.lowercased()],
+                reason: "Inspect the selected image body and disclose the requested pixels or recognized text.")
+            let policy = policyStore.policyRevision
+            let grant = grantStore.activeGrant(capability: .bodyRead, clientID: client.id)?.id
+            let epoch = snapshotService.captureEpoch
+            guard let revision = snapshotService.sourceRevision(for: sessionID),
+                  let record = snapshotService.indexedSession(id: sessionID)?.record, record.state == .completed,
+                  let response = record.response else { throw ArtifactAnalysisFailure.sourceUnavailable }
+            let recognition = options.mode == .ocr ? AgentImageView.TextRecognition() : nil
+            let output = try await withTaskCancellationHandler {
+                try await artifactWorker.perform { try AgentImageView.render(response, options: options, recognition: recognition) }
+            } onCancel: { recognition?.cancel() }
+            guard !Task.isCancelled, policy == policyStore.policyRevision,
+                  grant == grantStore.activeGrant(capability: .bodyRead, clientID: client.id)?.id,
+                  let current = clientRegistry.client(id: client.id), current.credentialState == .active,
+                  current.credentialGeneration == client.credentialGeneration, current.assignedProfileID == client.assignedProfileID,
+                  policyEvaluator.effectiveAllows(capability: .bodyRead, client: current),
+                  policyEvaluator.effectiveAllows(capability: .mediaAdvancedInspection, client: current) else {
+                throw ArtifactAnalysisFailure.sourceUnavailable
+            }
+            guard epoch == snapshotService.captureEpoch, revision == snapshotService.sourceRevision(for: sessionID) else {
+                throw ArtifactAnalysisFailure.sourceChanged
+            }
+            var payload = try encodedObject(output.metadata)
+            payload["sessionID"] = sessionID.uuidString
+            payload["sourceRevision"] = revision
+            guard let jpeg = output.jpeg else { return toolStructuredResult(id: id, payload: payload) }
+            return ["id": id as Any, "jsonrpc": "2.0", "result": ["structuredContent": payload,
+                "content": [["type": "image", "mimeType": "image/jpeg", "data": jpeg.base64EncodedString()]]]]
+        } catch let error as MCPStructuredError {
+            return structuredErrorJSONRPC(id: id, error: error)
+        } catch {
+            return artifactAnalysisError(id: id, error: error)
+        }
+    }
+
+    private func repeatedImageAudit(id: Any?, arguments: [String: Any], client: MCPClientRecord, context: RequestContext) async -> [String: Any] {
+        do {
+            guard !artifactWorker.busy else { throw ArtifactAnalysisFailure.busy }
+            _ = try resolveSensitiveReadApproval(toolName: "audit_cache_efficiency", arguments: arguments, client: client,
+                capability: .bodyRead, mcpSessionID: context.headers[MCPNetworkConstants.sessionIDHeader.lowercased()],
+                reason: "Compare complete retained image bodies across capture URLs.")
+            let revision = snapshotService.stateRevision
+            let epoch = snapshotService.captureEpoch
+            let policy = policyStore.policyRevision
+            let grantID = grantStore.activeGrant(capability: .bodyRead, clientID: client.id)?.id
+            let records = snapshotService.sourceSessionStore.sessions
+            let report = try await artifactWorker.perform { try RepeatedImageAudit.inspect(records) }
+            guard policy == policyStore.policyRevision, let current = clientRegistry.client(id: client.id),
+                  grantID == grantStore.activeGrant(capability: .bodyRead, clientID: client.id)?.id,
+                  current.credentialState == .active, current.credentialGeneration == client.credentialGeneration,
+                  current.assignedProfileID == client.assignedProfileID,
+                  policyEvaluator.effectiveAllows(capability: .bodyRead, client: current) else {
+                throw ArtifactAnalysisFailure.sourceUnavailable
+            }
+            guard revision == snapshotService.stateRevision, epoch == snapshotService.captureEpoch else {
+                throw ArtifactAnalysisFailure.sourceChanged
+            }
+            return toolStructuredResult(id: id, payload: ["imageIdentity": try encodedObject(report),
+                "captureEpoch": epoch.rawValue, "stateRevision": revision])
+        } catch let error as MCPStructuredError {
+            return structuredErrorJSONRPC(id: id, error: error)
+        } catch {
+            return artifactAnalysisError(id: id, error: error)
         }
     }
 
@@ -2472,7 +2645,12 @@ final class MCPProtocolService {
               let filter = sessionsSearchFilter(arguments: scope), let start = filter.startedAfter,
               let end = filter.startedBefore, start <= end else { throw ArtifactAnalysisFailure.malformedRequest }
         let query = try ArtifactCalculation.Query(selectionPointer: "", operation: operation)
-        guard query.kind == .rowCount || (query.kind == .groupCount && query.fieldPointer == "/statusCode"),
+        let bucketSeconds: Int? = switch query.fieldPointer {
+        case "/minuteStartUnixSeconds": 60
+        case "/hourStartUnixSeconds": 3600
+        default: nil
+        }
+        guard query.kind == .rowCount || (query.kind == .groupCount && (query.fieldPointer == "/statusCode" || bucketSeconds != nil)),
               query.predicate == nil || query.predicate?.fieldPointer == "/statusCode" else {
             throw ArtifactAnalysisFailure.malformedRequest
         }
@@ -2481,7 +2659,9 @@ final class MCPProtocolService {
         if filter.pathContains != nil { fields.insert(.sanitizedPath) }
         if filter.domain != nil { fields.insert(.sanitizedHost) }
         if filter.method != nil { fields.insert(.method) }
-        if query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode" { fields.insert(.statusCode) }
+        let needsStatus = query.fieldPointer == "/statusCode" || query.predicate?.fieldPointer == "/statusCode"
+        let bucketField = String(query.fieldPointer.dropFirst())
+        if needsStatus { fields.insert(.statusCode) }
         guard policyEvaluator.effectiveAllows(capability: .sessionSearch, client: client),
               fields.isSubset(of: profile.allowedFieldClasses) else {
             throw MCPStructuredError(code: .policyDenied, message: "Profile does not grant the selected metadata.")
@@ -2491,17 +2671,19 @@ final class MCPProtocolService {
         let epoch = snapshotService.captureEpoch
         let policy = policyStore.policyRevision
         let records = snapshotService.sourceSessionStore.sessions
-        guard records.count <= 50_000 else { throw ArtifactAnalysisFailure.inputLimit }
         let serializer = disclosureSerializer
-        let needsStatus = query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode"
         let report = try await artifactWorker.perform {
             let deadline = ContinuousClock.now.advanced(by: .seconds(1))
             return try ArtifactCalculation.analyze(source: records, query: query, deadline: deadline) { record in
                 guard MCPSessionSnapshotService.matchesFilter(record, filter: filter, disclosure: serializer) else { return nil }
-                if needsStatus, let status = record.response?.statusCode {
-                    return .object([("statusCode", .number(String(status)))])
+                var values: [(String, ArtifactJSONValue)] = []
+                if let seconds = bucketSeconds {
+                    let start = floor(record.timing.startedAt.timeIntervalSince1970 / Double(seconds)) * Double(seconds)
+                    guard let stamp = Int64(exactly: start) else { throw ArtifactAnalysisFailure.invalidOperand }
+                    values.append((bucketField, .number(String(stamp))))
                 }
-                return .object([])
+                if needsStatus, let status = record.response?.statusCode { values.append(("statusCode", .number(String(status)))) }
+                return .object(values)
             }
         }
         guard let current = clientRegistry.client(id: client.id), current.credentialState == .active,
@@ -5494,6 +5676,13 @@ final class MCPProtocolService {
         switch name {
         case "agent_toolset_status":
             inputSchema = ["type": "object", "additionalProperties": false]
+        case "tool_find":
+            inputSchema = ["type": "object", "properties": ["query": ["type": "string", "minLength": 1, "maxLength": 128]],
+                           "required": ["query"], "additionalProperties": false]
+        case "capture_wait":
+            inputSchema = ["type": "object", "properties": ["count": ["type": "integer", "minimum": 1, "maximum": 100],
+                "seconds": ["type": "integer", "minimum": 1, "maximum": 5], "method": ["type": "string", "maxLength": 32],
+                "statusClass": ["type": "string", "enum": ["2xx", "3xx", "4xx", "5xx", "error", "non200"]]], "additionalProperties": false]
         case "documentation_list", "documentation_search", "documentation_read":
             inputSchema = ["type": "object", "properties": [
                 "query": ["type": "string", "maxLength": 512],
@@ -5541,6 +5730,8 @@ final class MCPProtocolService {
             properties["hasOverrideHit"] = ["type": "boolean", "description": "Filter by whether an active rule/effect matched."]
             properties["bodyAvailable"] = ["type": "boolean", "description": "Filter by whether response body bytes are retained."]
             properties["deduplicateBy"] = ["type": "string", "enum": ["endpoint"], "description": "Group all matching sessions in the cursor range. Returns up to 32 endpoint groups and the total aggregateMatchCount."]
+            properties["endpointExample"] = ["type": "string", "enum": ["first", "latest", "slowest"], "description": "One matching session ID per endpoint group."]
+            properties["includeEndpointStatistics"] = ["type": "boolean", "description": "Nearest-rank p95 duration and response size with sample counts."]
             properties["includeAuthChain"] = ["type": "boolean", "description": "Inspect credential and cookie continuity across all matches in the cursor range. The report counts omitted tokens and anomalies."]
             inputSchema = [
                 "type": "object",
@@ -5566,7 +5757,7 @@ final class MCPProtocolService {
         case "audit_cache_efficiency":
             inputSchema = [
                 "type": "object",
-                "properties": [:],
+                "properties": ["includeImageIdentity": ["type": "boolean", "description": "Return cross-URL image content groups. Requires body access."]],
                 "additionalProperties": false
             ]
         case "investigation_snapshot":
@@ -7216,7 +7407,17 @@ final class MCPProtocolService {
                 ],
                 "additionalProperties": false
             ]
-        case "streaming_waterfall_inspection", "visual_asset_inspection":
+        case "visual_asset_inspection":
+            let viewProperties: [String: Any] = [
+                "mode": ["type": "string", "enum": ["preview", "ocr"]],
+                "maxEdge": ["type": "integer", "minimum": 32, "maximum": 1024],
+                "crop": ["type": "array", "minItems": 4, "maxItems": 4, "items": ["type": "number"]],
+                "grayscale": ["type": "boolean"], "quality": ["type": "number", "minimum": 0.1, "maximum": 1],
+                "includeBoxes": ["type": "boolean"]]
+            inputSchema = ["type": "object", "properties": ["sessionID": ["type": "string", "format": "uuid"],
+                "view": ["type": "object", "properties": viewProperties, "required": ["mode"], "additionalProperties": false]],
+                "required": ["sessionID"], "additionalProperties": false]
+        case "streaming_waterfall_inspection":
             inputSchema = [
                 "type": "object",
                 "properties": ["sessionID": ["type": "string", "format": "uuid"]],
@@ -7263,13 +7464,13 @@ final class MCPProtocolService {
         case "effect_bundle_prepare":
             inputSchema = ["type": "object", "properties": [
                 "relatedResponsesJSON": ["type": "string", "maxLength": 65536,
-                    "description": "JSON array of at most 8 distinct captured GET sources. Each entry: sessionID (complete source body), optional targetSessionID (observed GET destination; defaults to source) OR targetPath (unobserved root-relative path on source origin, maximum 4096 UTF-8 bytes, exact query matching; incompatible with targetSessionID and ignoredQueryNames), edits [{pointer,value}] using typed JSON, images [{pointer,assetID}] referencing image-N IDs in images array order, identityLinks [{pointer,primaryPointer}] linking to prepared primary JSON. At least one identity link per resource. Optional ignoredQueryNames lists 1–16 reviewed rotating names; all other query items must match. Exact captured destination/query is the default; no refetch or fabricated capture identity. Example: [{\"sessionID\":\"<source UUID>\",\"targetSessionID\":\"<target UUID>\",\"edits\":[{\"pointer\":\"/title\",\"value\":\"JoesProxy\"}],\"identityLinks\":[{\"pointer\":\"/id\",\"primaryPointer\":\"/items/0/id\"}]}]"],
+                    "description": "Up to 8 captured GETs with identityLinks, typed edits and optional images. See reference-tools / effect-bundle-prepare for fields and examples."],
                 "sessionID": ["type": "string", "format": "uuid"],
                 "name": ["type": "string", "minLength": 1],
                 "idempotencyKey": ["type": "string", "minLength": 1, "maxLength": 256],
                 "clientAddress": ["type": "string", "minLength": 1],
                 "draftJSON": ["type": "string", "maxLength": CollectionMockDraftDecoder.maximumInputBytes,
-                    "description": "Collection draft with identityPointers. For a frozen batch, supply templateIndex and expansionItems: 1–100 objects with edits [{pointer,value}] and optional images [{pointer,assetID}] referencing supplied image-N assets. Supply unique identities for every copy. Shared edits and primary image bindings apply to all copies; overlapping pointers reject. Batch order is preserved for append and prepend. Only declared countPointers change. Whole preparation fails on any invalid item; no partial publication. identityPresence accepts required (default) or wherePresent for heterogeneous objects; present null/type mismatches still fail. Optional ignoredQueryNames lists 1–16 reviewed query names; other query items must match. 64 KiB input, 5 MiB output. Activation remains separate."],
+                    "description": "Collection draft with identityPointers and optional expansionItems. See reference-tools / effect-bundle-prepare for batch constraints."],
                 "images": ["type": "array", "maxItems": 16, "items": [
                     "type": "object", "properties": [
                         "itemPointer": ["type": "string", "description": "Shared primary item JSON Pointer. Omit for per-item batch or related-only artwork; expansionItems or a related response must explicitly bind this image-N asset ID (zero-based images array order)."],
@@ -7756,7 +7957,7 @@ final class MCPProtocolService {
         }
         // MCP CallToolResult requires `content`; negotiated clients receive a conforming empty
         // array instead of duplicated textual JSON while `structuredContent` remains authoritative.
-        result["content"] = [] as [[String: Any]]
+        result["content"] = (result["content"] as? [[String: Any]] ?? []).filter { $0["type"] as? String == "image" }
         var compact = response
         compact["result"] = result
         return compact
@@ -7864,8 +8065,22 @@ final class MCPProtocolService {
         MCPHTTPResponse.response(status: 401, headers: [:], body: Data("Unauthorized".utf8))
     }
 
-    private func rateLimitedResponse() -> MCPHTTPResponse {
-        MCPHTTPResponse.response(status: 429, headers: [:], body: Data("Rate limited".utf8))
+    /// A structured 429 so a client can back off for the right interval instead of guessing.
+    /// The interval comes from the fullest bucket that applies; no other client's state is disclosed.
+    private func rateLimitedResponse(fingerprint: String, clientID: String? = nil,
+                                     rateClass: MCPRequestRateClass = .substantive) -> MCPHTTPResponse {
+        let retryAfter = rateLimiter.retryAfterSeconds(clientID: clientID, fingerprint: fingerprint, rateClass: rateClass)
+        let error = MCPStructuredError(
+            code: .rateLimited,
+            message: "Request rate limit reached. Retry after \(retryAfter) seconds.",
+            details: ["retryAfterSeconds": String(retryAfter),
+                      "limitWindowSeconds": String(Int(rateLimiter.activeConfiguration.window))]
+        )
+        return MCPHTTPResponse.response(
+            status: 429,
+            headers: ["Content-Type": "application/json", "Retry-After": String(retryAfter)],
+            body: (try? JSONEncoder().encode(error)) ?? Data("Rate limited".utf8)
+        )
     }
 
     private func busyResponse() -> MCPHTTPResponse {

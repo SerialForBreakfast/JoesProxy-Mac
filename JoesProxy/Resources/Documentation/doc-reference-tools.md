@@ -2,6 +2,26 @@
 
 ## Scope {#safety}
 
+Use `joesproxyctl cache audit --image-identity` to group complete captured image files
+across URLs. The optional MCP argument `includeImageIdentity` requests only content groups.
+This reads captured bodies under existing local approval. Check skipped inputs and omitted groups.
+
+For a time window's failed endpoints, counts and one example, run
+`joesproxyctl sessions search --since <start> --until <end> --status-class error --deduplicate-by endpoint --endpoint-example slowest --limit 1 --json`.
+The equivalent MCP parameter is `endpointExample` (first, latest, or slowest). Slowest uses
+the earliest captured session in a duration tie and requires duration disclosure. An endpoint
+with no observed duration has no slowest example. Results contain at most 32 endpoint groups.
+`aggregateMatchCount` covers all retained matches at the cursor watermark.
+`omittedEndpointGroupCount` counts additional distinct endpoint signatures. Endpoint grouping
+can scan beyond 50,000 matches. Requesting an auth-chain summary in the same call applies that
+summary's 50,000-match limit. Narrow the time window if an analysis exceeds its time budget.
+Request `includeEndpointStatistics` (CLI `--endpoint-statistics`) for nearest-rank p95 duration
+and recorded response body size, with sample counts. Missing measurements are excluded.
+
+Use `joesproxyctl toolset find --query <keywords>` or `tool_find` to search the current
+client's policy-visible catalog. The response contains at most eight names and descriptions
+and a total match count. Call a known tool directly to avoid an extra discovery round trip.
+
 Generated from MCPCapabilitiesManifestBuilder.productionTools. This is an installed reference, not a grant or running availability claim. Use tools/list for exact input schemas and runtime_status for readiness. Mutation, replay and host profiling need their existing permissions.
 
 Analysis discovery: `tools/list` exposes `_meta.joesproxy.analysis` for response evidence briefs,
@@ -10,8 +30,7 @@ the capabilities manifest and exported guide: inputKind, method, limits, availab
 nextAction. CLI `toolset status` exposes the same policy-filtered analysis metadata plus explicit
 unavailableAnalyses. A catalog entry does not establish
 source readiness or authorization; unavailable or incomplete source analysis is explicit per call.
-Other tools retain their existing schemas and descriptions. OCR and semantic saved-artifact search
-are unavailable; no model download or shell endpoint is introduced. Saved-file authority is available
+Visual inspection accepts an optional body-approved `view` object. Use `mode: "ocr"` for text and optional normalized top-left boxes relative to the crop. Use `mode: "preview"` for a JPEG image block. Set `crop` to normalized top-left x, y, width, height in the oriented source. Set `maxEdge` to 32–1024, `quality` to 0.1–1, and `grayscale` if needed. Frame zero is used for animated inputs. Semantic saved-artifact search is unavailable. Saved-file authority is available
 only through the local selection/review flow described below, independently of live capture grants.
 
 ### Local calculations and reviewed saved sources
@@ -70,9 +89,16 @@ of silently presenting a missing companion list as a complete search.
 
 ## capture_calculate {#capture-calculate}
 
+For counts per UTC minute or hour use `groupCount` on `/minuteStartUnixSeconds` or
+`/hourStartUnixSeconds`; keys are inclusive bucket starts with exclusive bucket ends.
+Add a `where` predicate on `/statusCode` to count errors. Empty buckets have no rows.
+Check group omissions before interpreting an absent bucket as zero.
+
+Count by HTTP status (status histogram) in one call: filter startedAfter/startedBefore, dataset sessionMetadata, empty selectionPointer, groupCount on /statusCode. Includes missing status. Check omitted groups and capture coverage.
+
 For counts by HTTP status (status histogram), aggregate retained requests in one call. Use filter with inclusive startedAfter and startedBefore, dataset=sessionMetadata, selectionPointer=empty string, and operation {kind: groupCount, fieldPointer: /statusCode}. Missing status is a group. Check group omissions and capture coverage. Also supports filtered rowCount or explicit session IDs. Domain and path filters use disclosed text. Filtered metadata uses search permissions and reports its snapshot revision. Explicit session IDs require sensitive-read approval.
 
-Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. A scan above 50,000 retained sessions returns unavailable. Clearing history invalidates an in-flight scan.
+Supply exactly one of `sessionIDs` or `filter`. The filter requires `startedAfter` and `startedBefore` and accepts `method`, `domain`, and `path`. Use `dataset: sessionMetadata` and an empty `selectionPointer`. Counts cover retained matches. `rowsInOmittedGroups` accounts for rows outside the displayed groups. Missing status is a group when present. Processing is time-bounded; an expired scan returns an error. Clearing history invalidates an in-flight scan.
 
 Capability category: sessionSearch.
 
@@ -101,6 +127,8 @@ Release an owned source copy without editing its original. Cleanup remains avail
 Capability category: artifactSourceRelease.
 
 ## artifact_calculate {#artifact-calculate}
+
+Run exact typed calculations on an approved saved source with calculations-v1 consent. Check group omissions.
 
 Run six typed calculations over one approved saved source. Requires calculations-v1 consent and current shareable policy. Complete-domain exact results, bounded group output; no arbitrary code, approximate counts or file writes.
 
@@ -163,9 +191,25 @@ Capability category: agentResource.
 
 ## agent_toolset_status {#agent-toolset-status}
 
-Report the current discovery toolset and full policy-available tool count.
+Selected toolset and available tool count.
 
 Capability category: agentResource.
+
+## tool_find {#tool-find}
+
+Find policy-visible tools by keywords without listing schemas.
+
+Capability category: agentResource.
+
+## capture_wait {#capture-wait}
+
+Wait for new matching requests without polling.
+
+Use `joesproxyctl capture wait --count 2 --window-seconds 5 --status-class error` for two
+distinct newly captured failures. The wait starts at invocation. A timeout reports how many
+matched before expiry. Replacing the capture invalidates a pending wait.
+
+Capability category: sessionSearch.
 
 ## agent_toolset_select {#agent-toolset-select}
 
@@ -229,11 +273,15 @@ Capability category: captureResource.
 
 ## session_summary {#session-summary}
 
+Inspect one session, body availability and bounded transport diagnostics. Sensitive fields require approval.
+
 Summary for one session ID, including body availability and bounded transportDiagnostic reasons, read-only recovery checks and verification under existing disclosure policy. Missing bodies do not establish device profile or trust failure. Guidance never authorizes replay or routing changes.
 
 Capability category: sessionSummary.
 
 ## response_evidence_brief {#response-evidence-brief}
+
+Count and project fields from one complete retained JSON response or pointer with body-read approval. Returns source digest and coverage.
 
 Deterministic counts and immediate field types/null/missing counts for one complete retained JSON response or explicit pointer. Requires body-read approval. No scalar values, inference or automatic refetch. Coverage and source digest accompany results.
 
@@ -260,6 +308,8 @@ live locators, not immutable body references.
 Capability category: sessionSummary; sensitive analysis additionally requires bodyRead.
 
 ## investigation_compare_brief {#investigation-compare-brief}
+
+Compare selected baseline and candidate requests and JSON changes with body-read approval. Check missing sources and alignment coverage.
 
 Compare explicit baseline and candidate session selections with bounded request alignment and observed JSON structure changes. Requires structural metadata and body-read approval. Missing sources and analysis limits remain incomplete; no target-outcome or cleanup claim.
 
@@ -1415,6 +1465,10 @@ Run an integrated performance audit correlating captured network requests with h
 Capability category: diagnosticRunLifecycle.
 
 ## effect_bundle_prepare {#effect-bundle-prepare}
+
+JSON array of at most 8 distinct captured GET sources. Each entry: sessionID (complete source body), optional targetSessionID (observed GET destination; defaults to source) OR targetPath (unobserved root-relative path on source origin, maximum 4096 UTF-8 bytes, exact query matching; incompatible with targetSessionID and ignoredQueryNames), edits [{pointer,value}] using typed JSON, images [{pointer,assetID}] referencing image-N IDs in images array order, identityLinks [{pointer,primaryPointer}] linking to prepared primary JSON. At least one identity link per resource. Optional ignoredQueryNames lists 1–16 reviewed rotating names; all other query items must match. Exact captured destination/query is the default; no refetch or fabricated capture identity. Example: [{"sessionID":"<source UUID>","targetSessionID":"<target UUID>","edits":[{"pointer":"/title","value":"JoesProxy"}],"identityLinks":[{"pointer":"/id","primaryPointer":"/items/0/id"}]}]
+
+Collection draft with identityPointers. For a frozen batch, supply templateIndex and expansionItems: 1–100 objects with edits [{pointer,value}] and optional images [{pointer,assetID}] referencing supplied image-N assets. Supply unique identities for every copy. Shared edits and primary image bindings apply to all copies; overlapping pointers reject. Batch order is preserved for append and prepend. Only declared countPointers change. Whole preparation fails on any invalid item; no partial publication. identityPresence accepts required (default) or wherePresent for heterogeneous objects; present null/type mismatches still fail. Optional ignoredQueryNames lists 1–16 reviewed query names; other query items must match. 64 KiB input, 5 MiB output. Activation remains separate.
 
 Prepare an inactive immutable GET JSON fixture with optional image file bookmarks, scoped to an explicit client address. Body-read approval required; no upstream fetch or activation. Image URLs are versioned by default.
 

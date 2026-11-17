@@ -104,16 +104,24 @@ final class AuthChainBriefTests: XCTestCase {
         )
         policyStore.load()
         let profile = try policyStore.resolvedProfile(for: .shareable)
-        let groups = MCPSessionSnapshotService.deduplicateEndpoints(
-            items: page.items,
+        let groups = try MCPSessionSnapshotService.deduplicateEndpoints(
+            items: page.items, indexedMatch: { $0 },
             profile: profile,
             disclosure: serializer
-        )
+        ).groups
         // s2 (/v1/users/12345/items) and s3 (/v1/users/999999/items) collapse into one endpoint.
         XCTAssertEqual(groups.count, 2)
         let collapsed = try XCTUnwrap(groups.first { $0.count == 2 })
         XCTAssertEqual(collapsed.normalizedPath, "/v1/users/:id/items")
         XCTAssertEqual(collapsed.statusCounts, ["200": 1, "401": 1])
+        XCTAssertNil(collapsed.exampleSessionID)
+        let slowest = try MCPSessionSnapshotService.deduplicateEndpoints(
+            items: page.items, indexedMatch: { $0 }, profile: profile, disclosure: serializer, example: .slowest, includeStatistics: true).groups
+        XCTAssertEqual(slowest.first { $0.count == 2 }?.exampleSessionID, s3.id.uuidString)
+        let stats = try XCTUnwrap(slowest.first { $0.count == 2 }?.statistics)
+        XCTAssertEqual(stats.observedDurations, 2)
+        XCTAssertEqual(stats.p95DurationSeconds, 0.5)
+        XCTAssertEqual(stats.p95ResponseBodyBytes, 2)
     }
 
     func testMCPProtocolWiresSessionsSearchAuthChainAndBriefProjection() async throws {
@@ -214,6 +222,7 @@ final class AuthChainBriefTests: XCTestCase {
                     "statusClass": "4xx",
                     "limit": 1,
                     "deduplicateBy": "endpoint",
+                    "endpointExample": "latest",
                     "includeAuthChain": true
                 ]
             ]
@@ -228,6 +237,8 @@ final class AuthChainBriefTests: XCTestCase {
         XCTAssertNotNil(searchPayload["nextCursor"] as? String)
         let endpointGroups = try XCTUnwrap(searchPayload["endpointGroups"] as? [[String: Any]])
         XCTAssertEqual(endpointGroups.first?["count"] as? Int, 300)
+        let latest = try XCTUnwrap(endpointGroups.first?["exampleSessionID"] as? String)
+        XCTAssertEqual(latest, endpointGroups.first?["lastSessionID"] as? String)
         XCTAssertEqual(endpointGroups.first?["normalizedPath"] as? String, "/v1/items/:id")
         let authChain = try XCTUnwrap(searchPayload["authChain"] as? [String: Any])
         XCTAssertEqual(authChain["inspectedSessionCount"] as? Int, 300)

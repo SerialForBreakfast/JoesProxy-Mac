@@ -205,6 +205,167 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(work.value, 3)
     }
 
+    /// Every session pays for tool discovery before it does any work, so catalog size is budgeted.
+    /// Raise a budget only with a measured reason; prefer moving detail to documentation_read.
+    func testToolCatalogsStayWithinDiscoveryByteBudgets() async throws {
+        let stack = try await makeStack()
+        let full = try await callRPC(stack: stack, method: "tools/list", params: [:])
+        _ = try await callSessionSummary(stack: stack, toolName: "agent_toolset_select", toolArguments: ["toolset": "core"])
+        let core = try await callRPC(stack: stack, method: "tools/list", params: [:])
+        print("EFFICIENCY_METRIC discovery-budget-v1 fullBytes=\(full.wireBytes) coreBytes=\(core.wireBytes)")
+        // Measured 2026-11-17: core 36,817 bytes, default 74,268 bytes.
+        XCTAssertLessThanOrEqual(core.wireBytes, 36_500, "core tools/list exceeded its discovery budget")
+        XCTAssertLessThanOrEqual(full.wireBytes, 74_000, "default tools/list exceeded its discovery budget")
+        let budgets: [MCPToolset: Int] = [.capture: 47_500, .mocking: 47_500, .media: 43_200,
+                                         .reproduction: 37_500, .advanced: 46_200]
+        for toolset in MCPToolset.allCases where toolset != .core && toolset != .all {
+            let selection = try summaryPayload(from: await callSessionSummary(stack: stack,
+                toolName: "agent_toolset_select", toolArguments: ["toolset": toolset.rawValue]))
+            XCTAssertEqual(selection["selectedToolset"] as? String, toolset.rawValue)
+            let catalog = try await callRPC(stack: stack, method: "tools/list", params: [:])
+            XCTAssertNotNil(catalog.result?["tools"])
+            print("EDGE_CATALOG \(toolset.rawValue) bytes=\(catalog.wireBytes)")
+            XCTAssertLessThanOrEqual(catalog.wireBytes, try XCTUnwrap(budgets[toolset]))
+        }
+    }
+
+    func testSlowestFailureWorkflowAgainstTwoReadControl() async throws {
+        let stack = try await makeStack()
+        let start = Date(timeIntervalSince1970: 0)
+        let records = (0..<300).map { i in
+            let arrival = start.addingTimeInterval(Double(i))
+            return SessionRecord(id: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", i))!,
+                request: stack.session.request, response: .init(statusCode: 502, headers: [], bodyData: nil, bodySize: 0),
+                state: .completed, timing: .init(startedAt: arrival, completedAt: arrival.addingTimeInterval(i == 149 ? 3 : 1)))
+        }
+        stack.sessionStore.load(sessions: records)
+        let filters: [String: Any] = ["startedAfter": "1970-01-01T00:00:00Z", "startedBefore": "1970-01-01T00:04:59Z",
+            "statusClass": "error", "limit": 1]
+        var grouped = filters
+        grouped["deduplicateBy"] = "endpoint"
+        let clock = ContinuousClock()
+        let baselineStart = clock.now
+        let first = try await callSessionSummary(stack: stack, toolName: "sessions_search", toolArguments: grouped)
+        let baseline = try summaryPayload(from: first)
+        let group = try XCTUnwrap((baseline["endpointGroups"] as? [[String: Any]])?.first)
+        XCTAssertEqual(group["count"] as? Int, 300)
+        let maxSeconds = try XCTUnwrap(group["maxDurationSeconds"] as? Double)
+        var detail = filters
+        detail["minDurationMs"] = maxSeconds * 1000
+        let second = try await callSessionSummary(stack: stack, toolName: "sessions_search", toolArguments: detail)
+        let baselineElapsed = baselineStart.duration(to: clock.now)
+        let detailPayload = try summaryPayload(from: second)
+        XCTAssertEqual((detailPayload["items"] as? [[String: Any]])?.first?["id"] as? String, records[149].id.uuidString)
+        grouped["endpointExample"] = "slowest"
+        let candidateStart = clock.now
+        let answer = try await callSessionSummary(stack: stack, toolName: "sessions_search", toolArguments: grouped)
+        let candidateElapsed = candidateStart.duration(to: clock.now)
+        let payload = try summaryPayload(from: answer)
+        let selected = try XCTUnwrap((payload["endpointGroups"] as? [[String: Any]])?.first)
+        XCTAssertEqual(selected["count"] as? Int, 300)
+        XCTAssertEqual(selected["exampleSessionID"] as? String, records[149].id.uuidString)
+        print("EDGE_ENDPOINT_RECEIPT controlCalls=2 controlRequestBytes=\(first.requestBytes + second.requestBytes) controlResponseBytes=\(first.wireBytes + second.wireBytes) controlTime=\(baselineElapsed) candidateCalls=1 candidateRequestBytes=\(answer.requestBytes) candidateResponseBytes=\(answer.wireBytes) candidateTime=\(candidateElapsed)")
+    }
+
+    func testKeywordDiscoveryReturnsBoundedPolicyVisibleNames() async throws {
+        let stack = try await makeStack()
+        let result = try summaryPayload(from: await callSessionSummary(
+            stack: stack, toolName: "tool_find", toolArguments: ["query": "capture_calculate"]))
+        let tools = try XCTUnwrap(result["tools"] as? [[String: String]])
+        XCTAssertEqual(tools.first?["name"], "capture_calculate")
+        XCTAssertLessThanOrEqual(tools.count, 8)
+        XCTAssertFalse(MCPToolset.core.includes(toolName: "tool_find"))
+    }
+
+    func testCaptureWaitExcludesPreviouslyRetainedRequestsFromTimeout() async throws {
+        let stack = try await makeStack()
+        let answer = try summaryPayload(from: await callSessionSummary(stack: stack,
+            toolName: "capture_wait", toolArguments: ["method": "GET", "count": 1, "seconds": 1]))
+        XCTAssertEqual(answer["outcome"] as? String, "timeout")
+        XCTAssertEqual(answer["matched"] as? Int, 0)
+    }
+
+    func testImageContentAuditRequiresAuthorityAndExcludesPartialResponses() async throws {
+        let stack = try await makeStack()
+        let args = ["includeImageIdentity": true]
+        let pending = try await callSessionSummary(stack: stack, toolName: "audit_cache_efficiency", toolArguments: args)
+        XCTAssertNotNil(pending.errorData)
+        XCTAssertNil(pending.result)
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let bytes = Data("P6\n1 1\n255\nRGB".utf8)
+        let records = ["/first.ppm", "/other.ppm", "/partial.ppm"].enumerated().map { index, path in
+            SessionRecord(request: CapturedRequest(method: "GET", scheme: .https, host: "images.example.test", port: 443,
+                path: path, headers: [], bodyData: nil, bodySize: nil),
+                response: CapturedResponse(statusCode: index == 2 ? 206 : 200,
+                    headers: [.init(name: "Content-Type", value: "image/x-portable-pixmap")], bodyData: bytes, bodySize: bytes.count),
+                state: .completed, timing: SessionTiming(startedAt: Date(timeIntervalSince1970: 0)))
+        }
+        stack.sessionStore.load(sessions: records)
+        let payload = try summaryPayload(from: await callSessionSummary(
+            stack: stack, toolName: "audit_cache_efficiency", toolArguments: args))
+        let report = try XCTUnwrap(payload["imageIdentity"] as? [String: Any])
+        let group = try XCTUnwrap((report["groups"] as? [[String: Any]])?.first)
+        XCTAssertEqual(group["distinctURLCount"] as? Int, 2)
+        XCTAssertEqual(group["repeatedRepresentationBytes"] as? Int, bytes.count)
+        XCTAssertEqual(report["inspectedImages"] as? Int, 2)
+        XCTAssertEqual(report["skippedByReason"] as? [String: Int], ["range_or_revalidation": 1])
+    }
+
+    func testCroppedImageBlockRequiresBodyApprovalAndKeepsPixelsOutOfMetadata() async throws {
+        let stack = try await makeStack()
+        let request = CapturedRequest(method: "GET", scheme: .https, host: "assets.joesproxy.invalid", port: 443,
+            path: "/fixtures/images/test_pattern.png", headers: [], bodyData: nil, bodySize: nil)
+        let fixture = try XCTUnwrap(SyntheticAssetOriginServer.shared.response(for: request))
+        let record = SessionRecord(request: request, response: .init(statusCode: 200, headers: fixture.headers,
+            bodyData: fixture.bodyData, bodySize: fixture.bodyData.count), state: .completed, timing: .init(startedAt: Date()))
+        stack.sessionStore.load(sessions: [record])
+        let params: [String: Any] = ["sessionID": record.id.uuidString,
+            "view": ["mode": "preview", "maxEdge": 32, "crop": [0.0, 0.0, 0.5, 1.0]]]
+        let pending = try await callSessionSummary(stack: stack, toolName: "visual_asset_inspection", toolArguments: params)
+        XCTAssertNotNil(pending.errorData)
+        _ = try stack.grantStore.addGrant(clientID: stack.enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+        let answer = try await callSessionSummary(stack: stack, toolName: "visual_asset_inspection", toolArguments: params)
+        let meta = try summaryPayload(from: answer)
+        XCTAssertNil(meta["data"])
+        let w = try XCTUnwrap(meta["width"] as? Int)
+        let h = try XCTUnwrap(meta["height"] as? Int)
+        XCTAssertTrue((1...32).contains(w) && (1...32).contains(h))
+        let image = try XCTUnwrap((answer.result?["content"] as? [[String: Any]])?.first)
+        XCTAssertEqual(image["mimeType"] as? String, "image/jpeg")
+        let bytes = try XCTUnwrap(Data(base64Encoded: image["data"] as? String ?? ""))
+        XCTAssertEqual(Array(bytes.prefix(2)), [0xff, 0xd8])
+    }
+
+    func testRateLimitedRequestGetsStructuredRetryInterval() async throws {
+        let stack = try await makeStack()
+        let body = try JSONSerialization.data(withJSONObject: [
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": ["name": "sessions_list", "arguments": ["projection": "minimal", "limit": 1]]
+        ])
+        func send() async -> MCPHTTPResponse {
+            await stack.protocolService.handleHTTPRequest(
+                method: "POST", path: MCPNetworkConstants.endpointPath,
+                headers: ["authorization": "Bearer \(stack.enrollment.plaintextCredential)",
+                          "accept": "application/json, text/event-stream", "content-type": "application/json",
+                          "host": "127.0.0.1:\(NetworkConstants.mcpDefaultPort)",
+                          MCPNetworkConstants.sessionIDHeader.lowercased(): stack.transportSessionID,
+                          MCPNetworkConstants.protocolVersionHeader.lowercased(): "2025-11-25"],
+                body: body)
+        }
+        var limited: MCPHTTPResponse?
+        for _ in 0...MCPServerLimits.requestRatePerClientPerMinute {
+            let response = await send()
+            if response.status == 429 { limited = response; break }
+        }
+        let response = try XCTUnwrap(limited, "The per-client limit must reject within one window")
+        let object = try response.jsonBodyObject()
+        XCTAssertEqual(object["code"] as? String, "rate_limited")
+        let details = try XCTUnwrap(object["details"] as? [String: String])
+        let retryAfter = try XCTUnwrap(details["retryAfterSeconds"].flatMap(Int.init))
+        XCTAssertTrue((1...60).contains(retryAfter))
+        XCTAssertEqual(response.headers["Retry-After"], String(retryAfter))
+    }
+
     func testArtifactWorkflowMeasuresEveryAttemptAndWarmCalculationEnvelope() async throws {
         let raw = Data(("[" + (0..<1000).map {
             "{\"price\":0.1,\"description\":\"synthetic mock item \($0)\"}"
@@ -419,6 +580,23 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         let over = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args))
         XCTAssertEqual(over["rows"] as? Int, 10_001)
         XCTAssertEqual((over["result"] as? [String: Any])?["missing"] as? Int, 10_001)
+        stack.sessionStore.load(sessions: (0...50_000).map { index in
+            let request = CapturedRequest(method: "GET", scheme: .https, host: "api.example", port: 443,
+                path: "/fixture/group-\(index % 34)", headers: [], bodyData: nil, bodySize: nil)
+            return SessionRecord(request: request, state: .pending, timing: timing)
+        })
+        var countArguments = args
+        countArguments["operation"] = ["kind": "rowCount"]
+        let count = try summaryPayload(from: await callSessionSummary(
+            stack: stack, toolName: "capture_calculate", toolArguments: countArguments))
+        XCTAssertEqual((count["result"] as? [String: Any])?["count"] as? Int, 50_001)
+        let search = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "sessions_search",
+            toolArguments: ["limit": 1, "deduplicateBy": "endpoint", "method": "GET"]))
+        XCTAssertEqual(search["aggregateMatchCount"] as? Int, 50_001)
+        XCTAssertEqual(search["omittedEndpointGroupCount"] as? Int, 2)
+        let endpoints = try XCTUnwrap(search["endpointGroups"] as? [[String: Any]])
+        XCTAssertEqual(endpoints.count, 32)
+        XCTAssertEqual(endpoints.first?["count"] as? Int, 1471)
     }
 
     func testFilteredCalculationAgainstPagedSearchAndExplicitBatches() async throws {
@@ -440,6 +618,14 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         let single = try await callSessionSummary(stack: stack, toolName: "capture_calculate",
             toolArguments: base.merging(["filter": scope]) { _, new in new })
         let candidateElapsed = candidateStart.duration(to: .now)
+        var timeline = base.merging(["filter": scope]) { _, new in new }
+        timeline["operation"] = ["kind": "groupCount", "fieldPointer": "/minuteStartUnixSeconds"]
+        let minutes = try summaryPayload(from: await callSessionSummary(stack: stack,
+            toolName: "capture_calculate", toolArguments: timeline))
+        let buckets = try XCTUnwrap((minutes["result"] as? [String: Any])?["groups"] as? [[String: Any]])
+        XCTAssertEqual(buckets.compactMap { $0["count"] as? Int }, Array(repeating: 60, count: 5))
+        XCTAssertEqual(buckets.compactMap { ($0["key"] as? [String: Any])?["value"] as? String },
+                       ["0", "60", "120", "180", "240"])
         let result = try summaryPayload(from: single)
         XCTAssertEqual(result["rows"] as? Int, 300)
         XCTAssertNil(result["sessionIDs"])

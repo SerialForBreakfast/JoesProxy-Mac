@@ -4,6 +4,35 @@ import XCTest
 
 @MainActor
 final class MCPSessionSnapshotServiceTests: XCTestCase {
+    func testFutureWaitCountsMatchingNewIDsOnceAndDropsSubscription() async throws {
+        let store = InMemorySessionStore()
+        let service = MCPSessionSnapshotService(sessionStore: store)
+        store.append(Self.makeSession())
+        let work = Task { try await service.waitForMatches(2, seconds: 3,
+            filter: .init(method: "GET"), disclosure: .init()) }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        while service.activeWaits == 0 && ContinuousClock.now < deadline { await Task.yield() }
+        XCTAssertEqual(service.activeWaits, 1)
+        store.append(Self.makeSession(method: "POST"))
+        let first = Self.makeSession()
+        store.append(first)
+        store.update(first)
+        XCTAssertEqual(service.activeWaits, 1)
+        store.append(Self.makeSession())
+        let matches = try await work.value
+        XCTAssertEqual(matches, 2)
+        XCTAssertEqual(service.activeWaits, 0)
+    }
+
+    func testCancelledWaitReleasesListener() async {
+        let service = MCPSessionSnapshotService(sessionStore: InMemorySessionStore())
+        let work = Task { try await service.waitForMatches(1, seconds: 5, filter: nil, disclosure: .init()) }
+        await Task.yield()
+        work.cancel()
+        do { _ = try await work.value; XCTFail("A cancelled wait cannot report an outcome") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertEqual(service.activeWaits, 0)
+    }
     func testSourceRevisionsTrackUpdatesReloadsAndReinsertionsWithoutTombstones() throws {
         let store = InMemorySessionStore()
         let service = MCPSessionSnapshotService(sessionStore: store)

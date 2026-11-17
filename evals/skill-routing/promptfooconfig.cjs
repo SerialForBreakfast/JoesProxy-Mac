@@ -9,6 +9,7 @@ const guide = fs.readFileSync(path.join(skill, 'references/efficient-reads.md'),
 const cases = [
   ['Count retained requests by HTTP status between two known timestamps.', 'capture_calculate'],
   ['Find the latest retained requests with a 5xx response, grouped by endpoint.', 'sessions_search'],
+  ['Which endpoints failed in this time window, how often, and which request was slowest in each group?', 'sessions_search'],
   ['I have a response session ID. Show just two fields for each item in its JSON collection.', 'response_evidence_brief'],
   ['Compare two explicit baseline and candidate session selections for changes in JSON values.', 'investigation_compare_brief'],
   ['With an already shared saved JSON snapshot and revision, compute two numeric aggregates.', 'artifact_calculate'],

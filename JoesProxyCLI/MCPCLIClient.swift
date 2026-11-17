@@ -72,8 +72,15 @@ final class MCPCLIClient {
             retryOnStaleSession: retryOnStaleSession,
             receiptRetryOf: receiptRetryOf
         )
-        guard let structured = result["structuredContent"] as? [String: Any] else {
+        guard var structured = result["structuredContent"] as? [String: Any] else {
             throw CLIError.malformedResponse("JoesProxy returned a tool result without structured content.")
+        }
+        if name == "visual_asset_inspection", (arguments["view"] as? [String: Any])?["mode"] as? String == "preview" {
+            guard let block = (result["content"] as? [[String: Any]])?.first,
+                  block["type"] as? String == "image", block["mimeType"] as? String == "image/jpeg",
+                  let encoded = block["data"] as? String, encoded.utf8.count <= 64_000,
+                  let bytes = Data(base64Encoded: encoded) else { throw CLIError.malformedResponse("Missing bounded JPEG preview.") }
+            structured["previewFileData"] = bytes
         }
         return structured
     }
@@ -309,7 +316,10 @@ final class MCPCLIClient {
         case 408:
             throw CLIError.timedOut("The MCP request timed out.")
         case 429:
-            throw CLIError.rateLimited("JoesProxy is busy or rate limited this client. Retry after the reported interval.")
+            if let value = header("Retry-After", in: response.headers), let seconds = Int(value), seconds > 0 {
+                throw CLIError.rateLimited("JoesProxy rate limited this client. Retry after \(seconds) seconds.", retryAfterSeconds: seconds)
+            }
+            throw CLIError.rateLimited("JoesProxy rate limited this client. Retry later.")
         default:
             throw CLIError.serverUnavailable("The MCP endpoint returned HTTP \(response.statusCode). Check the endpoint with joesproxyctl doctor. An interrupted operation may have taken effect; inspect status before retrying. No automatic retry was made.")
         }

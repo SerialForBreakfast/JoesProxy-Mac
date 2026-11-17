@@ -82,6 +82,9 @@ final class MCPSessionSnapshotService {
     private var indexEntriesByHostCategory: [String: [IndexEntry]] = [:]
     private var indexEntriesByMethodAndHostCategory: [String: [IndexEntry]] = [:]
     private var sequenceByID: [SessionRecord.ID: UInt64] = [:]
+    var endpointSnapshot: (records: [SessionRecord], sequences: [SessionRecord.ID: UInt64]) {
+        (sessionStore.sessions, sequenceByID)
+    }
     private var revisionByID: [SessionRecord.ID: UInt64] = [:]
     private var nextSourceRevision: UInt64 = 1
 
@@ -109,6 +112,8 @@ final class MCPSessionSnapshotService {
     /// Global capture reads use this value; selected briefs use source revisions instead.
     private(set) var stateRevision: UInt64 = 0
     private var cancellables: Set<AnyCancellable> = []
+    private let waitEvents = PassthroughSubject<SessionStoreChange, Never>()
+    private(set) var activeWaits = 0
     private let sessionStore: any SessionStore
     var sourceSessionStore: any SessionStore { sessionStore }
 
@@ -337,25 +342,18 @@ final class MCPSessionSnapshotService {
 
     /// Collapses repetitive polling/segment traffic into bounded endpoint groups while preserving
     /// status distributions, duration maxima, override hit counts, and first/last session locators.
-    nonisolated static func deduplicateEndpoints(
-        items: [IndexedSession],
+    nonisolated static func deduplicateEndpoints<Rows: Sequence>(
+        items: Rows,
+        indexedMatch: (Rows.Element) -> IndexedSession?,
         profile: MCPDisclosureProfileDocument,
-        disclosure: MCPDisclosureSerializer
-    ) -> [MCPEndpointGroupDTO] {
-        struct Builder {
-            var signature: String
-            var method: String?
-            var sanitizedHost: String?
-            var normalizedPath: String?
-            var count: Int = 0
-            var firstSessionID: String
-            var lastSessionID: String
-            var firstSequence: UInt64
-            var lastSequence: UInt64
-            var statusCounts: [String: Int] = [:]
-            var maxDurationSeconds: Double?
-            var overrideHitCount: Int = 0
-        }
+        disclosure: MCPDisclosureSerializer,
+        example: EndpointExample? = nil,
+        includeStatistics: Bool = false
+    ) throws -> (groups: [MCPEndpointGroupDTO], matches: Int, omittedGroups: Int) {
+        var groupsBySignature: [String: EndpointBuilder] = [:]
+        var omitted = Set<String>()
+        var matchCount = 0
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
 
         let allowMethod = profile.allowedFieldClasses.contains(.method)
         let allowHost = profile.allowedFieldClasses.contains(.sanitizedHost)
@@ -364,10 +362,19 @@ final class MCPSessionSnapshotService {
         let allowDuration = profile.allowedFieldClasses.contains(.duration)
         let allowProvenance = profile.allowedFieldClasses.contains(.provenance)
 
-        var groupsBySignature: [String: Builder] = [:]
         var orderedSignatures: [String] = []
+        var durations: [String: [Double]] = [:]
+        var sizes: [String: [Int]] = [:]
 
-        for indexed in items {
+        for (offset, item) in items.enumerated() {
+            if offset.isMultiple(of: 256) {
+                try Task.checkCancellation()
+                guard ContinuousClock.now < deadline else {
+                    throw MCPStructuredError.malformedRequest(message: "Endpoint aggregation exceeded its time budget. Narrow the time window.")
+                }
+            }
+            guard let indexed = indexedMatch(item) else { continue }
+            matchCount += 1
             let record = indexed.record
             let method = allowMethod ? record.request.method : nil
             let host = allowHost ? disclosure.sanitizedHost(record.request.host) : (
@@ -377,6 +384,17 @@ final class MCPSessionSnapshotService {
             )
             let normPath = allowPath ? normalizeEndpointPath(disclosure.sanitizedPath(record.request.path)) : nil
             let signature = [method ?? "*", host ?? "*", normPath ?? "*"].joined(separator: " ")
+            // Only the first 32 groups are returned. Later rows can still belong to these groups.
+            if orderedSignatures.count == 32, groupsBySignature[signature] == nil {
+                omitted.insert(signature)
+                continue
+            }
+            if includeStatistics {
+                if allowDuration, let value = record.timing.duration, value.isFinite, value >= 0 {
+                    durations[signature, default: []].append(value)
+                }
+                if let value = record.response?.bodySize, value >= 0 { sizes[signature, default: []].append(value) }
+            }
 
             let statusKey: String
             if allowStatus {
@@ -394,13 +412,15 @@ final class MCPSessionSnapshotService {
                 existing.lastSessionID = record.id.uuidString
                 existing.lastSequence = indexed.captureSequence
                 existing.statusCounts[statusKey, default: 0] += 1
-                if allowDuration, let duration = record.timing.duration {
-                    existing.maxDurationSeconds = max(existing.maxDurationSeconds ?? duration, duration)
+                if allowDuration, let duration = record.timing.duration,
+                   existing.maxDurationSeconds.map({ duration > $0 }) ?? true {
+                    existing.maxDurationSeconds = duration
+                    existing.slowestSessionID = record.id.uuidString
                 }
                 if isHit { existing.overrideHitCount += 1 }
                 groupsBySignature[signature] = existing
             } else {
-                let builder = Builder(
+                let builder = EndpointBuilder(
                     signature: signature,
                     method: method,
                     sanitizedHost: host,
@@ -412,6 +432,7 @@ final class MCPSessionSnapshotService {
                     lastSequence: indexed.captureSequence,
                     statusCounts: [statusKey: 1],
                     maxDurationSeconds: allowDuration ? record.timing.duration : nil,
+                    slowestSessionID: allowDuration && record.timing.duration != nil ? record.id.uuidString : nil,
                     overrideHitCount: isHit ? 1 : 0
                 )
                 groupsBySignature[signature] = builder
@@ -419,8 +440,15 @@ final class MCPSessionSnapshotService {
             }
         }
 
-        return orderedSignatures.prefix(32).compactMap { sig in
+        let groups: [MCPEndpointGroupDTO] = orderedSignatures.compactMap { sig in
             guard let b = groupsBySignature[sig] else { return nil }
+            let exampleID: String?
+            switch example {
+            case .first: exampleID = b.firstSessionID
+            case .latest: exampleID = b.lastSessionID
+            case .slowest: exampleID = b.slowestSessionID
+            case nil: exampleID = nil
+            }
             return MCPEndpointGroupDTO(
                 signature: b.signature,
                 method: b.method,
@@ -433,9 +461,39 @@ final class MCPSessionSnapshotService {
                 lastSequence: b.lastSequence,
                 statusCounts: b.statusCounts,
                 maxDurationSeconds: b.maxDurationSeconds,
+                exampleSessionID: exampleID,
+                statistics: includeStatistics ? .init(observedDurations: durations[sig]?.count ?? 0,
+                    p95DurationSeconds: p95(durations[sig]), observedSizes: sizes[sig]?.count ?? 0,
+                    p95ResponseBodyBytes: p95(sizes[sig])) : nil,
                 overrideHitCount: b.overrideHitCount
             )
         }
+        return (groups, matchCount, omitted.count)
+    }
+
+    private struct EndpointBuilder {
+        var signature: String
+        var method: String?
+        var sanitizedHost: String?
+        var normalizedPath: String?
+        var count = 0
+        var firstSessionID: String
+        var lastSessionID: String
+        var firstSequence: UInt64
+        var lastSequence: UInt64
+        var statusCounts: [String: Int] = [:]
+        var maxDurationSeconds: Double?
+        var slowestSessionID: String?
+        var overrideHitCount = 0
+    }
+
+    enum EndpointExample: String, Sendable {
+        case first, latest, slowest
+    }
+
+    private nonisolated static func p95<T: Comparable>(_ values: [T]?) -> T? {
+        guard let values, !values.isEmpty else { return nil }
+        return values.sorted()[(95 * values.count + 99) / 100 - 1]
     }
 
     nonisolated static func normalizeEndpointPath(_ sanitizedPath: String) -> String {
@@ -491,8 +549,45 @@ final class MCPSessionSnapshotService {
         }
     }
 
+    /// Counts distinct future admissions that match during the wait, including late responses.
+    /// The subscription runs on the store's main actor. Only counts cross the async boundary.
+    func waitForMatches(_ count: Int, seconds: Int, filter: ListFilter?, disclosure: MCPDisclosureSerializer) async throws -> Int {
+        guard activeWaits < 4 else { throw ArtifactAnalysisFailure.busy }
+        activeWaits += 1
+        let watermark = highWaterSequence
+        let epoch = captureEpoch
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
+        var matched: Set<UUID> = []
+        func observe(_ record: SessionRecord) {
+            guard matched.count < count, let sequence = sequenceByID[record.id], sequence > watermark,
+                  Self.matchesFilter(record, filter: filter, disclosure: disclosure) else { return }
+            matched.insert(record.id)
+            if matched.count == count { continuation.finish() }
+        }
+        let subscription = waitEvents.sink { change in
+            switch change {
+            case .appended(let record, _), .updated(let record, _): observe(record)
+            case .updatedBatch(let records, _): for record in records { observe(record) }
+            case .cleared, .loaded: continuation.finish()
+            case .bodiesStripped, .removed: break
+            }
+        }
+        let timeout = Task {
+            try await Task.sleep(for: .seconds(seconds))
+            continuation.finish()
+        }
+        defer { subscription.cancel(); timeout.cancel(); activeWaits -= 1 }
+        for await _ in stream {}
+        try Task.checkCancellation()
+        guard epoch == captureEpoch else { throw ArtifactAnalysisFailure.sourceChanged }
+        return matched.count
+    }
+
     private func apply(_ change: SessionStoreChange) {
-        defer { stateRevision &+= 1 }
+        defer {
+            stateRevision &+= 1
+            if activeWaits > 0 { waitEvents.send(change) }
+        }
         switch change {
         case .appended(let session, droppedIDs: let droppedIDs):
             appendSession(session)

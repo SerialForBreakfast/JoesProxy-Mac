@@ -78,8 +78,9 @@ enum CLIArtifactArguments {
             guard dataset == "sessionMetadata", filter["startedAfter"] != nil, filter["startedBefore"] != nil,
                   result["selectionPointer"] as? String == "",
                   let operationName,
-                  operationName == "rowCount" || (operationName == "groupCount" && invocation.options["field-pointer"] == "/statusCode") else {
-                throw CLIError.invalidArguments("Filtered capture calculations require both time bounds and rowCount or groupCount on /statusCode.")
+                  operationName == "rowCount" || (operationName == "groupCount" &&
+                    ["/statusCode", "/minuteStartUnixSeconds", "/hourStartUnixSeconds"].contains(invocation.options["field-pointer"] ?? "")) else {
+                throw CLIError.invalidArguments("Use both time bounds and rowCount or groupCount on status, minute or hour.")
             }
             result["filter"] = filter
             result["dataset"] = dataset

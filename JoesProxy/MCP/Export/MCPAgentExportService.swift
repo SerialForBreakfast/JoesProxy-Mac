@@ -311,7 +311,7 @@ enum MCPAgentExportService {
         }
         sections.append("")
         sections.append("## CLI companion")
-        sections.append("Analysis budgets are shared with tools/list `_meta.joesproxy.analysis` and manifest `analysis`. Missing descriptors do not imply unsupported tools; consult their exact schemas. OCR and semantic artifact retrieval are unavailable.")
+        sections.append("Analysis budgets are shared with tools/list `_meta.joesproxy.analysis` and manifest `analysis`. Use visual_asset_inspection with body approval for local OCR. Semantic artifact retrieval is unavailable.")
         for tool in manifest.tools.sorted(by: { $0.name < $1.name }) {
             guard let analysis = tool.analysis else { continue }
             let limits = analysis.limits.sorted(by: { $0.key < $1.key }).map { "\($0.key)=\($0.value)" }.joined(separator: ", ")

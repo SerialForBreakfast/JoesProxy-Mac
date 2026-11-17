@@ -218,6 +218,11 @@ final class CLIApplication {
                 arguments: [:],
                 invocation: invocation
             ))
+        case ["toolset", "find"]:
+            guard let query = invocation.options["query"] else {
+                throw CLIError.invalidArguments("toolset find requires --query <keywords>.")
+            }
+            return success(commandName, try await runTool(client, name: "tool_find", arguments: ["query": query], invocation: invocation))
         case ["toolset", "select"]:
             guard let toolset = invocation.options["name"] else {
                 throw CLIError.invalidArguments(
@@ -274,8 +279,20 @@ final class CLIApplication {
                 arguments: arguments, invocation: invocation, retryOnStaleSession: command.last == "get"))
         case ["capture", "resume"]:
             return success(commandName, try await runTool(client, name: "capture_resume", arguments: [:], invocation: invocation))
+        case ["capture", "wait"]:
+            var args: [String: Any] = [:]
+            for (option, key) in [("count", "count"), ("window-seconds", "seconds")] {
+                if let raw = invocation.options[option] {
+                    guard let value = Int(raw) else { throw CLIError.invalidArguments("--\(option) requires an integer.") }
+                    args[key] = value
+                }
+            }
+            args["method"] = invocation.options["method"]
+            args["statusClass"] = invocation.options["status-class"]
+            return success(commandName, try await runTool(client, name: "capture_wait", arguments: args, invocation: invocation))
         case ["cache", "audit"]:
-            return success(commandName, try await runTool(client, name: "audit_cache_efficiency", arguments: [:], invocation: invocation))
+            let arguments: [String: Any] = invocation.flags.contains("image-identity") ? ["includeImageIdentity": true] : [:]
+            return success(commandName, try await runTool(client, name: "audit_cache_efficiency", arguments: arguments, invocation: invocation))
         case ["investigate", "snapshot"]:
             var arguments: [String: Any] = [:]
             if let limit = invocation.options["limit"], let value = Int(limit) {
@@ -867,7 +884,26 @@ final class CLIApplication {
             guard let sessionID = invocation.options["session-id"] else {
                 throw CLIError.invalidArguments("media visual requires --session-id <uuid>.")
             }
-            return success(commandName, try await runTool(client, name: "visual_asset_inspection", arguments: ["sessionID": sessionID], invocation: invocation))
+            var arguments: [String: Any] = ["sessionID": sessionID]
+            var destination: URL?
+            if let json = invocation.options["view-json"] {
+                guard json.utf8.count <= 2048, let view = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any],
+                      let mode = view["mode"] as? String, ["preview", "ocr"].contains(mode) else {
+                    throw CLIError.invalidArguments("Use --view-json with a preview or ocr mode.")
+                }
+                arguments["view"] = view
+                if mode == "preview" {
+                    guard let path = invocation.options["output"], !path.isEmpty else { throw CLIError.invalidArguments("A preview requires --output <new JPEG path>.") }
+                    destination = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+                }
+            }
+            var result = try await runTool(client, name: "visual_asset_inspection", arguments: arguments, invocation: invocation)
+            if let destination {
+                guard let bytes = result.removeValue(forKey: "previewFileData") as? Data else { throw CLIError.malformedResponse("Preview is unavailable.") }
+                try bytes.write(to: destination, options: .withoutOverwriting)
+                result["outputPath"] = destination.path
+            }
+            return success(commandName, result)
         case ["media", "scte35"]:
             guard let masterSession = invocation.options["master-session"] else {
                 throw CLIError.invalidArguments("media scte35 requires --master-session <uuid>.")
@@ -2782,9 +2818,13 @@ final class CLIApplication {
                 case .serverUnavailable, .staleSession:
                     lastError = error
                     try await sleep(1_000_000_000)
-                case .rateLimited:
+                case .rateLimited(_, let retryAfterSeconds):
                     lastError = error
-                    try await sleep(2_000_000_000)
+                    let delay = retryAfterSeconds ?? 2
+                    guard Double(delay) < deadline.timeIntervalSinceNow,
+                          let nanoseconds = UInt64(exactly: delay),
+                          nanoseconds <= UInt64.max / 1_000_000_000 else { throw error }
+                    try await sleep(nanoseconds * 1_000_000_000)
                 default:
                     throw error
                 }
@@ -3520,6 +3560,10 @@ final class CLIApplication {
         if let dedup = invocation.options["deduplicate-by"] {
             arguments["deduplicateBy"] = dedup
         }
+        if let example = invocation.options["endpoint-example"] {
+            arguments["endpointExample"] = example
+        }
+        if invocation.flags.contains("endpoint-statistics") { arguments["includeEndpointStatistics"] = true }
         if invocation.flags.contains("include-auth-chain") {
             arguments["includeAuthChain"] = true
         }
@@ -3599,6 +3643,10 @@ final class CLIApplication {
             return ["reason": reason, "recommendedAction": recovery, "documentationTopic": "agent-documentation"]
         }
         if case .invalidPreparation(_, let details) = error { return details }
+        if case .rateLimited(_, let interval?) = error {
+            return ["reason": "rate_limited", "retryAfterSeconds": interval,
+                    "recommendedAction": "Wait for the reported interval before retrying."]
+        }
         if case .approvalRequired(let requestID, _) = error, let requestID {
             return ["requestID": requestID, "recommendedAction": "Approve in JoesProxy, then retry the identical command or use --wait-for-approval."]
         }
@@ -3695,14 +3743,16 @@ final class CLIApplication {
       joesproxyctl proxy start|stop
       joesproxyctl status
       joesproxyctl toolset status
+      joesproxyctl toolset find --query <keywords>
       joesproxyctl toolset select --name core|capture|mocking|media|reproduction|advanced|all
       joesproxyctl capture digest
+      joesproxyctl capture wait [--count <1...100>] [--window-seconds <1...5>] [--method <method>] [--status-class <class>]
       joesproxyctl capture status
       joesproxyctl https rules get --host media.example.test [--recovery-id <uuid>]
       joesproxyctl https rules set --host media.example.test --mode tunnel|inspect|remove --expected-revision <revision> --scope host_and_subdomains_all_clients [--recovery-id <uuid>] [--wait-for-approval]
       joesproxyctl https rules restore --host media.example.test --recovery-id <uuid> --expected-revision <revision> --scope host_and_subdomains_all_clients [--wait-for-approval]
       joesproxyctl capture resume [--wait-for-approval]
-      joesproxyctl cache audit
+      joesproxyctl cache audit [--image-identity] [--wait-for-approval]
       joesproxyctl investigate snapshot [--limit <1...25>] [--since-sequence <n>] [--if-state-token <token>]
       joesproxyctl evidence get <evidence-ref>
       joesproxyctl read batch --file <requests.json>
@@ -3710,7 +3760,7 @@ final class CLIApplication {
       joesproxyctl capture restore-rolling
       joesproxyctl capture marker --name <marker-name> [--detail <text>] [--label <text>]
       joesproxyctl capture activity (--since-marker <session-id> | --since-sequence <n>) [--rule <override-id>] [--limit <n>]
-      joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--include-auth-chain]
+      joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--endpoint-example first|latest|slowest] [--include-auth-chain]
       joesproxyctl device list
       joesproxyctl device alias <ip-address> (--name <friendly-name> | --clear)
       joesproxyctl session show <session-id>
@@ -3957,7 +4007,7 @@ final class CLIApplication {
         [--media-sessions <id,id>]
       joesproxyctl media byte-range [--session-ids <id,id,...>]
       joesproxyctl media waterfall --session-id <uuid>
-      joesproxyctl media visual --session-id <uuid>
+      joesproxyctl media visual --session-id <uuid> [--view-json <options>] [--output <new JPEG path>] [--wait-for-approval]
       joesproxyctl media scte35 --master-session <uuid> [--variant-sessions <id,id>]
       joesproxyctl synthetic assets
       joesproxyctl synthetic inject --name <text> --url-pattern <pattern>

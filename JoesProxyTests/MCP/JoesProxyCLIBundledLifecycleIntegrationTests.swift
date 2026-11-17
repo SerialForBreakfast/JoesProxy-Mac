@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import ImageIO
 import XCTest
 @testable import JoesProxy
 
@@ -19,6 +20,70 @@ import XCTest
 /// exactly what a human clicking "Approve" in the UI would trigger.
 @MainActor
 final class JoesProxyCLIBundledLifecycleIntegrationTests: XCTestCase {
+    func testColdOCRThroughLoopbackCLI() async throws {
+        try await exerciseImageCLI(ocr: true)
+    }
+
+    func testCroppedJPEGThroughLoopbackCLI() async throws {
+        try await exerciseImageCLI(ocr: false)
+    }
+
+    private func exerciseImageCLI(ocr: Bool) async throws {
+        let store = InMemorySessionStore()
+        let image = SessionRecord(request: .init(method: "GET", scheme: .https, host: "assets.example",
+            port: 443, path: "/label.png", headers: [], bodyData: nil, bodySize: nil),
+            response: try ImagePreviewModelTests.labeledPNG(), state: .completed, timing: .init(startedAt: Date()))
+        store.load(sessions: [image])
+        let controller = try makeController(port: UInt16.random(in: 20_000...60_000), store: store)
+        await controller.start()
+        do {
+            guard case .running(_, let endpoint) = controller.state else { throw CLIError.malformedResponse("Listener failed") }
+            let enrollment = try controller.enrollClient(displayName: "Image fixture", profileID: .shareable)
+            _ = try controller.grantStore.addGrant(clientID: enrollment.client.id, capability: .bodyRead, mode: .untilSessionEnd)
+            let credentials = MemoryCLICredentialStore()
+            try credentials.save(enrollment.plaintextCredential, endpoint: endpoint)
+            var output = Data()
+            let app = CLIApplication(credentialStore: credentials, sessionStore: MemoryCLISessionStore(),
+                writeResult: { output.append($0) }, appLauncher: MockCLIAppLauncher())
+            func run(_ args: [String]) async throws -> (CLIExitCode, String) {
+                output.removeAll()
+                let code = await app.run(arguments: ["media", "visual", "--session-id", image.id.uuidString,
+                    "--endpoint", endpoint.absoluteString, "--json"] + args)
+                return (code, String(decoding: output, as: UTF8.self))
+            }
+            if ocr {
+                let start = ContinuousClock.now
+                let reply = try await run(["--view-json", #"{"mode":"ocr","includeBoxes":true}"#])
+                let latency = start.duration(to: .now)
+                XCTAssertEqual(reply.0, .success, reply.1)
+                let metadata = try compactResultObject(from: reply.1)
+                let lines = try XCTUnwrap(metadata["lines"] as? [[String: Any]], "\(metadata.keys)")
+                let line = try XCTUnwrap(lines.first { ($0["text"] as? String)?.uppercased() == "CLOSED" })
+                let box = try XCTUnwrap(line["box"] as? [Double])
+                XCTAssertEqual(box.count, 4)
+                XCTAssertTrue(box.allSatisfy { (0...1).contains($0) })
+                XCTAssertLessThan(latency, .seconds(60))
+                print("EDGE_PROCESS_OCR latency=\(latency)")
+            } else {
+                let path = temporaryURL(named: "edge-crop.jpg")
+                defer { try? FileManager.default.removeItem(at: path) }
+                let args = ["--view-json", #"{"mode":"preview","crop":[0,0,0.5,1],"maxEdge":120}"#, "--output", path.path]
+                let preview = try await run(args)
+                XCTAssertEqual(preview.0, .success, preview.1)
+                XCTAssertEqual(try compactResultObject(from: preview.1)["outputPath"] as? String, path.path)
+                let original = try Data(contentsOf: path)
+                let source = try XCTUnwrap(CGImageSourceCreateWithData(original as CFData, nil))
+                XCTAssertEqual(CGImageSourceGetType(source) as String?, "public.jpeg")
+                let decoded = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+                XCTAssertEqual(decoded.width, 120)
+                XCTAssertEqual(decoded.height, 50)
+                let collision = try await run(args)
+                XCTAssertNotEqual(collision.0, .success)
+                XCTAssertEqual(try Data(contentsOf: path), original)
+            }
+        } catch { await controller.stop(); throw error }
+        await controller.stop()
+    }
     func testFullScenarioLifecycleAgainstRealRunningServerRecordsCompactEvidenceAndNeverLeaksCredential() async throws {
         let controller = try makeController(port: UInt16.random(in: 20_000...60_000))
         await controller.start()
@@ -263,7 +328,7 @@ final class JoesProxyCLIBundledLifecycleIntegrationTests: XCTestCase {
     /// nil (scenario tools compose mutation-store primitives like `block`), so `draft_test_scenario`
     /// and friends would otherwise report "Unknown or unavailable tool" no matter how the client is
     /// enrolled.
-    private func makeController(port: UInt16) throws -> MCPServerController {
+    private func makeController(port: UInt16, store: InMemorySessionStore = InMemorySessionStore()) throws -> MCPServerController {
         let credentialStore = MCPInMemoryCredentialStore()
         let policyStore = MCPPolicyStore(persistenceURL: temporaryURL(named: "policy-lifecycle.json"))
         policyStore.load()
@@ -278,7 +343,7 @@ final class JoesProxyCLIBundledLifecycleIntegrationTests: XCTestCase {
         let responseOverrideStore = ResponseOverrideStore()
         let recoveryCoordinator = MCPRecoveryCoordinator(journalStore: MCPEffectJournalStore())
         let controller = MCPServerController(
-            sessionStore: InMemorySessionStore(),
+            sessionStore: store,
             port: port,
             credentialStore: credentialStore,
             policyStore: policyStore,

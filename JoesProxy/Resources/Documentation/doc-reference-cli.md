@@ -250,6 +250,18 @@ joesproxyctl toolset status
 joesproxyctl toolset select --name core|capture|mocking|media|reproduction|advanced|all
 ```
 
+## Find tools by keyword {#toolset-find}
+
+```text
+joesproxyctl toolset find --query <keywords>
+```
+
+## Wait for new capture activity {#capture-wait}
+
+```text
+joesproxyctl capture wait [--count <1...100>] [--window-seconds <1...5>] [--method <method>] [--status-class <class>]
+```
+
 ## Command 16 {#command-12448048014aa6a4}
 
 ```text
@@ -289,7 +301,7 @@ joesproxyctl capture resume [--wait-for-approval]
 ## Command 22 {#command-7611a081785f62f5}
 
 ```text
-joesproxyctl cache audit
+joesproxyctl cache audit [--image-identity] [--wait-for-approval]
 ```
 
 ## Command 23 {#command-2ea08d0f9f1813d5}
@@ -337,7 +349,7 @@ joesproxyctl capture activity (--since-marker <session-id> | --since-sequence <n
 ## Command 30 {#command-b47b63e47b882fc7}
 
 ```text
-joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--include-auth-chain]
+joesproxyctl sessions list|search [filters] [--status-code <n>] [--status-class 2xx|3xx|4xx|5xx|error|non200] [--min-duration-ms <ms>] [--has-override-hit|--no-override-hit] [--body-available|--no-body-available] [--deduplicate-by endpoint] [--endpoint-example first|latest|slowest] [--include-auth-chain]
 ```
 
 ## Command 31 {#command-1d391102ffe95d92}
@@ -1104,7 +1116,7 @@ joesproxyctl media waterfall --session-id <uuid>
 ## Command 152 {#command-9926ff1583f68c23}
 
 ```text
-joesproxyctl media visual --session-id <uuid>
+joesproxyctl media visual --session-id <uuid> [--view-json <options>] [--output <new JPEG path>] [--wait-for-approval]
 ```
 
 ## Command 153 {#command-509f32c08b5ce56b}

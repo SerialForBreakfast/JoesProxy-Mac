@@ -1,5 +1,29 @@
 # Edge efficiency tranche acceptance plan
 
+Build 28 source reconciliation: both endpoint and auth-chain search aggregates receive the
+full filtered input at the cursor watermark, independent of page size. A 50,000-input guard
+remains. The endpoint status distribution and first/latest locators already exist. Compare
+new example selection with that one-call baseline when measuring efficiency.
+
+The first candidate slice adds opt-in slowest/first/latest endpoint examples, bounded
+keyword discovery, filtered metadata counts without the retained-input count guard, CLI
+retry intervals, and body-approved exact image grouping. The example fixture retains 300
+matches behind a one-row page; the count fixture exercises 50,001 retained sessions. The
+image fixture uses one PPM under two URLs and one partial response. Token savings, live soak
+cost, and independent fixed-build paired receipts for these new paths remain unmeasured.
+
+On the candidate test host the 300-failure, single-endpoint fixture returned the correct
+slowest session at index 149 in both workflows. Two build-28-compatible reads used 460
+request bytes and 2,990 response bytes in 12.15 ms. One candidate read used 261 and 1,628
+bytes respectively in 9.56 ms. This is one local matched execution without model inference.
+A standalone synthetic label was recognized with OCR and boxes, without sending pixels.
+Its first focused test took 65 seconds on this Mac; cold interactive latency is unresolved.
+
+The candidate catalog fixture measured 36,144 bytes for core and 73,331 for all. Task
+catalogs measured 47,060 for capture, 47,068 for mocking, 42,832 for media, 37,183 for
+reproduction and 45,755 for advanced. The fixture uses one authenticated client with fixed
+grants and available services. These figures describe RPC response bytes, not model tokens.
+
 2026-11-10 review. The five capabilities have implementations in the working tree. Accept each on a user question with an independent expected answer, a disclosure test and a paired workflow receipt. Ship independently if one fails.
 
 ## Evidence available today
@@ -33,6 +57,9 @@ Review the local validation commit before pushing: it also includes the Apple HL
 
 ## Gap ledger
 
+Planned work that follows from these findings is in the
+[edge-compute roadmap](ADR-Edge-Compute-Roadmap.md).
+
 Started 2026-11-12 from a logging audit of the files this branch changed. The capture soak
 (`ProxyServerTests/testCaptureSoakWithAgentWorkflows`) adds measured entries. Each finding has one
 class: product defect, evidence gap, skill gap or capability gap.
@@ -57,7 +84,7 @@ receipt; track `core` discovery bytes so they cannot rise unnoticed.
 | A proxied exchange occasionally reaches the client cut short (`incompleteResponse`): once in the first rehearsal (cycle 374) and once overnight (cycle 2054, `media` fixture, normal receiver) | Product defect, unconfirmed | Open. About 1 in 90,000 overnight; the log cannot say which side closed first |
 | The proxy occasionally answers with its own `502 Bad Gateway` (152-byte plain-text body) for a request the loopback origin serves normally: once in the rehearsal (cycle 188) and six times overnight (cycles 187, 560, 1308, 1495, 2428, 3177; fixtures `gzip`, `api`, `redirect`, `empty`), about 1 in 15,000 requests, never two in one cycle | Mostly a test-environment artifact; product hardening open | Cause found 2026-11-13. The failure path logged only with verbose HTTPS logging; it now always logs `Proxy failure response` with status, bucket and error type. A third 60-minute run hit it again at cycle 183 and logged `errorType=ChannelError detail=I/O on closed channel`. In all seven overnight and rehearsal incidents, the client's ephemeral source ports had wrapped around and were 2 to 16 below the proxy's listening port, and the loopback origin listens on the adjacent ephemeral port. The spacing between overnight incidents (373, 748, 187, 933, 749 cycles) is a multiple of the roughly 187 cycles one pass through the ephemeral range takes. This fits an upstream connect whose source port collides with the origin's own port (TCP self-connect); not yet proven by an upstream local-port log. Only an origin listening inside the ephemeral range (49152–65535) can trigger it. Next: bind the soak origin below that range, log upstream local and remote endpoints on failure, and consider having the proxy refuse a self-connected upstream (local endpoint equals remote) with a clear reason |
 | `ChannelError` on the upstream connection is classified as bucket `unknown` and the client gets the generic text "could not complete this connection" | Evidence gap | Open |
-| A session whose response the proxy synthesized as a 502 is recorded with no status code, so `groupCount` on `/statusCode` reports it under `missing`, not `502` or a failure bucket; the agent sees a count but no reason | Evidence gap | Open. Seen in all five overnight windows where a 502 landed inside the measured window |
+| A session whose response the proxy synthesized as a 502 appeared under missing status in the historical overnight run | Recorded-status evidence | Candidate fixture verifies a refused upstream connection through wire status, stored proxy error, and filtered status count. The original soak's failure cause remains unconfirmed. |
 | The proxy logs `Proxy channel inactive` with no close reason, bytes relayed or matching capture ID, so the truncated exchange above could not be traced from the log | Evidence gap | Open |
 | The paged workflow spends one request per 50 sessions plus one per 192 identifiers against the same 60-per-minute limit, so on a busy capture the limit, not bytes, is what stops it first | Capability gap, measured at small scale | Pilot, 16 to 21 sessions per window: filtered 1 call and 1,312 bytes median, paged 2 calls and 8,829 bytes; the harness spent 434 of 612 seconds waiting on the limit. Overnight, 3,562 windows: filtered 1 call, 1,318 bytes, 10 ms median (p95 17 ms); paged 2 calls, 8,857 bytes, 32 ms median (p95 40 ms); 20,644 of 28,802 seconds spent waiting on the limit |
 | Overnight resources: footprint 64 to 148 MiB, no growth after clears (-1.6 MiB/hour across 356 clears), every checkpoint drained, no rejected captures; 890 rule changes, 593 pauses and 356 clears all behaved correctly | — | Evidence for the branch, not a gap |
@@ -79,3 +106,28 @@ JoesProxy completed 441 cycles in 3,603.6 seconds. The synthetic origin received
 The local calculation used 85.1% fewer median RPC bytes for this question. In the separate concurrent live-query exercise, 1,574 attempts succeeded and 190 returned `source_changed` as capture advanced. Those outcomes need to be counted when measuring end-to-end agent usage.
 
 These measurements describe the optimized development checkout used for the rehearsal. Provider-token measurements and a new eight-hour soak are pending.
+
+## Build 28 follow-up — endpoint evidence and image inspection
+
+The endpoint-failure fixture contains 300 failures and one uniquely slowest request. Both workflows returned the expected count and example ID. The control uses the build-28 API on the candidate dispatcher. A separate run against the tagged binary and fixed-model token trials remain pending.
+
+| Workflow | Calls | Request bytes | Response bytes | Elapsed in this run |
+|---|---:|---:|---:|---:|
+| Search and resolve the example separately | 2 | 460 | 2,990 | 12.15 ms |
+| Group endpoints with the slowest example | 1 | 261 | 1,628 | 9.56 ms |
+
+Authenticated discovery measured 36,144 bytes for core and 73,331 bytes for the default catalog. Their comparison baselines were 36,817 and 74,268 bytes respectively. The timing figures above are single observations.
+
+The synthetic image fixtures verified exact repeat grouping, JPEG crop delivery and recognition of the expected label with a normalized bounding box. The first OCR fixture took 65 seconds including setup. Cold success through the 60-second transport deadline remains unverified. The serial Policy run passed 3,108 tests with 17 skipped. The extended rehearsal, installed CLI file acceptance and autonomous model trials remain open.
+
+### November 16, 2026 — pre-soak verification on the candidate
+
+Endpoint-only grouping scanned an immutable capture with 50,001 matches, a one-row page and 34 distinct normalized endpoints. It returned 32 groups, reported two omitted signatures and counted 1,471 requests in the first group. The separate auth-chain input ceiling still applies when requested. A loopback refused connection produced HTTP 502 at the client and status 502 in the store. A filtered `capture_calculate` on that path returned exactly one 502.
+
+Adding the omission count changed the earlier endpoint receipt. On this revision the two-call control used 460 request bytes and 3,020 response bytes. The single call used 261 and 1,658 respectively. Both found the same count and slowest example on the candidate dispatcher.
+
+The first OCR command in a fresh test process returned `CLOSED` with a normalized bounding box in 0.400 seconds using the default CLI timeout. Timing includes CLI negotiation and the loopback request, and excludes creation of the synthetic PNG and listener. System-level model caches were left intact. This is one first-use observation on this Mac.
+
+The production CLI command received an MCP image block over loopback, cropped the left half of a 480 × 100 source and wrote a decodable 120 × 50 JPEG. A second write to the same destination failed and the original bytes were preserved. These tests use isolated credentials and run the CLI entry point in process. The installed executable and Keychain workflow remain part of release acceptance.
+
+Serial Policy passed 3,111 tests with 17 skipped and zero failures. The Debug app build succeeded. This verification precedes the soak.

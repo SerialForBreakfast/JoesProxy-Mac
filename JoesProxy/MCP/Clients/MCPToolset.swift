@@ -32,6 +32,7 @@ enum MCPToolset: String, Codable, Sendable, Equatable, CaseIterable {
         if self == .all || Self.coreToolNames.contains(toolName) {
             return true
         }
+        if toolName == "tool_find" { return self != .core }
         let keywords: [String]
         switch self {
         case .core, .all:

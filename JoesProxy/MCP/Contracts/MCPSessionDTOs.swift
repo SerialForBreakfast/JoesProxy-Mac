@@ -91,6 +91,12 @@ struct MCPDisclosedQueryParameter: Equatable, Sendable, Codable {
 
 /// Aggregated endpoint group for `sessions_search(deduplicateBy: "endpoint")`.
 struct MCPEndpointGroupDTO: Equatable, Sendable, Codable {
+    struct Statistics: Equatable, Sendable, Codable {
+        let observedDurations: Int
+        let p95DurationSeconds: Double?
+        let observedSizes: Int
+        let p95ResponseBodyBytes: Int?
+    }
     var signature: String
     var method: String?
     var sanitizedHost: String?
@@ -102,6 +108,8 @@ struct MCPEndpointGroupDTO: Equatable, Sendable, Codable {
     var lastSequence: UInt64
     var statusCounts: [String: Int]
     var maxDurationSeconds: Double?
+    var exampleSessionID: String? = nil
+    var statistics: Statistics? = nil
     var overrideHitCount: Int
 }
 
@@ -127,6 +135,7 @@ struct MCPSessionListPageDTO: Equatable, Sendable, Codable {
     var aggregateScope: String? = nil
     /// Includes matches in endpoint groups beyond the 32 displayed groups.
     var aggregateMatchCount: Int? = nil
+    var omittedEndpointGroupCount: Int? = nil
     var endpointGroups: [MCPEndpointGroupDTO]? = nil
     var authChain: AuthChainBrief.Report? = nil
 }

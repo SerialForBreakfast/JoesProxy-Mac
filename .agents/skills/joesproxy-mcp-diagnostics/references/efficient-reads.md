@@ -1,8 +1,24 @@
 ## Efficiency conventions (apply to every tool below)
 
+- Use `capture_wait` for up to five seconds of new matching activity; inspect the returned
+  count on timeout. Use `sessions_search` for a window that already elapsed.
+
+- To find repeated image transfers across URLs, request `audit_cache_efficiency` with
+  `includeImageIdentity: true`. Check skipped reasons. Repeated representation bytes
+  measure complete matching image-file content and do not predict cache or token savings.
+
+- Use `tool_find` with short keywords if you need a tool name from another task catalog.
+  Call known tools directly. Only policy-visible names and descriptions are returned.
+
+- For failed endpoints, counts and one matching example, use one `sessions_search` with
+  `startedAfter`, `startedBefore`, `statusClass: "error"`, `deduplicateBy: "endpoint"`,
+  `endpointExample: "slowest"` and `limit: 1`. Groups cover all retained matches in the
+  cursor range. Check capture warnings and compare group counts with `aggregateMatchCount`.
+  Choose `first` or `latest` when duration is unavailable. Fetch a body only for a follow-up.
+
 - **Analysis discovery:** tools/list `_meta.joesproxy.analysis` and capabilities `analysis` share
   input kinds, exact/heuristic methods, limits, readiness caveats and next drill-down. CLI toolset status
-  exposes the same policy-filtered analysis metadata. OCR and semantic artifact search are unavailable. For finite CLI workflows,
+  exposes the same policy-filtered analysis metadata. Use `visual_asset_inspection` with `view.mode=ocr` for text or `preview` for pixels after body approval. Semantic artifact search is unavailable. For finite CLI workflows,
   opt into content-free receipts with --receipt-output, --receipt-workflow, --receipt-version and
   --receipt-environment; compare equivalent receipts with efficiency compare. Unknown server work
   and provider usage remain unknown; failures/retries count and bytes never imply tokens.

@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 import ImageIO
 import UniformTypeIdentifiers
 import XCTest
@@ -6,6 +7,34 @@ import XCTest
 
 @MainActor
 final class ImagePreviewModelTests: XCTestCase {
+    static func labeledPNG() throws -> CapturedResponse {
+        let canvas = try XCTUnwrap(CGContext(data: nil, width: 480, height: 100, bitsPerComponent: 8,
+            bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        canvas.setFillColor(gray: 1, alpha: 1)
+        canvas.fill(CGRect(x: 0, y: 0, width: 480, height: 100))
+        let label = NSAttributedString(string: "CLOSED", attributes: [.font: NSFont.systemFont(ofSize: 56),
+            .foregroundColor: NSColor.black])
+        canvas.textPosition = CGPoint(x: 24, y: 22)
+        CTLineDraw(CTLineCreateWithAttributedString(label), canvas)
+        let data = NSMutableData()
+        let target = try XCTUnwrap(CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(target, try XCTUnwrap(canvas.makeImage()), nil)
+        XCTAssertTrue(CGImageDestinationFinalize(target))
+        return CapturedResponse(statusCode: 200, headers: [.init(name: "Content-Type", value: "image/png")],
+            bodyData: data as Data, bodySize: data.length)
+    }
+
+    func testAgentOCRReadsLabelAndReturnsBoxesWithoutPixels() throws {
+        let response = try Self.labeledPNG()
+        let output = try AgentImageView.render(response, options: .init(mode: .ocr, maxEdge: nil, crop: nil,
+            grayscale: nil, quality: nil, includeBoxes: true))
+        XCTAssertNil(output.jpeg)
+        let line = try XCTUnwrap(output.metadata.lines?.first { $0.text.uppercased() == "CLOSED" })
+        let box = try XCTUnwrap(line.box)
+        XCTAssertEqual(box.count, 4)
+        XCTAssertTrue(box.allSatisfy { (0...1).contains($0) })
+    }
+
     func testCommonPNGPathPreservesPixelsMetadataAndVisualAnalysis() async throws {
         let context = try XCTUnwrap(CGContext(data: nil, width: 24, height: 12, bitsPerComponent: 8,
             bytesPerRow: 96, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
