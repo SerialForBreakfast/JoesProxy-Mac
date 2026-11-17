@@ -1,0 +1,26 @@
+[
+  {
+    "test": "ScreenshotUITests/testCaptureGuidedDeviceSetupScreenshot()",
+    "attachmentPrefix": "JP-08 Reserved Device Setup standard",
+    "filename": "ios-profile-airdrop.png",
+    "caption": "iOS guide with AirDrop and Safari alternatives at reserved 192.0.2.10; proxy stopped, certificate needs setup, device unverified.",
+    "fixture": "synthetic demo sessions",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureLoopbackTransportEvidence()",
+    "attachmentPrefix": "JP-03 Transport Success standard",
+    "filename": "transport-success.png",
+    "caption": "Controlled downstream write completed; rendering/playback unconfirmed and listener stopped.",
+    "fixture": "controlled loopback transport-assets",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureLoopbackTransportEvidence()",
+    "attachmentPrefix": "JP-03 Unavailable Asset standard",
+    "filename": "transport-unavailable.png",
+    "caption": "Retained-asset failure details beside controlled write evidence; no rendering confirmation.",
+    "fixture": "controlled loopback transport-assets",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  }
+]

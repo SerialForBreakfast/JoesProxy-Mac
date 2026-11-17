@@ -1,0 +1,42 @@
+[
+  {
+    "test": "GuidedMockAuthoringUITests/testCaptureEditorialBatchBeforeAndPreparedReview()",
+    "attachmentPrefix": "JP-01-02-editor-demonstration",
+    "filename": "batch-editor.png",
+    "caption": "Synthetic batch edits before preparation; zero active modifications.",
+    "fixture": "editorial synthetic batch and owned artwork",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "GuidedMockAuthoringUITests/testCaptureEditorialBatchBeforeAndPreparedReview()",
+    "attachmentPrefix": "JP-01-02-prepared-summary-demonstration",
+    "filename": "batch-review.png",
+    "caption": "Prepared one-to-three-item collection change; not serving.",
+    "fixture": "editorial synthetic batch and owned artwork",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "GuidedMockAuthoringUITests/testCaptureEditorialBatchBeforeAndPreparedReview()",
+    "attachmentPrefix": "JP-02-resulting-collection-demonstration",
+    "filename": "batch-result.png",
+    "caption": "Prepared response JSON; delivery and rendering remain unverified.",
+    "fixture": "editorial synthetic batch and owned artwork",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "GuidedMockAuthoringUITests/testCaptureEditorialBatchBeforeAndPreparedReview()",
+    "attachmentPrefix": "JP-02-artwork-binding-demonstration",
+    "filename": "artwork-binding.png",
+    "caption": "Owned 640 by 360 demonstration artwork bound to a prepared response; no delivery claim.",
+    "fixture": "editorial synthetic batch and owned artwork",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureMCPManagementApprovalsScreenshot()",
+    "attachmentPrefix": "JoesProxy MCP Management Approvals",
+    "filename": "mcp-approval.png",
+    "caption": "Synthetic pending MCP request with Allow Once and denial controls; no approval executed.",
+    "fixture": "synthetic demo sessions",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  }
+]

@@ -1,0 +1,45 @@
+{
+  "sourceCommit": null,
+  "dirtyPathsAtCollection": null,
+  "buildKind": "historical capture; build identity unverified",
+  "appVersion": null,
+  "appBuild": null,
+  "images": [
+    {
+      "test": "ScreenshotUITests/testCaptureLoopbackHLSManifestAndFaultTimeline()",
+      "attachmentPrefix": "JP-05 HLS Manifest Loopback",
+      "filename": "hls-manifest.png",
+      "caption": "Captured synthetic HLS media playlist with three segments; lower segment list continues below viewport.",
+      "fixture": "controlled loopback transport-assets",
+      "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending.",
+      "sha256": "bc26461511ed1f38a4b7e8182e03f78863726450a4adac6806ab19cc03c78b48",
+      "width": 980,
+      "height": 720,
+      "timestamp": 1793866688.07,
+      "attachment": "JP-05 HLS Manifest Loopback_0_BDED088B-BB99-4E7F-8127-AA6214A40C72.png",
+      "exportedAttachment": "35716323-9CBD-4736-B0D8-0E912B4F80F2.png",
+      "resultBundle": "ui-20261105-001729-87080.xcresult",
+      "crop": null,
+      "publicationApproval": "pending maintainer review",
+      "rights": "Project application UI and synthetic fixtures; maintainer confirmation pending"
+    },
+    {
+      "test": "ScreenshotUITests/testCaptureLoopbackHLSManifestAndFaultTimeline()",
+      "attachmentPrefix": "JP-05 Controlled Segment Fault Timeline",
+      "filename": "hls-segment-fault.png",
+      "caption": "Controlled HTTP 503 segment failure in Timeline, proxy stopped; not evidence of a player stall.",
+      "fixture": "controlled loopback transport-assets",
+      "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending.",
+      "sha256": "6b8cd07d3cc010d57873bf26a45ce001ef7bce090cdaa96183e5cc4dd314b976",
+      "width": 1440,
+      "height": 900,
+      "timestamp": 1793866696.84,
+      "attachment": "JP-05 Controlled Segment Fault Timeline_0_CEB97F58-1826-4D99-AC26-BE16F679B41D.png",
+      "exportedAttachment": "808E8A34-7D40-4B41-AF5A-C90C64198067.png",
+      "resultBundle": "ui-20261105-001729-87080.xcresult",
+      "crop": null,
+      "publicationApproval": "pending maintainer review",
+      "rights": "Project application UI and synthetic fixtures; maintainer confirmation pending"
+    }
+  ]
+}

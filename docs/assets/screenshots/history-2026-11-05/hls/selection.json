@@ -1,0 +1,18 @@
+[
+  {
+    "test": "ScreenshotUITests/testCaptureLoopbackHLSManifestAndFaultTimeline()",
+    "attachmentPrefix": "JP-05 HLS Manifest Loopback",
+    "filename": "hls-manifest.png",
+    "caption": "Captured synthetic HLS media playlist with three segments; lower segment list continues below viewport.",
+    "fixture": "controlled loopback transport-assets",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureLoopbackHLSManifestAndFaultTimeline()",
+    "attachmentPrefix": "JP-05 Controlled Segment Fault Timeline",
+    "filename": "hls-segment-fault.png",
+    "caption": "Controlled HTTP 503 segment failure in Timeline, proxy stopped; not evidence of a player stall.",
+    "fixture": "controlled loopback transport-assets",
+    "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending."
+  }
+]

@@ -1,0 +1,63 @@
+{
+  "sourceCommit": null,
+  "dirtyPathsAtCollection": null,
+  "buildKind": "historical capture; build identity unverified",
+  "appVersion": null,
+  "appBuild": null,
+  "images": [
+    {
+      "test": "ScreenshotUITests/testCaptureGuidedDeviceSetupScreenshot()",
+      "attachmentPrefix": "JP-08 Reserved Device Setup standard",
+      "filename": "ios-profile-airdrop.png",
+      "caption": "iOS guide with AirDrop and Safari alternatives at reserved 192.0.2.10; proxy stopped, certificate needs setup, device unverified.",
+      "fixture": "synthetic demo sessions",
+      "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending.",
+      "sha256": "9dff88cc27441f73a1e7f5675c9a8fbb965ca337824e1e9e4faef9e02f4c96e9",
+      "width": 1440,
+      "height": 900,
+      "timestamp": 1793866474.132,
+      "attachment": "JP-08 Reserved Device Setup standard_0_C3DB9E7D-073E-40CB-BD0A-F36B84AC284D.png",
+      "exportedAttachment": "F65B7B24-96C6-4F54-AD69-499A4B3A2747.png",
+      "resultBundle": "ui-20261105-001248-86514.xcresult",
+      "crop": null,
+      "publicationApproval": "pending maintainer review",
+      "rights": "Project application UI and synthetic fixtures; maintainer confirmation pending"
+    },
+    {
+      "test": "ScreenshotUITests/testCaptureLoopbackTransportEvidence()",
+      "attachmentPrefix": "JP-03 Transport Success standard",
+      "filename": "transport-success.png",
+      "caption": "Controlled downstream write completed; rendering/playback unconfirmed and listener stopped.",
+      "fixture": "controlled loopback transport-assets",
+      "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending.",
+      "sha256": "16c97bc83918ff7c16c99a8b041420a3d9e95cd1bd043adc2a043c6806f5f1ae",
+      "width": 2880,
+      "height": 1740,
+      "timestamp": 1793866511.952,
+      "attachment": "JP-03 Transport Success standard_0_A45AD18E-8071-4BAE-B091-B75710C16978.png",
+      "exportedAttachment": "40AEBC07-D8AD-473E-B399-F80F93EAA221.png",
+      "resultBundle": "ui-20261105-001248-86514.xcresult",
+      "crop": null,
+      "publicationApproval": "pending maintainer review",
+      "rights": "Project application UI and synthetic fixtures; maintainer confirmation pending"
+    },
+    {
+      "test": "ScreenshotUITests/testCaptureLoopbackTransportEvidence()",
+      "attachmentPrefix": "JP-03 Unavailable Asset standard",
+      "filename": "transport-unavailable.png",
+      "caption": "Retained-asset failure details beside controlled write evidence; no rendering confirmation.",
+      "fixture": "controlled loopback transport-assets",
+      "privacyReview": "Codex visual review on 2026-11-17: synthetic/reserved data; no private identity observed. Historical UI, publication pending.",
+      "sha256": "d11f36d78b693adb80b8eec2351636814bc49c254c2dfab00125be214b160a62",
+      "width": 2880,
+      "height": 1740,
+      "timestamp": 1793866513.254,
+      "attachment": "JP-03 Unavailable Asset standard_0_EED1885B-2618-4EB0-94A8-E8072CDB6FAB.png",
+      "exportedAttachment": "0E765CDA-E4F3-4E9A-BBEA-9B0BF5747205.png",
+      "resultBundle": "ui-20261105-001248-86514.xcresult",
+      "crop": null,
+      "publicationApproval": "pending maintainer review",
+      "rights": "Project application UI and synthetic fixtures; maintainer confirmation pending"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "purpose": "Historical originals recovered from the editorial inventory, not current release illustrations",
+  "appVersion": null,
+  "appBuild": null,
+  "sourceCommit": null,
+  "dirtyState": "unknown; not reconstructed from current checkout",
+  "rights": "Project application UI with synthetic fixtures; maintainer confirmation pending",
+  "privacyReview": "Codex visual review: reserved example addresses and synthetic artwork; no private identity observed",
+  "publicationApproval": "pending maintainer review; historical archive only",
+  "images": [
+    {
+      "filename": "batch-prepared.png",
+      "sha256": "bb9caf9712fbcda854a634736dad5c1ee821f441eb9128eaa4ac4efc9bcc2375",
+      "width": 1920, "height": 1440, "timestamp": 1793838792.091,
+      "test": "GuidedMockAuthoringUITests/testBatchFailureCorrectionReviewAndRetirement()",
+      "attachment": "batch-review-standard_0_BBAD45D8-932C-4942-B6FD-513D7069C332.png",
+      "exportedAttachment": "BFBF7E66-8CAE-4C56-8CE9-F7869175F057.png",
+      "resultBundle": "ui-20261104-162958-77001.xcresult",
+      "fixture": "guided mock authoring, reserved client and api.example.test",
+      "caption": "Prepared collection change from one to three items, not serving; zero active modifications.",
+      "limitations": "Scrolled editor; not a complete before/review pair or preferred website hero. Attachment not associated with failure does not prove full-suite success.",
+      "crop": null
+    },
+    {
+      "filename": "artwork-prepared.png",
+      "sha256": "86e71990a8a2e03b22112c3029e67089334319069961e2212eb6850109d501db",
+      "width": 1920, "height": 1440, "timestamp": 1793846549.87,
+      "test": "GuidedMockAuthoringUITests/testArtworkRelatedResponseRemovalAndKeyboardRecovery()",
+      "attachment": "artwork-review-standard_0_B20EDDA4-DB92-40A6-8394-19A4532EEF72.png",
+      "exportedAttachment": "9EE73128-BED9-4630-AD4F-0EEB3E1719EB.png",
+      "resultBundle": "ui-20261104-183954-88342.xcresult",
+      "fixture": "guided mock authoring, synthetic 2x2 artwork",
+      "caption": "Prepared response and synthetic artwork metadata with delivery and rendering warnings.",
+      "limitations": "Tiny fixture artwork; technical evidence only. No proof of delivery or rendering. Attachment not associated with failure does not prove full-suite success.",
+      "crop": null
+    }
+  ]
+}

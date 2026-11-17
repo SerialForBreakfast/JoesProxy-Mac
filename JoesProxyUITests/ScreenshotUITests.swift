@@ -10,6 +10,7 @@
 import XCTest
 import AppKit
 import ScreenCaptureKit
+import Vision
 
 final class ScreenshotUITests: XCTestCase {
     @MainActor
@@ -286,6 +287,75 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureIOSWebsiteDeliveryStates() async throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-fixture=demo-sessions", "--ui-test-text-size=standard",
+                               "--ui-test-open-ios-setup", "--ui-test-primary-screen",
+                               "--ui-test-certificate-state=ready", "--ui-test-verification-state=inspected"]
+        app.launchJoesProxyForTesting()
+        defer { app.terminate() }
+        XCTAssertTrue(app.staticTexts["Profile Downloaded"].waitForExistence(timeout: 8))
+        let window = app.windows.containing(.staticText, identifier: "Profile Downloaded").firstMatch
+        let scroll = app.sheets.firstMatch.scrollViews.firstMatch
+        let airDrop = window.buttons["AirDrop to iPhone or iPad"]
+        XCTAssertTrue(airDrop.waitForExistence(timeout: 5))
+        for _ in 0..<8 where !airDrop.isHittable { scroll.scroll(byDeltaX: 0, deltaY: -120) }
+        XCTAssertTrue(airDrop.isHittable)
+        XCTAssertTrue(window.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@",
+            "http://192.0.2.10:8765", "http://192.0.2.10:8765")).firstMatch.waitForExistence(timeout: 5))
+        try await captureAssetWindow(app: app, window: window, name: "ios-profile-airdrop")
+
+        let certificateQR = window.buttons["Show QR Code"].firstMatch
+        for _ in 0..<8 where !certificateQR.isHittable { scroll.scroll(byDeltaX: 0, deltaY: -100) }
+        XCTAssertTrue(certificateQR.isHittable)
+        certificateQR.click()
+        XCTAssertTrue(app.staticTexts["Scan to Install Certificate"].waitForExistence(timeout: 5))
+        try await assertWebsiteQR(window: window, expected: "x-safari-http://192.0.2.10:8765")
+        try await captureAssetWindow(app: app, window: window, name: "ios-certificate-qr")
+        app.buttons["Dismiss"].click()
+
+        let wifiQR = window.buttons["iosProxyPACQRCode"]
+        for _ in 0..<18 where wifiQR.frame.midY > scroll.frame.maxY - 300 || !wifiQR.isHittable {
+            scroll.scroll(byDeltaX: 0, deltaY: -120)
+        }
+        XCTAssertTrue(wifiQR.isHittable)
+        wifiQR.click()
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Visible"), object: wifiQR)], timeout: 3), .completed)
+        let url = window.staticTexts["iosProxyPACURL"]
+        let payload = url.value as? String ?? url.label
+        XCTAssertEqual(URL(string: payload)?.host, "192.0.2.10")
+        XCTAssertTrue(window.buttons["iosProxyCopyPACURL"].isHittable)
+        try await assertWebsiteQR(window: window, expected: payload)
+        try await captureAssetWindow(app: app, window: window, name: "ios-wifi-qr")
+
+        let watch = window.buttons["Watch for Device Traffic"]
+        for _ in 0..<16 where watch.frame.midY > scroll.frame.maxY - 160 || !watch.isHittable {
+            scroll.scroll(byDeltaX: 0, deltaY: -120)
+        }
+        XCTAssertTrue(watch.isHittable)
+        scroll.scroll(byDeltaX: 0, deltaY: -100)
+        try await captureAssetWindow(app: app, window: window, name: "ios-watch-device-traffic")
+    }
+
+    @MainActor
+    private func assertWebsiteQR(window: XCUIElement, expected: String) async throws {
+        let png = try await ownedWindowPNG(window: window)
+        let diagnostic = XCTAttachment(data: png, uniformTypeIdentifier: "public.png")
+        diagnostic.name = "QR decoding source"
+        diagnostic.lifetime = .keepAlways
+        add(diagnostic)
+        let request = VNDetectBarcodesRequest()
+        request.symbologies = [.qr]
+        try VNImageRequestHandler(data: png).perform([request])
+        XCTAssertEqual(request.results?.compactMap(\.payloadStringValue), [expected])
+        let receipt = XCTAttachment(string: expected)
+        receipt.name = "Decoded website QR payload"
+        receipt.lifetime = .keepAlways
+        add(receipt)
+    }
+
+    @MainActor
     func testCaptureReservedDeviceSetupAccessibility() async throws {
         try await captureReservedDeviceSetup(textSize: "accessibility")
     }
@@ -488,6 +558,11 @@ extension XCTestCase {
     /// Capture the identified window itself, not a desktop crop that may contain another app.
     @MainActor
     func ownedWindowAttachment(window: XCUIElement) async throws -> XCTAttachment {
+        XCTAttachment(data: try await ownedWindowPNG(window: window), uniformTypeIdentifier: "public.png")
+    }
+
+    @MainActor
+    func ownedWindowPNG(window: XCUIElement) async throws -> Data {
         guard CGPreflightScreenCaptureAccess() else { throw CaptureFailure.accessUnavailable }
         guard let target = screenshotTarget() else { throw CaptureFailure.ambiguousTarget }
         let frame = window.frame
@@ -508,7 +583,7 @@ extension XCTestCase {
         guard let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
             throw CaptureFailure.encodingFailed
         }
-        return XCTAttachment(data: png, uniformTypeIdentifier: "public.png")
+        return png
     }
 
 }

@@ -1,0 +1,34 @@
+[
+  {
+    "test": "ScreenshotUITests/testCaptureIOSWebsiteDeliveryStates()",
+    "attachmentPrefix": "ios-profile-airdrop_",
+    "filename": "ios-profile-airdrop.png",
+    "caption": "AirDrop and Safari profile-delivery controls in the synthetic iOS setup guide; no transfer performed.",
+    "decodedQRPayload": null,
+    "fixture": "demo-sessions, certificate ready and inspected proxy runtime simulated; reserved 192.0.2.10; no real trust or routing changes"
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureIOSWebsiteDeliveryStates()",
+    "attachmentPrefix": "ios-certificate-qr_",
+    "filename": "ios-certificate-qr.png",
+    "caption": "Demonstration certificate QR. Scan the code in your own app; this reserved example does not install or trust a certificate.",
+    "decodedQRPayload": "x-safari-http://192.0.2.10:8765",
+    "fixture": "demo-sessions, certificate ready and inspected proxy runtime simulated; reserved 192.0.2.10; no real trust or routing changes"
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureIOSWebsiteDeliveryStates()",
+    "attachmentPrefix": "ios-wifi-qr_",
+    "filename": "ios-wifi-qr.png",
+    "caption": "Automatic proxy URL and QR in a synthetic setup. Copy your own app's URL into Wi-Fi settings; scanning alone does not configure the device.",
+    "decodedQRPayload": "http://192.0.2.10:9090/.well-known/joesproxy/proxy.pac",
+    "fixture": "demo-sessions, certificate ready and inspected proxy runtime simulated; reserved 192.0.2.10; no real trust or routing changes"
+  },
+  {
+    "test": "ScreenshotUITests/testCaptureIOSWebsiteDeliveryStates()",
+    "attachmentPrefix": "ios-watch-device-traffic_",
+    "filename": "ios-watch-device-traffic.png",
+    "caption": "Verify Routing before starting Watch for Device Traffic; device traffic has not been verified.",
+    "decodedQRPayload": null,
+    "fixture": "demo-sessions, certificate ready and inspected proxy runtime simulated; reserved 192.0.2.10; no real trust or routing changes"
+  }
+]
