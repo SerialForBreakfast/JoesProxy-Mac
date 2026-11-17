@@ -336,6 +336,63 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(Array(bytes.prefix(2)), [0xff, 0xd8])
     }
 
+    func testCaptureIntervalCountsLateFailuresPeaksAndLossAcrossCheckpoints() async throws {
+        let stack = try await makeStack(responseBody: Data(repeating: 1, count: 100))
+        let budget = CaptureAdmissionBudget(byteLimit: 1, countLimit: 1)
+        stack.protocolService.setCaptureStatusProvider {
+            MCPCaptureStatusDTO(proxyState: "running", admission: budget.snapshot, perResponseByteLimit: 1,
+                retainedBodyByteLimit: nil, evictedBodyCount: stack.sessionStore.evictedBodyCount,
+                droppedSessionCount: stack.sessionStore.droppedSessionCount)
+        }
+        var intervalBytes = (request: 0, response: 0)
+        func read(_ token: String) async throws -> [String: Any] {
+            let response = try await callSessionSummary(stack: stack, toolName: "capture_digest",
+                toolArguments: ["interval": token])
+            intervalBytes.request += response.requestBytes
+            intervalBytes.response += response.wireBytes
+            return try summaryPayload(from: response)
+        }
+        let firstDigest = try await callSessionSummary(stack: stack, toolName: "capture_digest", toolArguments: [:])
+        let baseline = try await read("start")
+        let token = try XCTUnwrap(baseline["checkpoint"] as? String)
+        var late = stack.session
+        late.state = .failed
+        stack.sessionStore.update(late)
+        stack.sessionStore.update(late)
+        let extra = SessionRecord(request: stack.session.request, response: stack.session.response, state: .completed,
+            timing: .init(startedAt: Date()))
+        stack.sessionStore.append(extra)
+        let peak = stack.sessionStore.retainedBodyBytes
+        stack.sessionStore.retentionPolicy = .keepLastBodyBytes(0)
+        stack.sessionStore.retentionPolicy = .keepLastSessions(1)
+        XCTAssertNil(budget.reserve(bytes: 2))
+        let result = try await read(token)
+        let lastDigest = try await callSessionSummary(stack: stack, toolName: "capture_digest", toolArguments: [:])
+        let firstStatus = try XCTUnwrap(try summaryPayload(from: firstDigest)["captureStatus"] as? [String: Any])
+        let lastStatus = try XCTUnwrap(try summaryPayload(from: lastDigest)["captureStatus"] as? [String: Any])
+        let oldLoss = try XCTUnwrap(lastStatus["droppedSessionCount"] as? Int) - XCTUnwrap(firstStatus["droppedSessionCount"] as? Int)
+        XCTAssertEqual(oldLoss, result["removedSessions"] as? Int)
+        XCTAssertEqual(result["unrecordedRequests"] as? Int, 1)
+        print("EDGE_INTERVAL_RECEIPT controlCalls=2 request=\(firstDigest.requestBytes + lastDigest.requestBytes) response=\(firstDigest.wireBytes + lastDigest.wireBytes) intervalCalls=2 request=\(intervalBytes.request) response=\(intervalBytes.response)")
+        XCTAssertEqual(result["newSessions"] as? Int, 1)
+        XCTAssertEqual(result["failureTransitions"] as? Int, 1)
+        XCTAssertEqual(result["removedSessions"] as? Int, 1)
+        XCTAssertEqual(result["removedBodies"] as? Int, stack.sessionStore.evictedBodyCount)
+        XCTAssertGreaterThan(stack.sessionStore.evictedBodyCount, 0)
+        XCTAssertEqual(result["peakRetainedBodyBytes"] as? Int, peak)
+        XCTAssertEqual(result["peakRetainedSessions"] as? Int, 2)
+        let next = try XCTUnwrap(result["checkpoint"] as? String)
+        let replay = try await read(token)
+        XCTAssertEqual(replay["checkpoint"] as? String, next)
+        let quiet = try await read(next)
+        XCTAssertEqual(quiet["failureTransitions"] as? Int, 0)
+        XCTAssertEqual(quiet["newSessions"] as? Int, 0)
+        stack.sessionStore.clear()
+        let reset = try await read(try XCTUnwrap(quiet["checkpoint"] as? String))
+        XCTAssertEqual(reset["status"] as? String, "restart_required")
+        XCTAssertNil(reset["newSessions"])
+    }
+
     func testRateLimitedRequestGetsStructuredRetryInterval() async throws {
         let stack = try await makeStack()
         let body = try JSONSerialization.data(withJSONObject: [

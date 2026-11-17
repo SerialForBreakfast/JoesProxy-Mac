@@ -3487,6 +3487,7 @@ final class CLIApplication {
 
     private func captureDigestArguments(_ invocation: CLIInvocation) -> [String: Any] {
         var arguments: [String: Any] = [:]
+        if let interval = invocation.options["interval"] { arguments["interval"] = interval }
         if let sequence = invocation.options["since-sequence"], let value = UInt64(sequence) {
             arguments["knownLatestSequence"] = value
         }
@@ -3745,7 +3746,7 @@ final class CLIApplication {
       joesproxyctl toolset status
       joesproxyctl toolset find --query <keywords>
       joesproxyctl toolset select --name core|capture|mocking|media|reproduction|advanced|all
-      joesproxyctl capture digest
+      joesproxyctl capture digest [--interval <start|checkpoint>]
       joesproxyctl capture wait [--count <1...100>] [--window-seconds <1...5>] [--method <method>] [--status-class <class>]
       joesproxyctl capture status
       joesproxyctl https rules get --host media.example.test [--recovery-id <uuid>]

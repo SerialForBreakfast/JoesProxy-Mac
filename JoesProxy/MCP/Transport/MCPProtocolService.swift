@@ -1262,7 +1262,7 @@ final class MCPProtocolService {
                 filter: sessionsSearchFilter(arguments: arguments)
             )
         case "capture_digest":
-            return captureDigestTool(id: id, arguments: arguments)
+            return captureDigestTool(id: id, arguments: arguments, client: client)
         case "capture_wait":
             do {
                 struct Wait: Decodable { let count: Int?; let seconds: Int?; let method: String?; let statusClass: String? }
@@ -1814,8 +1814,23 @@ final class MCPProtocolService {
         return "search:\(method):\(hostCategory):\(sessionIDPrefix):\(domain):\(path):\(startedAfter):\(startedBefore):\(statusCode):\(statusClass):\(minDurationMs):\(hasOverrideHit):\(bodyAvailable)"
     }
 
-    private func captureDigestTool(id: Any?, arguments: [String: Any]) -> [String: Any] {
+    private func captureDigestTool(id: Any?, arguments: [String: Any], client: MCPClientRecord) -> [String: Any] {
         do {
+            if let raw = arguments["interval"] {
+                guard arguments.count == 1, let token = raw as? String else {
+                    throw MCPStructuredError.malformedRequest(message: "Pass interval alone with start or a returned checkpoint.")
+                }
+                let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
+                guard policyEvaluator.effectiveAllows(capability: .sessionSearch, client: client),
+                      profile.allowedFieldClasses.contains(.statusCode) else {
+                    throw MCPStructuredError(code: .policyDenied, message: "Capture intervals require search and status disclosure.")
+                }
+                let report = try snapshotService.intervals.report(clientID: client.id, token: token,
+                    scope: .init(epoch: snapshotService.captureEpoch, policy: policyStore.policyRevision,
+                                 generation: client.credentialGeneration, profile: client.assignedProfileID),
+                    sample: snapshotService.intervalSample, capacity: captureStatusProvider?())
+                return try encodedToolResult(id: id, payload: MCPDTOEnvelope(payload: report))
+            }
             let counts = snapshotService.captureCounts
             let stateToken = captureStateToken()
             let unchanged = arguments["ifStateToken"] as? String == stateToken
@@ -5742,6 +5757,7 @@ final class MCPProtocolService {
             inputSchema = [
                 "type": "object",
                 "properties": [
+                    "interval": ["type": "string", "description": "start or previous interval checkpoint; use alone."],
                     "ifStateToken": [
                         "type": "string",
                         "description": "Previously returned state token; returns unchanged=true when still current."

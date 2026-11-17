@@ -2,6 +2,10 @@
 const base = require('./promptfooconfig.cjs');
 const questions = [
   {
+    question: 'Begin measuring failure transitions, retained body peaks and session removals for my next fifteen-minute checkpoint.',
+    tool: 'capture_digest', args: {interval: 'start'},
+  },
+  {
     question: 'Which endpoints failed between 2026-01-01T10:00:00Z and 2026-01-01T10:05:00Z? Count them and identify the slowest failure in each.',
     tool: 'sessions_search',
     args: {statusClass: 'error', deduplicateBy: 'endpoint', endpointExample: 'slowest',

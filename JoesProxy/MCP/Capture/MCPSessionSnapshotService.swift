@@ -104,6 +104,14 @@ final class MCPSessionSnapshotService {
     private var methodByID: [SessionRecord.ID: String] = [:]
     private var hostCategoryByID: [SessionRecord.ID: String] = [:]
     private var stateByID: [SessionRecord.ID: SessionLifecycleState] = [:]
+    let intervals = MCPCaptureIntervals()
+    private var failingIDs = Set<SessionRecord.ID>()
+    private var failureTransitions: UInt64 = 0
+    var intervalSample: MCPCaptureIntervals.Sample {
+        .init(sequence: highWaterSequence, failureTransitions: failureTransitions,
+              removedBodies: sessionStore.evictedBodyCount, removedSessions: sessionStore.droppedSessionCount,
+              retainedBytes: sessionStore.retainedBodyBytes, retainedSessions: sequenceByID.count)
+    }
     private var removedEntryCount = 0
     private var completedCount = 0
     private var pendingCount = 0
@@ -540,6 +548,8 @@ final class MCPSessionSnapshotService {
         methodByID = [:]
         hostCategoryByID = [:]
         stateByID = [:]
+        failingIDs.removeAll()
+        failureTransitions = 0
         removedEntryCount = 0
         completedCount = 0
         pendingCount = 0
@@ -586,6 +596,7 @@ final class MCPSessionSnapshotService {
     private func apply(_ change: SessionStoreChange) {
         defer {
             stateRevision &+= 1
+            intervals.observe(bytes: sessionStore.retainedBodyBytes, sessions: sequenceByID.count)
             if activeWaits > 0 { waitEvents.send(change) }
         }
         switch change {
@@ -676,7 +687,7 @@ final class MCPSessionSnapshotService {
         nextSequence += 1
         sequenceByID[session.id] = sequence
         reviseSource(session.id)
-        updateLifecycleState(session.state, for: session.id)
+        updateLifecycleState(session)
         let entry = IndexEntry(id: session.id, captureSequence: sequence)
         indexEntries.append(entry)
         let method = session.request.method.lowercased()
@@ -716,7 +727,7 @@ final class MCPSessionSnapshotService {
             methodByID[id] = newMethod
             hostCategoryByID[id] = newHostCategory
         }
-        updateLifecycleState(session.state, for: session.id)
+        updateLifecycleState(session)
     }
 
     private func removeSessions(_ ids: Set<SessionRecord.ID>) {
@@ -731,6 +742,7 @@ final class MCPSessionSnapshotService {
             methodByID.removeValue(forKey: id)
             hostCategoryByID.removeValue(forKey: id)
             stateByID.removeValue(forKey: id)
+            failingIDs.remove(id)
         }
 
         // Retention commonly drops one oldest session for every append. Removing that ID from the
@@ -758,7 +770,14 @@ final class MCPSessionSnapshotService {
         }.filter { !$0.value.isEmpty }
     }
 
-    private func updateLifecycleState(_ state: SessionLifecycleState, for id: SessionRecord.ID) {
+    private func updateLifecycleState(_ session: SessionRecord) {
+        let id = session.id
+        let state = session.state
+        if state == .failed || (session.response?.statusCode ?? 0) >= 400 {
+            if failingIDs.insert(id).inserted { failureTransitions += 1 }
+        } else {
+            failingIDs.remove(id)
+        }
         if let previous = stateByID[id] {
             guard previous != state else { return }
             decrementCount(for: previous)

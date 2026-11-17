@@ -2211,6 +2211,31 @@ final class ProxyServerTests: XCTestCase {
             sink.record("discovery", ["toolset": "core", "bytes": core.wireBytes])
             _ = try await tool("agent_toolset_select", ["toolset": "all"])
 
+            let firstInterval = try await tool("capture_digest", ["interval": "start"])
+            var intervalToken = try XCTUnwrap(firstInterval.payload?["checkpoint"] as? String)
+            var intervalStarted = ProcessInfo.processInfo.systemUptime
+            var initialBodies = store.evictedBodyCount
+            var initialDrops = store.droppedSessionCount
+            var initialCount = store.sessions.count
+            func recordInterval() async throws {
+                let reply = try await tool("capture_digest", ["interval": intervalToken])
+                let report = try XCTUnwrap(reply.payload)
+                let dropped = store.droppedSessionCount - initialDrops
+                XCTAssertEqual(report["status"] as? String, "complete")
+                XCTAssertEqual(report["removedBodies"] as? Int, store.evictedBodyCount - initialBodies)
+                XCTAssertEqual(report["removedSessions"] as? Int, dropped)
+                XCTAssertEqual(report["newSessions"] as? Int, store.sessions.count - initialCount + dropped)
+                intervalToken = try XCTUnwrap(report["checkpoint"] as? String)
+                sink.record("interval_report", ["cycle": cycle, "rpcBytes": reply.bytes, "ms": reply.ms,
+                    "failureTransitions": report["failureTransitions"] as? Int ?? -1,
+                    "peakRetainedBodyBytes": report["peakRetainedBodyBytes"] as? Int ?? -1,
+                    "removedBodies": store.evictedBodyCount - initialBodies, "removedSessions": dropped])
+                initialCount = store.sessions.count
+                initialDrops = store.droppedSessionCount
+                initialBodies = store.evictedBodyCount
+                intervalStarted = ProcessInfo.processInfo.systemUptime
+            }
+
             while ProcessInfo.processInfo.systemUptime - started < duration, sink.failures < 200 {
                 cycle += 1
                 disturbedWindow = false
@@ -2339,7 +2364,15 @@ final class ProxyServerTests: XCTestCase {
 
                 // 5. User clears history: an earlier window must not read as a measured zero.
                 if cycle.isMultiple(of: 10) {
+                    try await recordInterval()
                     store.clear()
+                    let invalid = try await tool("capture_digest", ["interval": intervalToken])
+                    XCTAssertEqual(invalid.payload?["status"] as? String, "restart_required")
+                    let fresh = try await tool("capture_digest", ["interval": "start"])
+                    intervalToken = try XCTUnwrap(fresh.payload?["checkpoint"] as? String)
+                    initialCount = store.sessions.count
+                    initialDrops = store.droppedSessionCount
+                    initialBodies = store.evictedBodyCount
                     let cleared = try await tool("capture_calculate", filtered)
                     let qualified = cleared.error != nil || cleared.payload?["historyChangedSinceWindowStart"] as? Bool == true
                     if !qualified {
@@ -2348,6 +2381,7 @@ final class ProxyServerTests: XCTestCase {
                     sink.record("user_clear", ["cycle": cycle, "qualified": qualified, "error": cleared.error ?? ""])
                 }
 
+                if ProcessInfo.processInfo.systemUptime - intervalStarted >= 900 { try await recordInterval() }
                 // 6. Delivery assertions raised inside shared exchange helpers, then a drained checkpoint.
                 for detail in issues.drain() {
                     sink.observe("delivery_mismatch", detail, cycle: cycle)
@@ -2372,6 +2406,7 @@ final class ProxyServerTests: XCTestCase {
                     throw NSError(domain: "CaptureSoakDiskSafetyStop", code: 1)
                 }
             }
+            try await recordInterval()
         } catch {
             sink.record("aborted", ["cycle": cycle, "error": "\(error)"])
             await proxy.stop()

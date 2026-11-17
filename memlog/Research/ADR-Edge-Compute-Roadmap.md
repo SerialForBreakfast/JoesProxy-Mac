@@ -97,7 +97,7 @@ Class is `exact` or `heuristic`. Status is `shipped`, `in progress` or `planned`
 | A5 | `capture_wait`: return when N matching requests arrive or a timeout passes | exact | Implemented for future admissions, distinct IDs, cancellation and capture reset; live soak pending |
 | A7 | Optional columnar or TSV rows for list results | exact | Planned |
 | A8 | Result handles: refine, page or re-aggregate a stored query result | exact | Planned |
-| A9 | `sinceSequence` and digest conditions on the remaining read tools | exact | Planned |
+| A9 | Interval reports and delta reads | exact | Candidate revision 35 adds rolling failure, retention and admission intervals to `capture_digest` and the CLI. Rehearsal assertions reconcile the report with the store before clear and at periodic checkpoints. Generalizing delta reads to other tools remains planned. |
 
 ### Tranche 6 — image depth
 

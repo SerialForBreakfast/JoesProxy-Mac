@@ -131,3 +131,29 @@ The first OCR command in a fresh test process returned `CLOSED` with a normalize
 The production CLI command received an MCP image block over loopback, cropped the left half of a 480 × 100 source and wrote a decodable 120 × 50 JPEG. A second write to the same destination failed and the original bytes were preserved. These tests use isolated credentials and run the CLI entry point in process. The installed executable and Keychain workflow remain part of release acceptance.
 
 Serial Policy passed 3,111 tests with 17 skipped and zero failures. The Debug app build succeeded. This verification precedes the soak.
+
+### Revision 35 — periodic capture intervals
+
+The synthetic interval starts with one successful retained response. A late update marks
+that session failed twice, a second request arrives, body retention strips bytes, and
+count retention removes one session. One admission is rejected. The interval reports one
+failure transition, one new session, one whole-session removal, the store's body-removal
+count, one unrecorded request and the peak observed between reads. A quiet interval reports
+zero transitions. A retried checkpoint returns its prior report, and a clear invalidates it.
+
+For the shared question “How many whole sessions were lost between these two checkpoints?”,
+both workflows returned one. These dispatcher measurements include both checkpoint calls
+and use the same capture and disclosure settings.
+
+| Workflow | Calls | Request bytes | Response bytes | Total RPC bytes |
+|---|---:|---:|---:|---:|
+| Read the ordinary digest twice and difference retention counters | 2 | 194 | 3,810 | 4,004 |
+| Start an interval and read its checkpoint | 2 | 261 | 980 | 1,241 |
+
+The peaks measure retained store state at published changes. Network in-flight peaks and
+physical process memory need separate instrumentation. The reference workflow uses the
+existing API on the candidate dispatcher. Model tokens and live-run savings remain unmeasured.
+
+Serial Policy passed 3,113 tests with 17 skipped and zero failures. The Debug app built
+successfully. The rehearsal now records rolling interval receipts and reconciles retention
+and admissions with the store across clears. Its opt-in timed run remains pending.

@@ -1,5 +1,9 @@
 ## Efficiency conventions (apply to every tool below)
 
+- For periodic failure, retention loss and peak usage reports, call `capture_digest` with
+  `interval: "start"`, then pass each returned checkpoint as `interval`. On `restart_required`,
+  mark the gap and start again.
+
 - Use `capture_wait` for up to five seconds of new matching activity; inspect the returned
   count on timeout. Use `sessions_search` for a window that already elapsed.
 

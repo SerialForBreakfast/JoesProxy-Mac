@@ -4746,10 +4746,15 @@ final class JoesProxyCLITests: XCTestCase {
         ])
         XCTAssertEqual(rCalc, .success)
 
+        let interval = await app.run(arguments: ["capture", "digest", "--interval", "start", "--quiet"])
+        XCTAssertEqual(interval, .success)
+
         let requests = try MockCLIURLProtocol.state.recordedRequests().map {
             try $0.bodyData().jsonObject()["params"] as? [String: Any] ?? [:]
         }
-        XCTAssertEqual(requests.count, 6)
+        XCTAssertEqual(requests.count, 7)
+        XCTAssertEqual(requests.last?["name"] as? String, "capture_digest")
+        XCTAssertEqual(requests.last?["arguments"] as? [String: String], ["interval": "start"])
 
         XCTAssertEqual(requests[0]["name"] as? String, "sessions_search")
         let searchArgs = try XCTUnwrap(requests[0]["arguments"] as? [String: Any])

@@ -4,6 +4,27 @@ import XCTest
 
 @MainActor
 final class MCPSessionSnapshotServiceTests: XCTestCase {
+    func testIntervalTokensAreScopedBoundedAndExpire() throws {
+        let intervals = MCPCaptureIntervals()
+        let start = ContinuousClock.now
+        let scope = MCPCaptureIntervals.Scope(epoch: .initial, policy: .initial, generation: 1, profile: .shareable)
+        let sample = MCPCaptureIntervals.Sample(sequence: 0, failureTransitions: 0, removedBodies: 0,
+            removedSessions: 0, retainedBytes: 0, retainedSessions: 0)
+        func read(_ id: String, _ token: String, _ at: ContinuousClock.Instant,
+                  _ authority: MCPCaptureIntervals.Scope) throws -> MCPCaptureIntervals.Report {
+            try intervals.report(clientID: id, token: token, scope: authority, sample: sample, capacity: nil, now: at)
+        }
+        let token = try XCTUnwrap(read("owner", "start", start, scope).checkpoint)
+        XCTAssertEqual(try read("other", token, start, scope).status, "restart_required")
+        var rotated = scope
+        rotated.generation += 1
+        XCTAssertEqual(try read("owner", token, start, rotated).status, "restart_required")
+        for i in 1..<32 { _ = try read(String(i), "start", start, scope) }
+        XCTAssertThrowsError(try read("extra", "start", start, scope))
+        let expired = start.advanced(by: .seconds(3600))
+        XCTAssertEqual(try read("owner", token, expired, scope).status, "restart_required")
+        XCTAssertEqual(try read("extra", "start", expired, scope).status, "started")
+    }
     func testFutureWaitCountsMatchingNewIDsOnceAndDropsSubscription() async throws {
         let store = InMemorySessionStore()
         let service = MCPSessionSnapshotService(sessionStore: store)

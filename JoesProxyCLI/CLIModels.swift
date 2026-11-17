@@ -2,7 +2,7 @@ import Foundation
 
 enum CLIRuntimeIdentity {
     /// Kept equal to `MCPCapabilitiesRevision.current`; an app-target test prevents drift.
-    static let capabilitiesRevision = 34
+    static let capabilitiesRevision = 35
 
     static func expectation(bundle: Bundle = .main) -> [String: Any] {
         let marketingVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String

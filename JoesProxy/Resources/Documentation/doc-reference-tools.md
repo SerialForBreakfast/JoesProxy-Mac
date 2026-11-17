@@ -2,6 +2,17 @@
 
 ## Scope {#safety}
 
+For periodic capture checks, call `capture_digest` with `interval: "start"`, then pass the
+returned `checkpoint` as the next `interval`. Use the newest checkpoint every time.
+Each successful interval counts new session admissions and transitions into HTTP status ≥400
+or failed state, including late failures of older sessions. A repeated update in the same
+failure state adds zero. Retention counters distinguish removed bodies from whole sessions.
+Peaks are retained bytes and sessions at store publications, including the starting sample.
+Admission skip and rejection deltas appear only when comparable counters are available.
+One client has one rolling checkpoint. A retry of the last token replays its report. After
+`restart_required`, begin a fresh interval and mark the gap. Checkpoints expire after an hour
+and are scoped to the capture, client credential and policy. Ordinary digest reads are independent.
+
 Use `joesproxyctl cache audit --image-identity` to group complete captured image files
 across URLs. The optional MCP argument `includeImageIdentity` requests only content groups.
 This reads captured bodies under existing local approval. Check skipped inputs and omitted groups.

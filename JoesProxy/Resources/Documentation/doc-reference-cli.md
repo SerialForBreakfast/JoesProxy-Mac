@@ -260,12 +260,14 @@ joesproxyctl toolset find --query <keywords>
 
 ```text
 joesproxyctl capture wait [--count <1...100>] [--window-seconds <1...5>] [--method <method>] [--status-class <class>]
+joesproxyctl capture digest --interval start --json
+joesproxyctl capture digest --interval <returned-checkpoint> --json
 ```
 
 ## Command 16 {#command-12448048014aa6a4}
 
 ```text
-joesproxyctl capture digest
+joesproxyctl capture digest [--interval <start|checkpoint>]
 ```
 
 ## Command 17 {#command-7a1396581bcfc3e0}
