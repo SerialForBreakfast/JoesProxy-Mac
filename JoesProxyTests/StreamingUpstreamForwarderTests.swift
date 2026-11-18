@@ -73,6 +73,55 @@ private final class StalledMutationWriteHandler: ChannelOutboundHandler {
 }
 
 final class StreamingUpstreamForwarderTests: XCTestCase {
+    /// A throttled or stalled 101 write must not be recorded as permanently pending, and a failed
+    /// one must be recorded as failed. The relay itself starts without waiting for the write.
+    func testUpgradeHandshakeIsRecordedAfterTheHeadWriteSettles() throws {
+        for succeeded in [true, false] {
+            let loop = EmbeddedEventLoop()
+            let sink = StalledMutationWriteHandler()
+            let downstream = EmbeddedChannel(handler: sink, loop: loop)
+            let upstream = EmbeddedChannel(loop: loop)
+            defer {
+                _ = try? upstream.finish(acceptAlreadyClosed: true)
+                _ = try? downstream.finish(acceptAlreadyClosed: true)
+            }
+            let request = HTTPProxyRequest(kind: .standard, method: "GET", version: "HTTP/1.1",
+                host: "socket.example.test", port: 443, path: "/socket",
+                headers: [HTTPHeaderField(name: "Upgrade", value: "websocket"),
+                          HTTPHeaderField(name: "Connection", value: "Upgrade")], body: Data())
+            var completions = 0
+            var upgrades = 0
+            var recorded: (CapturedResponse, WireTimingProfile)?
+            let forwarder = StreamingUpstreamForwarder(request: request, upstreamScheme: .https,
+                keepConnectionOpen: true, downstreamChannel: downstream,
+                downstreamThrottleWriter: NetworkThrottleWriter(direction: .downstream, configurationProvider: { .defaults }),
+                responseParser: HTTPResponseParser(), timingRecorder: UpstreamWireTimingRecorder(startedAt: Date()),
+                boundedCaptureAccumulator: BoundedCaptureAccumulator(limit: 1024), sessionRecorder: nil,
+                sessionIDTask: Task { nil },
+                onSessionCompleted: { response, profile in completions += 1; recorded = (response, profile) },
+                onSessionFailed: { error in XCTFail("A 101 is not a failed session: \(error)") },
+                onConnectionDone: { _ in XCTFail("An upgraded connection does not return to HTTP") },
+                onProtocolUpgraded: { _ in upgrades += 1 })
+            try upstream.pipeline.addHandler(forwarder).wait()
+            var input = upstream.allocator.buffer(capacity: 96)
+            input.writeString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\nhi")
+            try upstream.writeInbound(input)
+            loop.run()
+
+            XCTAssertEqual(upgrades, 1, "The relay must start while the 101 write is outstanding")
+            XCTAssertEqual(completions, 0, "The handshake is recorded only after its write settles")
+            XCTAssertGreaterThan(sink.pendingWriteCount, 0)
+            sink.complete(succeeded ? .success(()) : .failure(ChannelError.ioOnClosedChannel))
+            loop.run()
+
+            XCTAssertEqual(completions, 1)
+            XCTAssertEqual(recorded?.0.statusCode, 101)
+            XCTAssertNil(recorded?.0.bodyData)
+            XCTAssertEqual(recorded?.1.transport?.pendingWrites, 0)
+            XCTAssertEqual(recorded?.1.transport?.deliveryState, succeeded ? "writes_completed" : "write_failed")
+        }
+    }
+
     func testFragmentedEOFWithCacheRewriteWaitsForDeliveryAndReportsFailure() throws {
         for rewriteHeaders in [false, true] {
             for succeeded in [false, true] {

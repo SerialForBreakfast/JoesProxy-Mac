@@ -84,6 +84,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
     private var activeUpstreamCancellation: (@Sendable () -> Void)?
     private var activeUpstreamRequestID: UUID?
     private var activeMapRemoteSessionID: UUID?
+    /// The request whose protocol upgrade this connection is now relaying, if any.
+    private var upgradedTunnelRequestID: UUID?
     nonisolated(unsafe) static var beforeLoopbackRegistrationPauseForTesting: (@Sendable () async -> Void)?
 
     init(
@@ -179,6 +181,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         activeUpstreamRequestID = nil
         ActiveMapRemoteSessionRegistry.shared.unregister(activeMapRemoteSessionID)
         activeMapRemoteSessionID = nil
+        upgradedTunnelRequestID = nil
         context.fireChannelInactive()
     }
 
@@ -1405,6 +1408,17 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                 eventLoop.execute {
                     let handler = loopBoundSelf.value
                     let ctx = loopBoundContext.value
+                    // An upgraded connection outlives its request; revocation must still end it.
+                    if handler.upgradedTunnelRequestID == requestID, case .tunneling(let peer) = handler.state {
+                        handler.upgradedTunnelRequestID = nil
+                        ActiveMapRemoteSessionRegistry.shared.unregister(handler.activeMapRemoteSessionID)
+                        handler.activeMapRemoteSessionID = nil
+                        handler.activeStreamingForwarder = nil
+                        handler.state = .closed
+                        peer.close(promise: nil)
+                        ctx.close(promise: nil)
+                        return
+                    }
                     guard handler.activeUpstreamRequestID == requestID else { return }
                     handler.activeUpstreamRequestID = nil
                     handler.activeUpstreamCancellation?()
@@ -1543,7 +1557,7 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         upstreamChannel.close(promise: nil)
                         return
                     }
-                    handler.beginUpgradedTunnel(to: upstreamChannel, context: ctx)
+                    handler.beginUpgradedTunnel(to: upstreamChannel, requestID: requestID, context: ctx)
                 }
             }
         ).whenComplete { result in
@@ -1776,8 +1790,10 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
     /// After the origin accepts a protocol upgrade (WebSocket), the connection stops being HTTP:
     /// client bytes go straight to the origin, including any that arrived with the handshake.
     /// The streaming forwarder stays on the upstream channel and relays the other direction.
-    private func beginUpgradedTunnel(to upstreamChannel: Channel, context: ChannelHandlerContext) {
+    private func beginUpgradedTunnel(to upstreamChannel: Channel, requestID: UUID, context: ChannelHandlerContext) {
         activeUpstreamRequestID = nil
+        // Keeps a loopback Map Remote registration able to close this tunnel when access is revoked.
+        upgradedTunnelRequestID = requestID
         activeUpstreamCancellation = nil
         releaseUploadSpool()
         pendingFrameExpectedLength = nil

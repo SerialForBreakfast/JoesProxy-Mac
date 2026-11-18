@@ -306,7 +306,15 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
             bodyTruncated: false
         )
         let wireProfile = timingRecorder.snapshot(headerByteCount: headerByteCount, bodyByteCount: 0)
-        onSessionCompleted(capturedResponse, wireProfile)
+        // Record after the 101 write settles, so throttled or failed delivery is reflected, as in finishStreaming.
+        let diagnostics = timingRecorder.transport
+        let onSessionCompleted = self.onSessionCompleted
+        (lastDelivery ?? downstreamChannel.eventLoop.makeSucceededFuture(())).whenComplete { _ in
+            var deliveredProfile = wireProfile
+            deliveredProfile.transport = diagnostics.snapshot()
+            onSessionCompleted(capturedResponse, deliveredProfile)
+        }
+        // Client bytes may already be waiting; the relay starts without waiting for the write.
         onProtocolUpgraded?(context.channel)
     }
 
