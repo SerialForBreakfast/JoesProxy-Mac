@@ -719,9 +719,11 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
 
         let closed = expectation(description: "Upgraded tunnel closes on revocation")
         let task = Task.detached { () -> Data in
+            // The receive timeout bounds the read even if both shutdowns below fail to close it.
             let output = (try? await Self.sendViaProxyRaw(
                 proxyPort: proxy.port,
-                rawRequest: "GET http://socket.example.invalid/socket HTTP/1.1\r\nHost: socket.example.invalid\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\n\r\n"
+                rawRequest: "GET http://socket.example.invalid/socket HTTP/1.1\r\nHost: socket.example.invalid\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\n\r\n",
+                receiveTimeoutSeconds: 10
             )) ?? Data()
             closed.fulfill()
             return output
@@ -740,6 +742,10 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         ActiveMapRemoteSessionRegistry.shared.cancelLoopbackSessions(forPorts: nil)
 
         await fulfillment(of: [closed], timeout: 3.0)
+        // If revocation failed, the client is still reading. End both sides before waiting on it
+        // so the failure is reported instead of hanging the suite.
+        await proxy.stop()
+        await backend.stop()
         let received = await task.value
         XCTAssertTrue(String(decoding: received, as: UTF8.self).hasPrefix("HTTP/1.1 101 "),
                       "The connection must have been upgraded before it was revoked")
@@ -1749,7 +1755,8 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         return (statusLine, headers, body)
     }
 
-    private static func sendViaProxyRaw(proxyPort: UInt16, rawRequest: String) async throws -> Data {
+    private static func sendViaProxyRaw(proxyPort: UInt16, rawRequest: String,
+                                        receiveTimeoutSeconds: Int? = nil) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global().async {
                 let fd = socket(AF_INET, SOCK_STREAM, 0)
@@ -1758,6 +1765,11 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
                     return
                 }
                 defer { close(fd) }
+                if let receiveTimeoutSeconds {
+                    // recv then returns -1 after the timeout, which ends the read loop below.
+                    var timeout = timeval(tv_sec: receiveTimeoutSeconds, tv_usec: 0)
+                    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+                }
 
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(AF_INET)

@@ -39,12 +39,17 @@ final class ProxyServerTests: XCTestCase {
             try await proxy.start()
             let client = try await InterceptingHTTPSTestClient.connect(port: proxy.port, trustedRootCertificates: [root.certificateData])
             do {
+                // "early" rides in the same write as the request, as clients that pipeline the
+                // first frame do. The proxy holds it while the request is processed, then relays it.
                 let handshake = try await client.performBytes(targetHost: "localhost", targetPort: origin.port,
-                    request: "GET /socket HTTP/1.1\r\nHost: localhost\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\nX-Synthetic-Upgrade: yes\r\n\r\n",
-                    expectedBodyBytes: 5)
+                    request: "GET /socket HTTP/1.1\r\nHost: localhost\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade, X-Synthetic-Option\r\nX-Synthetic-Option: kept\r\nX-Synthetic-Upgrade: yes\r\n\r\nearly",
+                    expectedBodyBytes: "helloecho:early".utf8.count)
                 let text = String(decoding: handshake, as: UTF8.self)
                 XCTAssertTrue(text.hasPrefix("HTTP/1.1 101 "), "captured=\(captured): the origin must see Connection: Upgrade; got \(text.prefix(40))")
-                XCTAssertTrue(text.hasSuffix("\r\n\r\nhello"), "captured=\(captured): bytes sent with the 101 head must reach the client")
+                XCTAssertTrue(text.hasSuffix("\r\n\r\nhelloecho:early"),
+                              "captured=\(captured): the greeting and the buffered early bytes must both arrive; got \(text.suffix(30))")
+                XCTAssertEqual(origin.lastUpgradeConnectionHeader?.lowercased(), "upgrade, x-synthetic-option",
+                               "captured=\(captured): upgrade-specific Connection options must reach the origin")
                 for message in ["ping-1", "ping-2 after the first round trip"] {
                     let reply = try await client.exchangeRaw(message, expectedBytes: message.utf8.count + 5)
                     XCTAssertEqual(String(decoding: reply, as: UTF8.self), "echo:\(message)", "captured=\(captured)")
@@ -2665,6 +2670,9 @@ private final class SimpleHTTPSTestServer {
     private let responseGate: ScriptedDeliveryGate?
     private let scripted: [String: Data]
     let scriptedCounter = ScriptedOriginCounter()
+    private let upgradeObservation = UpgradeObservation()
+    /// The `Connection` value the origin last saw on an upgrade request.
+    var lastUpgradeConnectionHeader: String? { upgradeObservation.connectionHeader }
     private let pacedRanges: Bool
     private let echoDigest: Bool
     private let responseBody: String
@@ -2707,6 +2715,7 @@ private final class SimpleHTTPSTestServer {
         let counter = scriptedCounter
         let tlsGate = self.tlsGate
         let responseGate = self.responseGate
+        let upgradeObservation = self.upgradeObservation
 
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -2716,7 +2725,7 @@ private final class SimpleHTTPSTestServer {
                 let ready = tlsGate?.wait(on: channel.eventLoop) ?? channel.eventLoop.makeSucceededFuture(())
                 return ready.flatMap { channel.pipeline.addHandlers([
                     NIOSSLServerHandler(context: tlsContext),
-                    SimpleHTTPSResponder(responseBody: responseBody, requestParser: requestParser, echoDigest: echoDigest, pacedRanges: pacedRanges, scripted: scripted, counter: counter, responseGate: responseGate)
+                    SimpleHTTPSResponder(responseBody: responseBody, requestParser: requestParser, echoDigest: echoDigest, pacedRanges: pacedRanges, scripted: scripted, counter: counter, responseGate: responseGate, upgradeObservation: upgradeObservation)
                 ]) }
             }
 
@@ -2741,6 +2750,14 @@ private final class SimpleHTTPSTestServer {
     }
 }
 
+/// Written on the origin's event loop, read by the test.
+private final class UpgradeObservation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: String?
+    var connectionHeader: String? { lock.withLock { value } }
+    func record(_ header: String?) { lock.withLock { value = header } }
+}
+
 private final class SimpleHTTPSResponder: ChannelInboundHandler {
     private let responseGate: ScriptedDeliveryGate?
     private let scripted: [String: Data]
@@ -2755,8 +2772,10 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
     private let requestParser: HTTPRequestParser
     private var buffer = Data()
     private var upgraded = false
+    private let upgradeObservation: UpgradeObservation?
 
-    init(responseBody: String, requestParser: HTTPRequestParser, echoDigest: Bool = false, pacedRanges: Bool = false, scripted: [String: Data] = [:], counter: ScriptedOriginCounter? = nil, responseGate: ScriptedDeliveryGate? = nil) {
+    init(responseBody: String, requestParser: HTTPRequestParser, echoDigest: Bool = false, pacedRanges: Bool = false, scripted: [String: Data] = [:], counter: ScriptedOriginCounter? = nil, responseGate: ScriptedDeliveryGate? = nil, upgradeObservation: UpgradeObservation? = nil) {
+        self.upgradeObservation = upgradeObservation
         self.responseGate = responseGate
         self.scripted = scripted
         self.counter = counter
@@ -2789,12 +2808,22 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
             // A WebSocket-style origin requires both hop-by-hop headers, as RFC 9110 §7.8 does.
             let lowered = framingRequest.lowercased()
             let accepted = lowered.contains("\r\nupgrade: synthetic-echo") && lowered.contains("\r\nconnection: upgrade")
+            upgradeObservation?.record(framingRequest.components(separatedBy: "\r\n")
+                .first { $0.lowercased().hasPrefix("connection:") }
+                .map { String($0.dropFirst("connection:".count)).trimmingCharacters(in: .whitespaces) })
+            // Bytes that followed the request head already belong to the upgraded protocol.
+            let consumed = (try? requestParser.parseRequestFrame(buffer).consumedLength) ?? buffer.count
+            let early = buffer.count > consumed ? Data(buffer[buffer.index(buffer.startIndex, offsetBy: consumed)...]) : Data()
             buffer.removeAll()
             var wire = context.channel.allocator.buffer(capacity: 160)
             if accepted {
                 upgraded = true
                 // The greeting shares the write with the 101 head, as real servers' first frames often do.
                 wire.writeString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\n\r\nhello")
+                if !early.isEmpty {
+                    wire.writeString("echo:")
+                    wire.writeBytes(early)
+                }
                 context.writeAndFlush(wrapOutboundOut(wire), promise: nil)
             } else {
                 wire.writeString("HTTP/1.1 426 Upgrade Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")

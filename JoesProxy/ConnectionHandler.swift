@@ -1798,17 +1798,20 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         releaseUploadSpool()
         pendingFrameExpectedLength = nil
         state = .tunneling(peer: upstreamChannel)
-        if !buffer.isEmpty {
+        // Request processing paused client reads; the relay now owns read admission.
+        requestReadsPaused = false
+        if buffer.isEmpty {
+            context.channel.setOption(ChannelOptions.autoRead, value: true).whenSuccess {
+                context.read()
+            }
+        } else {
             var pending = context.channel.allocator.buffer(capacity: buffer.count)
             pending.writeBytes(buffer)
             buffer = Data()
+            // The relay pauses client reads for this write and resumes them only once it drains
+            // and the shared relay budget allows, so buffered bytes keep backpressure.
             forwardToPeer(upstreamChannel, payload: NIOAny(pending), context: context)
         }
-        if requestReadsPaused {
-            requestReadsPaused = false
-            context.channel.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
-        }
-        context.read()
         logger.notice("Connection upgraded [\(self.traceID, privacy: .public)]; relaying both directions")
     }
 

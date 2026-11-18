@@ -438,6 +438,19 @@ final class HTTPUpstreamConnector {
         return hasUpgrade && connectionTokens.contains("upgrade")
     }
 
+    /// `Upgrade` followed by the client's other upgrade-specific options in their original order,
+    /// for example `Upgrade, HTTP2-Settings` for h2c. Connection-management tokens are dropped
+    /// because the proxy decides persistence for its own upstream connection.
+    static func upgradeConnectionValue(_ headers: [HTTPHeaderField]) -> String {
+        var seen: Set<String> = ["upgrade", "close", "keep-alive"]
+        let options = headers
+            .filter { $0.name.caseInsensitiveCompare("Connection") == .orderedSame }
+            .flatMap { $0.value.split(separator: ",") }
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+        return (["Upgrade"] + options).joined(separator: ", ")
+    }
+
     private func makeUpstreamRequestBuffer(
         for request: HTTPProxyRequest,
         scheme: SessionScheme,
@@ -460,7 +473,8 @@ final class HTTPUpstreamConnector {
         )
         filteredHeaders.removeAll { $0.name.caseInsensitiveCompare("Host") == .orderedSame }
         filteredHeaders.append(HTTPHeaderField(name: "Host", value: resolvedHost))
-        filteredHeaders.append(HTTPHeaderField(name: "Connection", value: forwardsUpgrade ? "Upgrade" : "close"))
+        filteredHeaders.append(HTTPHeaderField(name: "Connection",
+            value: forwardsUpgrade ? Self.upgradeConnectionValue(request.headers) : "close"))
 
         let noCachingPolicy = NoCachingPolicy(
             isGloballyEnabled: appConfiguration?.isNoCachingEnabled ?? false,
