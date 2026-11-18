@@ -15,7 +15,7 @@
   "textFixture": {
     "schemaVersion": 1,
     "baseProfileID": "player-qa-widescreen-v1",
-    "baseInventorySHA256": "e3b5b97fb9c0158b6c0900021fc274bffa2a756cb316ac709ce735d69dcd449a",
+    "baseInventorySHA256": "6ce15932877ee8bb6097d77b0aef074197c3783a68a1c4deb0fa7306818441f8",
     "durationMilliseconds": 24000,
     "segmentMilliseconds": 4000,
     "mediaTimestamp": 132000,

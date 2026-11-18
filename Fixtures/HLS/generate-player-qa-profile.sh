@@ -71,15 +71,17 @@ cat > "$PROFILE/master.m3u8" <<'EOF'
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="English Audio Description",LANGUAGE="en",ASSOC-LANGUAGE="en",DEFAULT=NO,AUTOSELECT=YES,CHARACTERISTICS="public.accessibility.describes-video",CHANNELS="2",URI="audio-ad/stream.m3u8"
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Español",LANGUAGE="es",DEFAULT=NO,AUTOSELECT=YES,CHANNELS="2",URI="audio-es/stream.m3u8"
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Deutsch",LANGUAGE="de",DEFAULT=NO,AUTOSELECT=YES,CHANNELS="2",URI="audio-de/stream.m3u8"
-#EXT-X-STREAM-INF:BANDWIDTH=928000,AVERAGE-BANDWIDTH=800000,RESOLUTION=640x360,FRAME-RATE=30.000,CODECS="avc1.64001f,mp4a.40.2",AUDIO="aud"
+#EXT-X-STREAM-INF:BANDWIDTH=928000,AVERAGE-BANDWIDTH=800000,RESOLUTION=640x360,FRAME-RATE=30.000,CODECS="avc1.64001f,mp4a.40.2",AUDIO="aud",CLOSED-CAPTIONS=NONE
 video-360/stream.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=2464000,AVERAGE-BANDWIDTH=2200000,RESOLUTION=1280x720,FRAME-RATE=30.000,CODECS="avc1.640028,mp4a.40.2",AUDIO="aud"
+#EXT-X-STREAM-INF:BANDWIDTH=2464000,AVERAGE-BANDWIDTH=2200000,RESOLUTION=1280x720,FRAME-RATE=30.000,CODECS="avc1.640028,mp4a.40.2",AUDIO="aud",CLOSED-CAPTIONS=NONE
 video-720/stream.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=4964000,AVERAGE-BANDWIDTH=4500000,RESOLUTION=1920x1080,FRAME-RATE=30.000,CODECS="avc1.640029,mp4a.40.2",AUDIO="aud"
+#EXT-X-STREAM-INF:BANDWIDTH=4964000,AVERAGE-BANDWIDTH=4500000,RESOLUTION=1920x1080,FRAME-RATE=30.000,CODECS="avc1.640029,mp4a.40.2",AUDIO="aud",CLOSED-CAPTIONS=NONE
 video-1080/stream.m3u8
 EOF
 
-cat > "$PROFILE/profile.json" <<'EOF'
+python3 "$ROOT/variant-rates.py" "$PROFILE"
+peak_rates=( $(sed -n 's/^#EXT-X-STREAM-INF:BANDWIDTH=\([0-9]*\),.*/\1/p' "$PROFILE/master.m3u8") )
+cat > "$PROFILE/profile.json" <<EOF
 {
   "id": "player-qa-widescreen-v1",
   "version": "2",
@@ -87,9 +89,9 @@ cat > "$PROFILE/profile.json" <<'EOF'
   "purpose": "16:9 adaptive test pattern with multilingual and audio-description rendition switching.",
   "featureTags": ["player-qa", "16:9", "abr", "test-pattern", "timecode", "tone", "alternate-audio", "multilingual", "audio-description"],
   "renditions": [
-    {"width": 640, "height": 360, "bandwidth": 800000, "codecs": "avc1.64001f,mp4a.40.2"},
-    {"width": 1280, "height": 720, "bandwidth": 2200000, "codecs": "avc1.640028,mp4a.40.2"},
-    {"width": 1920, "height": 1080, "bandwidth": 4500000, "codecs": "avc1.640029,mp4a.40.2"}
+    {"width": 640, "height": 360, "bandwidth": ${peak_rates[0]}, "codecs": "avc1.64001f,mp4a.40.2"},
+    {"width": 1280, "height": 720, "bandwidth": ${peak_rates[1]}, "codecs": "avc1.640028,mp4a.40.2"},
+    {"width": 1920, "height": 1080, "bandwidth": ${peak_rates[2]}, "codecs": "avc1.640029,mp4a.40.2"}
   ],
   "audioRenditions": [
     {"name": "English Program", "language": "en", "associatedLanguage": null, "channels": "2", "isDefault": true, "isAutoSelect": true, "characteristics": [], "audibleSignature": "440 Hz"},

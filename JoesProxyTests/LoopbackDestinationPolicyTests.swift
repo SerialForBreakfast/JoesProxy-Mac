@@ -1413,7 +1413,7 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
 
         let directJSON = directDir.appendingPathComponent("validation_data.json")
         let directArgs = [
-            "--exit-code.threshold", "must",
+            "--exit-code.threshold", "must_auth",
             "--timeout", "120",
             "--validation-data-path", directJSON.path,
             "http://127.0.0.1:\(origin.boundPort)/master.m3u8"
@@ -1453,7 +1453,7 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         // Route explicitly through JoesProxy's origin-form HTTP handler matching 127.0.0.1:<proxy.port> -> 127.0.0.1:<origin.boundPort>.
         let remappedJSON = remappedDir.appendingPathComponent("validation_data.json")
         let remappedArgs = [
-            "--exit-code.threshold", "must",
+            "--exit-code.threshold", "must_auth",
             "--timeout", "120",
             "--validation-data-path", remappedJSON.path,
             "http://127.0.0.1:\(proxy.port)/master.m3u8"
@@ -1550,13 +1550,27 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         XCTAssertEqual(remappedRun.exitCode, directRun.exitCode, "Remapped MSV exit code differed from direct baseline")
         XCTAssertEqual(
             directFindings,
-            Set(["433088|MustAuth|/M01", "242528|ShouldAuth|/M01"]),
+            Set(["242528|ShouldAuth|/M01"]),
             "Direct baseline findings changed from pinned sdr-six-second-positive-v1 expectation"
         )
         XCTAssertEqual(remappedFindings, directFindings, "Remapped MSV findings must match direct baseline findings")
         let directStructureKeys = Set((directObject?["structure"] as? [String: Any])?.keys.map { $0 } ?? [])
         let remappedStructureKeys = Set((remappedObject?["structure"] as? [String: Any])?.keys.map { $0 } ?? [])
-        XCTAssertFalse(directStructureKeys.isEmpty)
+        for object in [directObject, remappedObject] {
+            let structure = try XCTUnwrap(object?["structure"] as? [String: Any])
+            let master = try XCTUnwrap(structure["M01"] as? [String: Any])
+            var mediaPaths = Set<String>()
+            for case let node as [String: Any] in master.values {
+                guard let details = node["details"] as? [String: Any],
+                      details["playlistKind"] as? String == "media" else { continue }
+                let path = try XCTUnwrap(details["url"] as? String)
+                XCTAssertTrue(mediaPaths.insert(path).inserted)
+                XCTAssertEqual(details["parsedSegmentsCount"] as? Int, 15, path)
+                XCTAssertEqual(details["processedSegmentsCount"] as? Int, 15, path)
+            }
+            XCTAssertEqual(mediaPaths, ["audio-en/stream.m3u8", "video-360/stream.m3u8",
+                                        "video-720/stream.m3u8", "video-1080/stream.m3u8"])
+        }
         XCTAssertEqual(remappedStructureKeys, directStructureKeys)
     }
 

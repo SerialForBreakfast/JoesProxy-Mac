@@ -193,6 +193,23 @@ final class MCPMediaInspectionTests: XCTestCase {
         XCTAssertFalse(text.contains("cdn.example.com"))
     }
 
+    func testManifestStructureDiagnosesUnlabelledFixtureBodies() throws {
+        let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Fixtures/HLS")
+        let store = InMemorySessionStore()
+        let service = MCPMediaInspectionService(sessionStore: store, snapshotService: MCPSessionSnapshotService(sessionStore: store))
+        for (fixture, missing, aliases) in [("baseline-aligned-codecs", 0, 0),
+                                            ("missing-codecs-only", 2, 0), ("bogus-ad-alias-only", 0, 1),
+                                            ("combined-defects", 2, 1)] {
+            let body = try Data(contentsOf: fixtures.appendingPathComponent(fixture + "/master.m3u8"))
+            let session = makeSession(path: "/master.m3u8", mimeType: "application/vnd.apple.mpegurl", body: body)
+            store.append(session)
+            let result = try service.manifestStructure(sessionID: session.id, policyRevision: .initial)
+            XCTAssertEqual(result.counts["variantsMissingCodecs"], missing, fixture)
+            XCTAssertEqual(result.counts["audioDescriptionRenditionsSharingProgramURI"], aliases, fixture)
+        }
+    }
+
     func testDASHManifestStructureOmitsProtectionSecrets() throws {
         let body = Data("""
         <?xml version="1.0" encoding="UTF-8"?>

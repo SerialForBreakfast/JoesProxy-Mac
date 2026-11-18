@@ -259,6 +259,20 @@ final class MCPMediaInspectionService: MCPMediaOperationServicing {
             let bodyDigest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
             let codecs = manifest.variants.compactMap(\.codecs)
                 .flatMap { $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) } }
+            let audioGroups = Dictionary(grouping: manifest.mediaGroups.filter { $0.type == "AUDIO" },
+                                         by: \.groupID)
+            let baseURL = MediaDetector.absoluteURL(for: record.request)
+            func audioURL(_ rendition: HLSMediaGroup) -> URL? {
+                rendition.uri.flatMap { URL(string: $0, relativeTo: baseURL)?.absoluteURL }
+            }
+            let descriptionTrait = "public.accessibility.describes-video"
+            var sharedAudioURIs = 0
+            for renditions in audioGroups.values {
+                let programURLs = Set(renditions.filter { !$0.characteristics.contains(descriptionTrait) }
+                    .compactMap(audioURL))
+                sharedAudioURIs += renditions.filter { $0.characteristics.contains(descriptionTrait) }
+                    .compactMap(audioURL).count(where: programURLs.contains)
+            }
             let itemLimit = 100
             let truncated = manifest.variants.count > itemLimit || manifest.mediaGroups.count > itemLimit
             let unsupportedVariantCount = text
@@ -279,6 +293,8 @@ final class MCPMediaInspectionService: MCPMediaOperationServicing {
                 targetDurationSeconds: manifest.targetDuration,
                 counts: [
                     "variants": manifest.variants.count,
+                    "variantsMissingCodecs": manifest.variants.count { ($0.codecs ?? "").isEmpty },
+                    "audioDescriptionRenditionsSharingProgramURI": sharedAudioURIs,
                     "renditions": manifest.mediaGroups.count,
                     "segments": manifest.segments.count,
                     "keys": manifest.keys.count,

@@ -1,5 +1,35 @@
 # JoesProxy HLS test fixtures
 
+## Apple VOD authoring checks
+
+Run `Fixtures/HLS/validate-six-second-sdr-profile.sh` for the offline bitstream checks.
+On a Mac with Apple's HLS Tools installed, run `python3 Fixtures/HLS/validate-apple-vod.py`
+from the checkout. It serves the checked-in profiles over a temporary loopback HTTP port
+and writes each validator command, log and JSON report under `build/hls-validation/`.
+The gate compares the exit status at `must_auth`, exact finding IDs and parsed/processed
+segment coverage against the eight named cases. Expected findings target MSV 2.0.284.
+
+| VOD profile | Expected processed / parsed | Apple findings at or above `must_auth` |
+| --- | ---: | --- |
+| Six-second SDR | 60/60 | None |
+| Aligned baseline | 26/26 | None |
+| Widescreen player QA | 42/42 | None |
+| Missing CODECS | 26/26 | None |
+| Aliased audio description | 19/19 | None |
+| Misaligned audio boundary | 30/30 | 536009 |
+| Cross-rendition discontinuity drift | 30/30 | 536001, 536002, 536009 |
+| Combined defects | 0/21 | 536001, 536009. Advisory 111025 explains the missing payload coverage. |
+
+The SDR, aligned baseline and widescreen controls declare the absence of in-band captions.
+Their variant bitrates include selectable audio. The missing-CODECS and aliased-description
+cases can both pass Apple's threshold. Inspect `media_manifest_structure.counts` for
+`variantsMissingCodecs` and `audioDescriptionRenditionsSharingProgramURI` to distinguish
+those cases from the baseline using captured manifest bytes. The combined-defects case
+expects encryption to prevent payload analysis. Seeking, audible description, visible
+subtitle cues and live switching require separate player tests.
+
+[Apple HLS authoring specification](https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices/)
+
 ## Multilingual text VOD — 2026-09-21
 
 `multilingual-text-vod-v1/profile.json` is the editable text contract. It contains seven bounded

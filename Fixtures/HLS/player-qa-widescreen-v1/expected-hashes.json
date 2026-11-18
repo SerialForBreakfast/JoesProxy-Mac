@@ -118,11 +118,11 @@
       "bytes": 287
     },
     "master.m3u8": {
-      "sha256": "d8579406401348bb6ba1ab28eda5d21e7991c70e31ebb6cf0e797fa2a5719659",
-      "bytes": 1186
+      "sha256": "49c5f3b2ba14cbd65b72756b309fbb721c15a1456d22772c9336f7fb1fb1a28f",
+      "bytes": 1248
     },
     "profile.json": {
-      "sha256": "896b41298310082ab9ab432ee448c82ea3536185710a82dcfc6ea4dba3d8b3a3",
+      "sha256": "198331df281f311bb73f8143524048d5d365d3ba6cd9c7760acfe8474219147c",
       "bytes": 1756
     },
     "video-1080/seg-000.ts": {
