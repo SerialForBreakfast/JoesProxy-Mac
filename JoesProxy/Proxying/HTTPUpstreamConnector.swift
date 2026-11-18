@@ -148,7 +148,8 @@ final class HTTPUpstreamConnector {
         onSessionCompleted: @escaping @Sendable (CapturedResponse, WireTimingProfile) -> Void,
         onSessionFailed: @escaping @Sendable (Error) -> Void,
         onCancellationReady: @escaping @Sendable (@escaping @Sendable () -> Void) -> Void = { _ in },
-        onConnectionDone: @escaping @Sendable (Bool) -> Void
+        onConnectionDone: @escaping @Sendable (Bool) -> Void,
+        onProtocolUpgraded: (@Sendable (Channel) -> Void)? = nil
     ) -> EventLoopFuture<StreamingUpstreamForwarder> {
         guard (1...Int(UInt16.max)).contains(request.port) else {
             let error = HTTPUpstreamConnectorError.invalidPort(request.port)
@@ -208,7 +209,8 @@ final class HTTPUpstreamConnector {
                     transportDiagnostics: transportDiagnostics,
                     onSessionCompleted: onSessionCompleted,
                     onSessionFailed: onSessionFailed,
-                    onConnectionDone: onConnectionDone
+                    onConnectionDone: onConnectionDone,
+                    onProtocolUpgraded: onProtocolUpgraded
                 )
 
                 if scheme == .https {
@@ -223,6 +225,7 @@ final class HTTPUpstreamConnector {
                         for: request,
                         scheme: scheme,
                         hostHeaderOverride: validatedEndpoint?.httpHostHeaderValue,
+                        allowsProtocolUpgrade: onProtocolUpgraded != nil,
                         allocator: channel.allocator
                     )
                     let upstreamThrottleWriter = NetworkThrottleWriter(
@@ -422,12 +425,29 @@ final class HTTPUpstreamConnector {
         }
     }
 
+    /// True when the client asked to switch protocols: `Connection` lists `upgrade` and `Upgrade` is set.
+    static func requestsProtocolUpgrade(_ headers: [HTTPHeaderField]) -> Bool {
+        let connectionTokens = headers
+            .filter { $0.name.caseInsensitiveCompare("Connection") == .orderedSame }
+            .flatMap { $0.value.split(separator: ",") }
+            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+        let hasUpgrade = headers.contains {
+            $0.name.caseInsensitiveCompare("Upgrade") == .orderedSame
+                && !$0.value.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        return hasUpgrade && connectionTokens.contains("upgrade")
+    }
+
     private func makeUpstreamRequestBuffer(
         for request: HTTPProxyRequest,
         scheme: SessionScheme,
         hostHeaderOverride: String? = nil,
+        allowsProtocolUpgrade: Bool = false,
         allocator: ByteBufferAllocator
     ) -> ByteBuffer {
+        // An upgrade needs `Connection: Upgrade` with its `Upgrade` header (RFC 9110 §7.8).
+        // Only a caller that can relay the upgraded connection may forward it.
+        let forwardsUpgrade = allowsProtocolUpgrade && Self.requestsProtocolUpgrade(request.headers)
         var filteredHeaders = request.headers.filter { header in
             let name = header.name.lowercased()
             return name != "proxy-connection" && name != "connection"
@@ -440,7 +460,7 @@ final class HTTPUpstreamConnector {
         )
         filteredHeaders.removeAll { $0.name.caseInsensitiveCompare("Host") == .orderedSame }
         filteredHeaders.append(HTTPHeaderField(name: "Host", value: resolvedHost))
-        filteredHeaders.append(HTTPHeaderField(name: "Connection", value: "close"))
+        filteredHeaders.append(HTTPHeaderField(name: "Connection", value: forwardsUpgrade ? "Upgrade" : "close"))
 
         let noCachingPolicy = NoCachingPolicy(
             isGloballyEnabled: appConfiguration?.isNoCachingEnabled ?? false,

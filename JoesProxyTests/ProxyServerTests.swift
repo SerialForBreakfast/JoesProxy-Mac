@@ -21,6 +21,56 @@ final class ProxyServerTests: XCTestCase {
         try await exerciseSequentialHTTPS(delayedStage: nil)
     }
 
+    /// Claude voice and other WebSocket apps upgrade an inspected HTTPS request with 101. After the
+    /// handshake both directions must flow, including bytes sent in the same write as the 101 head.
+    @MainActor
+    func testInspectedProtocolUpgradeRelaysBytesBothWays() async throws {
+        let authority = PersistentCertificateAuthorityProvider(configuration: TestProxyConfiguration(proxyPort: 0,
+            logLevel: .info, certificateLabel: "Upgrade-\(UUID().uuidString)"), certificateStore: UploadTLSCertificateStore())
+        let root = try authority.loadOrCreateRootCertificate()
+        let origin = SimpleHTTPSTestServer(leafCertificate: try authority.issueLeafCertificate(for: "localhost"))
+        try await origin.start()
+        for captured in [false, true] {
+            let store = InMemorySessionStore()
+            let recorder = ProxySessionRecorder(sessionStore: store)
+            let proxy = ProxyServer(port: 0, bindHost: "127.0.0.1", httpsProxyMode: .intercepting,
+                certificateAuthority: authority, sessionRecorder: captured ? recorder : nil,
+                upstreamConnectorConfiguration: .init(trustedRootCertificates: [root.certificateData]))
+            try await proxy.start()
+            let client = try await InterceptingHTTPSTestClient.connect(port: proxy.port, trustedRootCertificates: [root.certificateData])
+            do {
+                let handshake = try await client.performBytes(targetHost: "localhost", targetPort: origin.port,
+                    request: "GET /socket HTTP/1.1\r\nHost: localhost\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\nX-Synthetic-Upgrade: yes\r\n\r\n",
+                    expectedBodyBytes: 5)
+                let text = String(decoding: handshake, as: UTF8.self)
+                XCTAssertTrue(text.hasPrefix("HTTP/1.1 101 "), "captured=\(captured): the origin must see Connection: Upgrade; got \(text.prefix(40))")
+                XCTAssertTrue(text.hasSuffix("\r\n\r\nhello"), "captured=\(captured): bytes sent with the 101 head must reach the client")
+                for message in ["ping-1", "ping-2 after the first round trip"] {
+                    let reply = try await client.exchangeRaw(message, expectedBytes: message.utf8.count + 5)
+                    XCTAssertEqual(String(decoding: reply, as: UTF8.self), "echo:\(message)", "captured=\(captured)")
+                }
+                if captured {
+                    try await withTimeout(seconds: 3) {
+                        while store.sessions.first(where: { $0.request.path == "/socket" })?.response == nil {
+                            try await Task.sleep(for: .milliseconds(10))
+                        }
+                    }
+                    let session = try XCTUnwrap(store.sessions.first { $0.request.path == "/socket" })
+                    XCTAssertEqual(session.response?.statusCode, 101)
+                    XCTAssertNil(session.response?.bodyData, "frames after the upgrade are not captured as a body")
+                }
+            } catch {
+                try? await client.close()
+                await proxy.stop()
+                await origin.stop()
+                throw error
+            }
+            try await client.close()
+            await proxy.stop()
+        }
+        await origin.stop()
+    }
+
     func testDelayedTLSAndOriginDoNotBlockHealthySiblingRequests() async throws {
         for stage in ["tls", "response"] { try await exerciseSequentialHTTPS(delayedStage: stage) }
     }
@@ -2704,6 +2754,7 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
     private let responseBody: String
     private let requestParser: HTTPRequestParser
     private var buffer = Data()
+    private var upgraded = false
 
     init(responseBody: String, requestParser: HTTPRequestParser, echoDigest: Bool = false, pacedRanges: Bool = false, scripted: [String: Data] = [:], counter: ScriptedOriginCounter? = nil, responseGate: ScriptedDeliveryGate? = nil) {
         self.responseGate = responseGate
@@ -2717,6 +2768,14 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var byteBuffer = unwrapInboundIn(data)
+        if upgraded {
+            // After 101 the connection carries the new protocol: echo every byte with a marker.
+            var echo = context.channel.allocator.buffer(capacity: byteBuffer.readableBytes + 5)
+            echo.writeString("echo:")
+            echo.writeBuffer(&byteBuffer)
+            context.writeAndFlush(wrapOutboundOut(echo), promise: nil)
+            return
+        }
         if let bytes = byteBuffer.readBytes(length: byteBuffer.readableBytes) {
             buffer.append(contentsOf: bytes)
         }
@@ -2726,6 +2785,23 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
         }
 
         let framingRequest = String(decoding: buffer, as: UTF8.self)
+        if framingRequest.contains("X-Synthetic-Upgrade: yes") {
+            // A WebSocket-style origin requires both hop-by-hop headers, as RFC 9110 §7.8 does.
+            let lowered = framingRequest.lowercased()
+            let accepted = lowered.contains("\r\nupgrade: synthetic-echo") && lowered.contains("\r\nconnection: upgrade")
+            buffer.removeAll()
+            var wire = context.channel.allocator.buffer(capacity: 160)
+            if accepted {
+                upgraded = true
+                // The greeting shares the write with the 101 head, as real servers' first frames often do.
+                wire.writeString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\n\r\nhello")
+                context.writeAndFlush(wrapOutboundOut(wire), promise: nil)
+            } else {
+                wire.writeString("HTTP/1.1 426 Upgrade Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                context.writeAndFlush(wrapOutboundOut(wire)).whenComplete { _ in context.close(promise: nil) }
+            }
+            return
+        }
         if framingRequest.contains("X-Synthetic-Sequential: yes") {
             guard let request = try? requestParser.parseRequestFrame(buffer).request else {
                 context.close(promise: nil)
@@ -2955,6 +3031,18 @@ private final class InterceptingHTTPSTestClient {
         defer { deadline.cancel() }
         let responseData = try await responseFuture.get()
         return responseData
+    }
+
+    /// Sends raw bytes on an already established connection and waits for `expectedBytes` back.
+    func exchangeRaw(_ text: String, expectedBytes: Int) async throws -> Data {
+        let future = collector.nextData(matching: { $0.count >= expectedBytes }, on: channel)
+        try await write(text)
+        let deadline = channel.eventLoop.scheduleTask(in: .seconds(10)) {
+            self.collector.timeout()
+            self.channel.close(promise: nil)
+        }
+        defer { deadline.cancel() }
+        return try await future.get()
     }
 
     func close() async throws {
