@@ -33,6 +33,9 @@ Review the local validation commit before pushing: it also includes the Apple HL
 
 ## Gap ledger
 
+Planned work that follows from these findings is in the
+[edge-compute roadmap](ADR-Edge-Compute-Roadmap.md).
+
 Started 2026-11-12 from a logging audit of the files this branch changed. The capture soak
 (`ProxyServerTests/testCaptureSoakWithAgentWorkflows`) adds measured entries. Each finding has one
 class: product defect, evidence gap, skill gap or capability gap.

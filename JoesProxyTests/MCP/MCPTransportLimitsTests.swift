@@ -354,6 +354,28 @@ final class MCPTransportLimitsTests: XCTestCase {
         )
     }
 
+    func testRetryAfterIsTheTimeUntilTheFullBucketFreesASlot() {
+        var configuration = MCPRateLimiter.Configuration()
+        configuration.globalRequestsPerMinute = 10
+        configuration.clientRequestsPerMinute = 2
+        var limiter = MCPRateLimiter(configuration: configuration)
+        let start = Date(timeIntervalSince1970: 1_000)
+
+        // Nothing is full: the floor is one second, never zero.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fingerprint", at: start), 1)
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start))
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(20)))
+        let rejectedAt = start.addingTimeInterval(45)
+        XCTAssertFalse(limiter.allowClientRequest(clientID: "client", at: rejectedAt))
+
+        // The first request leaves the 60-second window 15 seconds after the rejection.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: rejectedAt), 15)
+        // Another caller is not told about this client's bucket.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "other", fingerprint: nil, at: rejectedAt), 1)
+        // Reading the interval never consumes a slot.
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(60.5)))
+    }
+
     func testControlPlanePollingDoesNotConsumeSubstantiveRateBudget() {
         var configuration = MCPRateLimiter.Configuration()
         configuration.globalRequestsPerMinute = 1

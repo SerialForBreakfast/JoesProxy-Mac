@@ -205,6 +205,49 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(work.value, 3)
     }
 
+    /// Every session pays for tool discovery before it does any work, so catalog size is budgeted.
+    /// Raise a budget only with a measured reason; prefer moving detail to documentation_read.
+    func testToolCatalogsStayWithinDiscoveryByteBudgets() async throws {
+        let stack = try await makeStack()
+        let full = try await callRPC(stack: stack, method: "tools/list", params: [:])
+        _ = try await callSessionSummary(stack: stack, toolName: "agent_toolset_select", toolArguments: ["toolset": "core"])
+        let core = try await callRPC(stack: stack, method: "tools/list", params: [:])
+        print("EFFICIENCY_METRIC discovery-budget-v1 fullBytes=\(full.wireBytes) coreBytes=\(core.wireBytes)")
+        // Measured 2026-11-17: core 36,817 bytes, default 74,268 bytes.
+        XCTAssertLessThanOrEqual(core.wireBytes, 37_500, "core tools/list exceeded its discovery budget")
+        XCTAssertLessThanOrEqual(full.wireBytes, 75_500, "default tools/list exceeded its discovery budget")
+    }
+
+    func testRateLimitedRequestGetsStructuredRetryInterval() async throws {
+        let stack = try await makeStack()
+        let body = try JSONSerialization.data(withJSONObject: [
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": ["name": "sessions_list", "arguments": ["projection": "minimal", "limit": 1]]
+        ])
+        func send() async -> MCPHTTPResponse {
+            await stack.protocolService.handleHTTPRequest(
+                method: "POST", path: MCPNetworkConstants.endpointPath,
+                headers: ["authorization": "Bearer \(stack.enrollment.plaintextCredential)",
+                          "accept": "application/json, text/event-stream", "content-type": "application/json",
+                          "host": "127.0.0.1:\(NetworkConstants.mcpDefaultPort)",
+                          MCPNetworkConstants.sessionIDHeader.lowercased(): stack.transportSessionID,
+                          MCPNetworkConstants.protocolVersionHeader.lowercased(): "2025-11-25"],
+                body: body)
+        }
+        var limited: MCPHTTPResponse?
+        for _ in 0...MCPServerLimits.requestRatePerClientPerMinute {
+            let response = await send()
+            if response.status == 429 { limited = response; break }
+        }
+        let response = try XCTUnwrap(limited, "The per-client limit must reject within one window")
+        let object = try response.jsonBodyObject()
+        XCTAssertEqual(object["code"] as? String, "rate_limited")
+        let details = try XCTUnwrap(object["details"] as? [String: String])
+        let retryAfter = try XCTUnwrap(details["retryAfterSeconds"].flatMap(Int.init))
+        XCTAssertTrue((1...60).contains(retryAfter))
+        XCTAssertEqual(response.headers["Retry-After"], String(retryAfter))
+    }
+
     func testArtifactWorkflowMeasuresEveryAttemptAndWarmCalculationEnvelope() async throws {
         let raw = Data(("[" + (0..<1000).map {
             "{\"price\":0.1,\"description\":\"synthetic mock item \($0)\"}"

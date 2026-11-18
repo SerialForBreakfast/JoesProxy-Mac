@@ -452,14 +452,14 @@ final class MCPProtocolService {
             client = try clientRegistry.authenticate(bearerToken: token)
         } catch {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "authorization_invalid")
             return unauthorizedResponse()
         }
         guard client.credentialState == .active else {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "credential_inactive")
             return unauthorizedResponse()
@@ -468,7 +468,7 @@ final class MCPProtocolService {
               rateLimiter.allowFingerprintRequest(fingerprint, rateClass: rateClass),
               rateLimiter.allowClientRequest(clientID: client.id, rateClass: rateClass) else {
             MCPLog.auth.notice("Rate limited client \(client.id, privacy: .public).")
-            return rateLimitedResponse()
+            return rateLimitedResponse(fingerprint: fingerprint, clientID: client.id, rateClass: rateClass)
         }
         guard beginInFlight(clientID: client.id) else {
             MCPLog.protocolLog.notice("Rejected request: client in-flight limit reached for \(client.id, privacy: .public).")
@@ -498,14 +498,14 @@ final class MCPProtocolService {
             client = try clientRegistry.authenticate(bearerToken: token)
         } catch {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "authorization_invalid")
             return unauthorizedResponse()
         }
         guard client.credentialState == .active else {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return rateLimitedResponse()
+                return rateLimitedResponse(fingerprint: fingerprint)
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "credential_inactive")
             return unauthorizedResponse()
@@ -513,7 +513,7 @@ final class MCPProtocolService {
         guard rateLimiter.allowGlobalRequest(rateClass: .controlPlane),
               rateLimiter.allowFingerprintRequest(fingerprint, rateClass: .controlPlane),
               rateLimiter.allowClientRequest(clientID: client.id, rateClass: .controlPlane) else {
-            return rateLimitedResponse()
+            return rateLimitedResponse(fingerprint: fingerprint, clientID: client.id, rateClass: .controlPlane)
         }
         guard beginInFlight(clientID: client.id) else {
             return busyResponse()
@@ -623,14 +623,14 @@ final class MCPProtocolService {
             client = try clientRegistry.authenticate(bearerToken: token)
         } catch {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return .rejected(response: rateLimitedResponse())
+                return .rejected(response: rateLimitedResponse(fingerprint: fingerprint))
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "authorization_invalid")
             return .rejected(response: unauthorizedResponse())
         }
         guard client.credentialState == .active else {
             guard rateLimiter.allowGlobalRequest(), rateLimiter.allowFingerprintRequest(fingerprint) else {
-                return .rejected(response: rateLimitedResponse())
+                return .rejected(response: rateLimitedResponse(fingerprint: fingerprint))
             }
             recordAuthFailure(fingerprint: fingerprint, reason: "credential_inactive")
             return .rejected(response: unauthorizedResponse())
@@ -638,7 +638,7 @@ final class MCPProtocolService {
         guard rateLimiter.allowGlobalRequest(rateClass: .controlPlane),
               rateLimiter.allowFingerprintRequest(fingerprint, rateClass: .controlPlane),
               rateLimiter.allowClientRequest(clientID: client.id, rateClass: .controlPlane) else {
-            return .rejected(response: rateLimitedResponse())
+            return .rejected(response: rateLimitedResponse(fingerprint: fingerprint, clientID: client.id, rateClass: .controlPlane))
         }
         let context = RequestContext(headers: normalizedHeaders, remoteAddress: nil)
         if let rejection = sessionHTTPRejection(for: "GET", id: nil, client: client, context: context) {
@@ -7864,8 +7864,22 @@ final class MCPProtocolService {
         MCPHTTPResponse.response(status: 401, headers: [:], body: Data("Unauthorized".utf8))
     }
 
-    private func rateLimitedResponse() -> MCPHTTPResponse {
-        MCPHTTPResponse.response(status: 429, headers: [:], body: Data("Rate limited".utf8))
+    /// A structured 429 so a client can back off for the right interval instead of guessing.
+    /// The interval comes from the fullest bucket that applies; no other client's state is disclosed.
+    private func rateLimitedResponse(fingerprint: String, clientID: String? = nil,
+                                     rateClass: MCPRequestRateClass = .substantive) -> MCPHTTPResponse {
+        let retryAfter = rateLimiter.retryAfterSeconds(clientID: clientID, fingerprint: fingerprint, rateClass: rateClass)
+        let error = MCPStructuredError(
+            code: .rateLimited,
+            message: "Request rate limit reached. Retry after \(retryAfter) seconds.",
+            details: ["retryAfterSeconds": String(retryAfter),
+                      "limitWindowSeconds": String(Int(rateLimiter.activeConfiguration.window))]
+        )
+        return MCPHTTPResponse.response(
+            status: 429,
+            headers: ["Content-Type": "application/json", "Retry-After": String(retryAfter)],
+            body: (try? JSONEncoder().encode(error)) ?? Data("Rate limited".utf8)
+        )
     }
 
     private func busyResponse() -> MCPHTTPResponse {
