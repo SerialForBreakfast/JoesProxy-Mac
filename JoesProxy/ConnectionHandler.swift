@@ -1534,6 +1534,17 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         ctx.close(promise: nil)
                     }
                 }
+            },
+            onProtocolUpgraded: { upstreamChannel in
+                context.eventLoop.execute {
+                    let handler = loopBoundSelf.value
+                    let ctx = loopBoundContext.value
+                    guard handler.activeUpstreamRequestID == requestID else {
+                        upstreamChannel.close(promise: nil)
+                        return
+                    }
+                    handler.beginUpgradedTunnel(to: upstreamChannel, context: ctx)
+                }
             }
         ).whenComplete { result in
             guard loopBoundSelf.value.activeUpstreamRequestID == requestID else { return }
@@ -1762,7 +1773,30 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         }
     }
 
-    fileprivate func resumeTunnelReads(from source: Channel, to destination: Channel) {
+    /// After the origin accepts a protocol upgrade (WebSocket), the connection stops being HTTP:
+    /// client bytes go straight to the origin, including any that arrived with the handshake.
+    /// The streaming forwarder stays on the upstream channel and relays the other direction.
+    private func beginUpgradedTunnel(to upstreamChannel: Channel, context: ChannelHandlerContext) {
+        activeUpstreamRequestID = nil
+        activeUpstreamCancellation = nil
+        releaseUploadSpool()
+        pendingFrameExpectedLength = nil
+        state = .tunneling(peer: upstreamChannel)
+        if !buffer.isEmpty {
+            var pending = context.channel.allocator.buffer(capacity: buffer.count)
+            pending.writeBytes(buffer)
+            buffer = Data()
+            forwardToPeer(upstreamChannel, payload: NIOAny(pending), context: context)
+        }
+        if requestReadsPaused {
+            requestReadsPaused = false
+            context.channel.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
+        }
+        context.read()
+        logger.notice("Connection upgraded [\(self.traceID, privacy: .public)]; relaying both directions")
+    }
+
+    func resumeTunnelReads(from source: Channel, to destination: Channel) {
         upstreamThrottleWriter.resumeReadsIfDrained(from: source, to: destination)
     }
 

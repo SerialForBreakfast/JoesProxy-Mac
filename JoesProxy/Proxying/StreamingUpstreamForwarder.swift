@@ -22,6 +22,8 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         case streamingDirect
         case bufferingForMutation(expectedLength: Int?)
         case transformingCollectionMock
+        /// The origin accepted a protocol upgrade (WebSocket). Bytes are relayed unmodified until close.
+        case upgradedRelay
         case completed
     }
 
@@ -48,6 +50,9 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
     private let onSessionCompleted: @Sendable (CapturedResponse, WireTimingProfile) -> Void
     private let onSessionFailed: @Sendable (Error) -> Void
     private let onConnectionDone: @Sendable (Bool) -> Void
+    /// Hands the upstream channel to the downstream handler so it relays client bytes after a 101.
+    /// Without it, an accepted upgrade is closed instead of being parsed as HTTP.
+    private let onProtocolUpgraded: (@Sendable (Channel) -> Void)?
     private let logger = Logger(subsystem: "com.joesproxyapp", category: "StreamingUpstreamForwarder")
 
     private var state: ForwarderState = .accumulatingHeaders
@@ -96,8 +101,10 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         transportDiagnostics: CaptureTransportDiagnostics? = nil,
         onSessionCompleted: @escaping @Sendable (CapturedResponse, WireTimingProfile) -> Void,
         onSessionFailed: @escaping @Sendable (Error) -> Void,
-        onConnectionDone: @escaping @Sendable (Bool) -> Void
+        onConnectionDone: @escaping @Sendable (Bool) -> Void,
+        onProtocolUpgraded: (@Sendable (Channel) -> Void)? = nil
     ) {
+        self.onProtocolUpgraded = onProtocolUpgraded
         self.request = request
         self.upstreamScheme = upstreamScheme
         self.keepConnectionOpen = keepConnectionOpen
@@ -199,6 +206,10 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
                 let initialBodyData = headerBuffer.subdata(in: headerEndIndex..<headerBuffer.endIndex)
                 headerBuffer.removeAll(keepingCapacity: false)
 
+                if isAcceptedProtocolUpgrade {
+                    beginUpgradedRelay(rawHeaders: rawHeaderData, initialBytes: initialBodyData, context: context)
+                    return
+                }
                 guard validateChunkFraming(initialBodyData, context: context) else { return }
                 evaluateMutationEligibilityAndTransition(rawHeaders: rawHeaderData, initialBody: initialBodyData, context: context)
             } else if headerBuffer.count > 65_536 {
@@ -247,9 +258,66 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
                 completeMutationAndDeliver(context: context)
             }
 
+        case .upgradedRelay:
+            // Frames after the upgrade belong to the new protocol: relay them as-is, never parse or capture.
+            lastDelivery = downstreamThrottleWriter.relay(byteBuffer, to: downstreamChannel, readingFrom: context.channel, diagnostics: timingRecorder.transport)
+
         case .transformingCollectionMock, .completed:
             break
         }
+    }
+
+    /// A 101 answering a request that asked to upgrade. Anything else stays an ordinary response.
+    private var isAcceptedProtocolUpgrade: Bool {
+        guard parsedStatusCode == 101, onProtocolUpgraded != nil else { return false }
+        func tokens(_ name: String, in headers: [HTTPHeaderField]) -> [String] {
+            headers.filter { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+                .flatMap { $0.value.split(separator: ",") }
+                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+        }
+        return tokens("Connection", in: request.headers).contains("upgrade")
+            && !tokens("Upgrade", in: request.headers).isEmpty
+            && !tokens("Upgrade", in: parsedHeaders).isEmpty
+    }
+
+    /// Delivers the 101 head unmodified, records the handshake as a completed session, and turns
+    /// this handler into a byte relay. The downstream handler relays client bytes the other way.
+    private func beginUpgradedRelay(rawHeaders: Data, initialBytes: Data, context: ChannelHandlerContext) {
+        state = .upgradedRelay
+        isCompleted = true
+        hasCompletedResponse = true
+        hasReportedCaptureTerminal = true
+        transportDiagnostics?.recordProgress(.responseComplete)
+        logger.notice("Protocol upgrade accepted status=101; relaying bytes without capture")
+
+        var head = downstreamChannel.allocator.buffer(capacity: rawHeaders.count + initialBytes.count)
+        head.writeBytes(rawHeaders)
+        head.writeBytes(initialBytes)
+        lastDelivery = downstreamThrottleWriter.relay(head, to: downstreamChannel, readingFrom: context.channel, diagnostics: timingRecorder.transport)
+
+        let upgradeProtocol = parsedHeaders.first { $0.name.caseInsensitiveCompare("Upgrade") == .orderedSame }?.value ?? "unknown"
+        let capturedResponse = CapturedResponse(
+            statusCode: parsedStatusCode,
+            headers: parsedHeaders,
+            bodyData: nil,
+            bodySize: nil,
+            source: responseSource,
+            sourceDescription: "Upgraded to \(upgradeProtocol); frames are relayed and not captured",
+            bodyTruncated: false
+        )
+        let wireProfile = timingRecorder.snapshot(headerByteCount: headerByteCount, bodyByteCount: 0)
+        onSessionCompleted(capturedResponse, wireProfile)
+        onProtocolUpgraded?(context.channel)
+    }
+
+    func channelWritabilityChanged(context: ChannelHandlerContext) {
+        if case .upgradedRelay = state, context.channel.isWritable {
+            let upstream = context.channel
+            downstreamChannel.pipeline.handler(type: ProxyConnectionHandler.self).whenSuccess { handler in
+                handler.resumeTunnelReads(from: self.downstreamChannel, to: upstream)
+            }
+        }
+        context.fireChannelWritabilityChanged()
     }
 
     private func isResponseComplete(_ frame: HTTPResponseFrameState) -> Bool {
@@ -272,6 +340,15 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
 
     func channelInactive(context: ChannelHandlerContext) {
         upstreamEnded = true
+        if case .upgradedRelay = state {
+            // Close the client side once bytes already relayed have been written.
+            let downstream = downstreamChannel
+            (lastDelivery ?? downstream.eventLoop.makeSucceededFuture(())).whenComplete { _ in
+                downstream.close(promise: nil)
+            }
+            context.fireChannelInactive()
+            return
+        }
         if let chunkedFraming, !chunkedFraming.isComplete {
             fail(context: context, error: HTTPResponseParserError.incompleteResponse)
             return
@@ -289,12 +366,19 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
             finishStreaming(context: context)
         case .bufferingForMutation:
             completeMutationAndDeliver(context: context)
-        case .transformingCollectionMock, .completed:
+        case .transformingCollectionMock, .upgradedRelay, .completed:
             break
         }
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
+        if case .upgradedRelay = state {
+            // The handshake is already recorded; a relay error ends both sides.
+            logger.notice("Upgraded relay ended by upstream error type=\(String(describing: type(of: error)), privacy: .public)")
+            context.close(promise: nil)
+            downstreamChannel.close(promise: nil)
+            return
+        }
         fail(context: context, error: error)
     }
 
