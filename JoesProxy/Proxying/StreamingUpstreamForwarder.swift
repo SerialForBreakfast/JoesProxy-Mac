@@ -260,7 +260,8 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
 
         case .upgradedRelay:
             // Frames after the upgrade belong to the new protocol: relay them as-is, never parse or capture.
-            lastDelivery = downstreamThrottleWriter.relay(byteBuffer, to: downstreamChannel, readingFrom: context.channel, diagnostics: timingRecorder.transport)
+            // They are not part of the handshake's delivery evidence, so they carry no request diagnostics.
+            lastDelivery = downstreamThrottleWriter.relay(byteBuffer, to: downstreamChannel, readingFrom: context.channel)
 
         case .transformingCollectionMock, .completed:
             break
@@ -289,11 +290,17 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         hasReportedCaptureTerminal = true
         transportDiagnostics?.recordProgress(.responseComplete)
         logger.notice("Protocol upgrade accepted status=101; relaying bytes without capture")
+        // A collection mock cannot transform a protocol upgrade; settle its evidence like any ineligible response.
+        noteCollectionOutcome(.ineligibleResponse)
 
         var head = downstreamChannel.allocator.buffer(capacity: rawHeaders.count + initialBytes.count)
         head.writeBytes(rawHeaders)
         head.writeBytes(initialBytes)
-        lastDelivery = downstreamThrottleWriter.relay(head, to: downstreamChannel, readingFrom: context.channel, diagnostics: timingRecorder.transport)
+        let handshakeDelivery = downstreamThrottleWriter.relay(head, to: downstreamChannel, readingFrom: context.channel, diagnostics: timingRecorder.transport)
+        lastDelivery = handshakeDelivery
+        if let collectionObservationID {
+            EffectBundleActivationGate.shared.trackDelivery(handshakeDelivery, receiptID: collectionObservationID)
+        }
 
         let upgradeProtocol = parsedHeaders.first { $0.name.caseInsensitiveCompare("Upgrade") == .orderedSame }?.value ?? "unknown"
         let capturedResponse = CapturedResponse(
@@ -309,7 +316,7 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         // Record after the 101 write settles, so throttled or failed delivery is reflected, as in finishStreaming.
         let diagnostics = timingRecorder.transport
         let onSessionCompleted = self.onSessionCompleted
-        (lastDelivery ?? downstreamChannel.eventLoop.makeSucceededFuture(())).whenComplete { _ in
+        handshakeDelivery.whenComplete { _ in
             var deliveredProfile = wireProfile
             deliveredProfile.transport = diagnostics.snapshot()
             onSessionCompleted(capturedResponse, deliveredProfile)

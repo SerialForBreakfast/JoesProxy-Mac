@@ -62,6 +62,14 @@ private final class StalledMutationWriteHandler: ChannelOutboundHandler {
         pending.forEach { $0.completeWith(result) }
     }
 
+    /// Settles only the oldest outstanding write, leaving later writes pending.
+    func completeFirst(_ result: Result<Void, Error>) {
+        guard !promises.isEmpty else { return }
+        let first = promises.removeFirst()
+        if !buffers.isEmpty { buffers.removeFirst() }
+        first.completeWith(result)
+    }
+
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         complete(.failure(ChannelError.ioOnClosedChannel))
         context.close(mode: mode, promise: promise)
@@ -120,6 +128,108 @@ final class StreamingUpstreamForwarderTests: XCTestCase {
             XCTAssertEqual(recorded?.1.transport?.pendingWrites, 0)
             XCTAssertEqual(recorded?.1.transport?.deliveryState, succeeded ? "writes_completed" : "write_failed")
         }
+    }
+
+    /// A frame that arrives while the 101 write is still outstanding is relayed, but it is not
+    /// handshake evidence: the recorded handshake must not show it as a pending write.
+    func testFrameRelayedDuringStalledHandshakeIsNotHandshakeEvidence() throws {
+        let loop = EmbeddedEventLoop()
+        let sink = StalledMutationWriteHandler()
+        let downstream = EmbeddedChannel(handler: sink, loop: loop)
+        let upstream = EmbeddedChannel(loop: loop)
+        defer {
+            _ = try? upstream.finish(acceptAlreadyClosed: true)
+            _ = try? downstream.finish(acceptAlreadyClosed: true)
+        }
+        let request = HTTPProxyRequest(kind: .standard, method: "GET", version: "HTTP/1.1",
+            host: "socket.example.test", port: 443, path: "/socket",
+            headers: [HTTPHeaderField(name: "Upgrade", value: "websocket"),
+                      HTTPHeaderField(name: "Connection", value: "Upgrade")], body: Data())
+        var recorded: WireTimingProfile?
+        let forwarder = StreamingUpstreamForwarder(request: request, upstreamScheme: .https,
+            keepConnectionOpen: true, downstreamChannel: downstream,
+            downstreamThrottleWriter: NetworkThrottleWriter(direction: .downstream, configurationProvider: { .defaults }),
+            responseParser: HTTPResponseParser(), timingRecorder: UpstreamWireTimingRecorder(startedAt: Date()),
+            boundedCaptureAccumulator: BoundedCaptureAccumulator(limit: 1024), sessionRecorder: nil,
+            sessionIDTask: Task { nil },
+            onSessionCompleted: { _, profile in recorded = profile },
+            onSessionFailed: { error in XCTFail("A 101 is not a failed session: \(error)") },
+            onConnectionDone: { _ in XCTFail("An upgraded connection does not return to HTTP") },
+            onProtocolUpgraded: { _ in })
+        try upstream.pipeline.addHandler(forwarder).wait()
+        for chunk in ["HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n", "frame-1"] {
+            var input = upstream.allocator.buffer(capacity: chunk.utf8.count)
+            input.writeString(chunk)
+            try upstream.writeInbound(input)
+            loop.run()
+        }
+        XCTAssertNil(recorded, "The handshake is recorded only after its write settles")
+        sink.completeFirst(.success(()))
+        loop.run()
+
+        XCTAssertGreaterThan(sink.pendingWriteCount, 0, "The frame write is still outstanding")
+        XCTAssertEqual(recorded?.transport?.pendingWrites, 0)
+        XCTAssertEqual(recorded?.transport?.deliveryState, "writes_completed")
+    }
+
+    /// A collection mock cannot transform a protocol upgrade. Its observation must be settled as
+    /// ineligible, and its delivery receipt must follow the 101 write, not stay pending.
+    @MainActor
+    func testCollectionMockReceiptSettlesWhenTheResponseIsAnUpgrade() throws {
+        let draft = CollectionMockDraft(collectionPointer: "/items", item: .object(["id": .string("synthetic")]),
+            templateIndex: nil, edits: [], identityPointers: ["/id"], countPointers: ["/total"], position: .append)
+        let package = try CapturedMockPackageCompiler.prepare(id: UUID(), name: "Synthetic upgrade",
+            source: Data(#"{"items":[],"total":0}"#.utf8), draft: draft,
+            scope: .init(host: "api.example.test", scheme: .http, port: 80, path: "/items", clients: .address("192.0.2.1")),
+            images: [], appVersion: "test", createdAt: Date())
+        let manifest = package.manifest, ruleID = manifest.responseEffects[0].id
+        let gate = EffectBundleActivationGate.shared, executor = LiveCollectionTransformationExecutor()
+        let plan = try collectionMockPlan()
+        gate.register(bundleID: manifest.id, responseRuleIDs: [ruleID], hlsExperimentIDs: [])
+        gate.registerResources(manifest: manifest)
+        gate.open(bundleID: manifest.id)
+        LiveTransformationActivationTracker.shared.recordActivationStart(ruleID: ruleID)
+        defer {
+            executor.stop(effectID: ruleID)
+            gate.close(bundleID: manifest.id)
+            gate.unregister(bundleID: manifest.id)
+            LiveTransformationActivationTracker.shared.clear(ruleID: ruleID)
+        }
+        let revision = try executor.begin(effectID: ruleID, plan: plan, bundleGate: gate)
+        let context = LiveCollectionMockContext(ruleID: ruleID, plan: plan, sourceDescription: "Synthetic", revision: revision)
+
+        let loop = EmbeddedEventLoop()
+        let downstream = EmbeddedChannel(loop: loop)
+        let upstream = EmbeddedChannel(loop: loop)
+        defer {
+            _ = try? upstream.finish(acceptAlreadyClosed: true)
+            _ = try? downstream.finish(acceptAlreadyClosed: true)
+        }
+        let request = HTTPProxyRequest(kind: .standard, method: "GET", version: "HTTP/1.1",
+            host: "api.example.test", port: 80, path: "/items",
+            headers: [HTTPHeaderField(name: "Upgrade", value: "websocket"),
+                      HTTPHeaderField(name: "Connection", value: "Upgrade")], body: Data())
+        var completions = 0
+        let forwarder = StreamingUpstreamForwarder(request: request, upstreamScheme: .http,
+            keepConnectionOpen: true, downstreamChannel: downstream,
+            downstreamThrottleWriter: NetworkThrottleWriter(direction: .downstream, configurationProvider: { .defaults }),
+            responseParser: HTTPResponseParser(), timingRecorder: UpstreamWireTimingRecorder(startedAt: Date()),
+            boundedCaptureAccumulator: BoundedCaptureAccumulator(limit: 1024), sessionRecorder: nil,
+            sessionIDTask: Task { nil }, liveCollectionMockContext: context, liveCollectionTransformationExecutor: executor,
+            onSessionCompleted: { _, _ in completions += 1 },
+            onSessionFailed: { error in XCTFail("A 101 is not a failed session: \(error)") },
+            onConnectionDone: { _ in XCTFail("An upgraded connection does not return to HTTP") },
+            onProtocolUpgraded: { _ in })
+        try upstream.pipeline.addHandler(forwarder).wait()
+        var input = upstream.allocator.buffer(capacity: 96)
+        input.writeString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+        try upstream.writeInbound(input)
+        loop.run()
+
+        XCTAssertEqual(completions, 1)
+        let receipts = gate.observationSnapshot(bundleID: manifest.id)
+        XCTAssertEqual(receipts.map(\.outcome), ["ineligibleResponse"])
+        XCTAssertEqual(receipts.first?.delivery, .downstreamWriteSucceeded)
     }
 
     func testFragmentedEOFWithCacheRewriteWaitsForDeliveryAndReportsFailure() throws {
