@@ -66,3 +66,6 @@ fastlane/test_output
 /build
 /DerivedData
 default.profraw
+Companion/JoesProxyCompanion/.DS_Store
+Companion/.DS_Store
+.DS_Store
