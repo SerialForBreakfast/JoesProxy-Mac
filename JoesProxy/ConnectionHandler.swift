@@ -84,6 +84,8 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
     private var activeUpstreamCancellation: (@Sendable () -> Void)?
     private var activeUpstreamRequestID: UUID?
     private var activeMapRemoteSessionID: UUID?
+    /// The request whose protocol upgrade this connection is now relaying, if any.
+    private var upgradedTunnelRequestID: UUID?
     nonisolated(unsafe) static var beforeLoopbackRegistrationPauseForTesting: (@Sendable () async -> Void)?
 
     init(
@@ -179,13 +181,19 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         activeUpstreamRequestID = nil
         ActiveMapRemoteSessionRegistry.shared.unregister(activeMapRemoteSessionID)
         activeMapRemoteSessionID = nil
+        upgradedTunnelRequestID = nil
         context.fireChannelInactive()
     }
 
     func channelWritabilityChanged(context: ChannelHandlerContext) {
         if context.channel.isWritable {
             activeStreamingForwarder?.notifyDownstreamWritable()
-            if case .tunneling(let peer) = state {
+            if case .tunneling(let peer) = state, upgradedTunnelRequestID != nil {
+                // An upgraded tunnel's server-to-client bytes use this handler's downstream writer.
+                // Resume through it directly: the forwarder reference is set only if the request's
+                // send future finished before the 101, so it can be missing.
+                downstreamThrottleWriter.resumeReadsIfDrained(from: peer, to: context.channel)
+            } else if case .tunneling(let peer) = state {
                 peer.pipeline.handler(type: TunnelPeerRelayHandler.self).whenSuccess { handler in
                     handler.resumeReads(from: peer)
                 }
@@ -1405,6 +1413,17 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                 eventLoop.execute {
                     let handler = loopBoundSelf.value
                     let ctx = loopBoundContext.value
+                    // An upgraded connection outlives its request; revocation must still end it.
+                    if handler.upgradedTunnelRequestID == requestID, case .tunneling(let peer) = handler.state {
+                        handler.upgradedTunnelRequestID = nil
+                        ActiveMapRemoteSessionRegistry.shared.unregister(handler.activeMapRemoteSessionID)
+                        handler.activeMapRemoteSessionID = nil
+                        handler.activeStreamingForwarder = nil
+                        handler.state = .closed
+                        peer.close(promise: nil)
+                        ctx.close(promise: nil)
+                        return
+                    }
                     guard handler.activeUpstreamRequestID == requestID else { return }
                     handler.activeUpstreamRequestID = nil
                     handler.activeUpstreamCancellation?()
@@ -1533,6 +1552,17 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
                         handler.state = .closed
                         ctx.close(promise: nil)
                     }
+                }
+            },
+            onProtocolUpgraded: { upstreamChannel in
+                context.eventLoop.execute {
+                    let handler = loopBoundSelf.value
+                    let ctx = loopBoundContext.value
+                    guard handler.activeUpstreamRequestID == requestID else {
+                        upstreamChannel.close(promise: nil)
+                        return
+                    }
+                    handler.beginUpgradedTunnel(to: upstreamChannel, requestID: requestID, context: ctx)
                 }
             }
         ).whenComplete { result in
@@ -1762,7 +1792,35 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
         }
     }
 
-    fileprivate func resumeTunnelReads(from source: Channel, to destination: Channel) {
+    /// After the origin accepts a protocol upgrade (WebSocket), the connection stops being HTTP:
+    /// client bytes go straight to the origin, including any that arrived with the handshake.
+    /// The streaming forwarder stays on the upstream channel and relays the other direction.
+    private func beginUpgradedTunnel(to upstreamChannel: Channel, requestID: UUID, context: ChannelHandlerContext) {
+        activeUpstreamRequestID = nil
+        // Keeps a loopback Map Remote registration able to close this tunnel when access is revoked.
+        upgradedTunnelRequestID = requestID
+        activeUpstreamCancellation = nil
+        releaseUploadSpool()
+        pendingFrameExpectedLength = nil
+        state = .tunneling(peer: upstreamChannel)
+        // Request processing paused client reads; the relay now owns read admission.
+        requestReadsPaused = false
+        if buffer.isEmpty {
+            context.channel.setOption(ChannelOptions.autoRead, value: true).whenSuccess {
+                context.read()
+            }
+        } else {
+            var pending = context.channel.allocator.buffer(capacity: buffer.count)
+            pending.writeBytes(buffer)
+            buffer = Data()
+            // The relay pauses client reads for this write and resumes them only once it drains
+            // and the shared relay budget allows, so buffered bytes keep backpressure.
+            forwardToPeer(upstreamChannel, payload: NIOAny(pending), context: context)
+        }
+        logger.notice("Connection upgraded [\(self.traceID, privacy: .public)]; relaying both directions")
+    }
+
+    func resumeTunnelReads(from source: Channel, to destination: Channel) {
         upstreamThrottleWriter.resumeReadsIfDrained(from: source, to: destination)
     }
 

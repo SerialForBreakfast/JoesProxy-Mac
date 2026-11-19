@@ -4,6 +4,8 @@ JoesProxy development began on November 5, 2024, by Joseph McCraw. The 1.9.0 sou
 
 ## 1.9.1 — build 28 release candidate source
 
+- Known issue: WebSocket features such as Claude voice mode stop after connecting while JoesProxy inspects that host's HTTPS. To work around it, click **HTTPS** in the toolbar, add the host (for example `claude.ai`) under **Custom Bypass Domains**, and start the call again.
+
 - Setup & Repair brings Certificate, Proxy, Verify Capture, Devices and MCP/CLI into one flow. The toolbar and the JoesProxy, Certificate and Help menus open it. The toolbar wraps at larger text sizes. SDK controls are hidden from setup, Proxy settings and the Apple TV guide.
 - Streaming waterfalls use captured playlist references to associate segments with their bitrate ladder, including across CDN hosts. When references are missing, a unique matching directory can supply the ladder. Ambiguous captures omit the inferred ladder. Capture-wide candidate filtering uses request paths and response headers. A replaced capture produces the same `source_changed` result as filtered calculations.
 - The DMG packaging includes the portable diagnostic skill and uninstall instructions. Build 27 was privately tested on an upgrade account. Fresh installation, certificate retirement, MCP/CLI checklist transitions and acceptance of the final installer remain open. See the [release record](RELEASE.md).

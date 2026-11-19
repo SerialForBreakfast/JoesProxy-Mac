@@ -5,9 +5,11 @@ enum SyntheticInjectionReason: String, Codable, Sendable, Error, CaseIterable {
     case invalidJSON, collectionMissing, collectionNotArray, emptyCollection, templateNotObject
     case transformationFailed, encodingFailed, outputTooLarge, transformed
     case capacityUnavailable
+    case protocolUpgrade
 
     var recovery: String {
         switch self {
+        case .protocolUpgrade: return "The origin upgraded this connection (for example to WebSocket), so it carries frames, not a JSON response. Target an HTTP endpoint instead."
         case .capacityUnavailable: return "Mutation buffering is busy. The original response was forwarded; retry after in-flight responses drain."
         case .urlMismatch: return "Compare the actual request path with the plan matcher."
         case .clientScopeMismatch: return "Review the intended client's headers and the configured scope; do not broaden it automatically."

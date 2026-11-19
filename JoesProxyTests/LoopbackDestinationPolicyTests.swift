@@ -695,6 +695,62 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         task.cancel()
     }
 
+    /// After a local origin accepts an upgrade, the connection is a relay, not a request. Revoking
+    /// local-server access must still close it.
+    func testRevocationClosesUpgradedLoopbackTunnel() async throws {
+        let backend = LocalEchoHTTPServer(upgradeOnPath: "/socket")
+        try await backend.start()
+        defer { Task { await backend.stop() } }
+
+        let (config, cleanup) = try makeIsolatedConfig()
+        defer { cleanup() }
+        config.isLoopbackMapRemoteEnabled = true
+        config.authorizedLoopbackMapRemotePorts = [Int(backend.boundPort)]
+
+        let store = ResponseOverrideStore()
+        let proxy = ProxyServer(port: 0, bindHost: "127.0.0.1", httpsProxyMode: .passThrough,
+                                configuration: config, responseOverrideStore: store)
+        try await proxy.start()
+        defer { Task { await proxy.stop() } }
+
+        let socketRequest = makeRequest(method: "GET", scheme: .http, host: "socket.example.invalid", port: 80, path: "/socket")
+        _ = try await store.addMapRemoteRule(from: socketRequest, label: "Socket Local", remoteHost: "127.0.0.1",
+            remotePort: Int(backend.boundPort), remoteScheme: .http, allowLoopbackDestination: true)
+
+        let closed = expectation(description: "Upgraded tunnel closes on revocation")
+        let task = Task.detached { () -> Data in
+            // The receive timeout bounds the read even if both shutdowns below fail to close it.
+            let output = (try? await Self.sendViaProxyRaw(
+                proxyPort: proxy.port,
+                rawRequest: "GET http://socket.example.invalid/socket HTTP/1.1\r\nHost: socket.example.invalid\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\n\r\n",
+                receiveTimeoutSeconds: 10
+            )) ?? Data()
+            closed.fulfill()
+            return output
+        }
+
+        for _ in 0..<40 {
+            if !backend.receivedRequests.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertFalse(backend.receivedRequests.isEmpty)
+        // Let the 101 reach the proxy so the connection is upgraded before revocation.
+        try await Task.sleep(for: .milliseconds(200))
+
+        config.isLoopbackMapRemoteEnabled = false
+        _ = await store.disableLoopbackMapRemoteRules(forRemovedPorts: nil)
+        ActiveMapRemoteSessionRegistry.shared.cancelLoopbackSessions(forPorts: nil)
+
+        await fulfillment(of: [closed], timeout: 3.0)
+        // If revocation failed, the client is still reading. End both sides before waiting on it
+        // so the failure is reported instead of hanging the suite.
+        await proxy.stop()
+        await backend.stop()
+        let received = await task.value
+        XCTAssertTrue(String(decoding: received, as: UTF8.self).hasPrefix("HTTP/1.1 101 "),
+                      "The connection must have been upgraded before it was revoked")
+    }
+
     @MainActor
     func testSettingsViewModelSingleActionRevocationClosesEstablishedAndInFlightPreflightPreservesUnrelatedAndStaysDisabled() async throws {
         let localBackend = try LocalEchoHTTPServer(holdStreamOnPath: "/stream")
@@ -1699,7 +1755,8 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
         return (statusLine, headers, body)
     }
 
-    private static func sendViaProxyRaw(proxyPort: UInt16, rawRequest: String) async throws -> Data {
+    private static func sendViaProxyRaw(proxyPort: UInt16, rawRequest: String,
+                                        receiveTimeoutSeconds: Int? = nil) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global().async {
                 let fd = socket(AF_INET, SOCK_STREAM, 0)
@@ -1708,6 +1765,11 @@ final class LoopbackDestinationPolicyTests: XCTestCase {
                     return
                 }
                 defer { close(fd) }
+                if let receiveTimeoutSeconds {
+                    // recv then returns -1 after the timeout, which ends the read loop below.
+                    var timeout = timeval(tv_sec: receiveTimeoutSeconds, tv_usec: 0)
+                    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+                }
 
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(AF_INET)
@@ -1766,6 +1828,8 @@ private final class LocalEchoHTTPServer: @unchecked Sendable {
     private var serverChannel: Channel?
     private let lock = NSLock()
     private let holdStreamOnPath: String?
+    /// A request to this path is answered with 101 and the connection is then held open.
+    let upgradeOnPath: String?
     private var _requests: [RecordedRequest] = []
     private(set) var boundPort: UInt16 = 0
 
@@ -1773,8 +1837,9 @@ private final class LocalEchoHTTPServer: @unchecked Sendable {
         lock.withLock { _requests }
     }
 
-    init(holdStreamOnPath: String? = nil) {
+    init(holdStreamOnPath: String? = nil, upgradeOnPath: String? = nil) {
         self.holdStreamOnPath = holdStreamOnPath
+        self.upgradeOnPath = upgradeOnPath
     }
 
     func start() async throws {
@@ -1835,6 +1900,13 @@ private final class LocalEchoHTTPServer: @unchecked Sendable {
                     body: bodyString
                 ))
                 var headers = HTTPHeaders()
+                if head.uri == server.upgradeOnPath {
+                    headers.add(name: "Upgrade", value: "synthetic-echo")
+                    headers.add(name: "Connection", value: "Upgrade")
+                    context.writeAndFlush(wrapOutboundOut(.head(HTTPResponseHead(version: head.version,
+                        status: .switchingProtocols, headers: headers))), promise: nil)
+                    return
+                }
                 headers.add(name: "Content-Type", value: "text/plain")
                 if holdOpen {
                     headers.add(name: "Cache-Control", value: "no-cache")

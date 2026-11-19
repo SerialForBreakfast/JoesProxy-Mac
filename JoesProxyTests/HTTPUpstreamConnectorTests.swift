@@ -11,6 +11,26 @@ import XCTest
 /// real wire correctly if the connector keeps using whatever `path` `ConnectionHandler` puts on
 /// the remapped request, exactly as it already does for `host`.
 final class HTTPUpstreamConnectorTests: XCTestCase {
+    /// An upgrade keeps the client's upgrade-specific Connection options (h2c needs
+    /// `HTTP2-Settings`), drops persistence tokens and never repeats `Upgrade`.
+    func testUpgradeConnectionValueKeepsUpgradeOptions() {
+        func value(_ connection: [String]) -> String {
+            HTTPUpstreamConnector.upgradeConnectionValue(connection.map { HTTPHeaderField(name: "Connection", value: $0) })
+        }
+        XCTAssertEqual(value(["Upgrade"]), "Upgrade")
+        XCTAssertEqual(value(["Upgrade, HTTP2-Settings"]), "Upgrade, HTTP2-Settings")
+        XCTAssertEqual(value(["keep-alive, Upgrade"]), "Upgrade")
+        XCTAssertEqual(value(["upgrade", "HTTP2-Settings, close", "http2-settings"]), "Upgrade, HTTP2-Settings")
+        XCTAssertTrue(HTTPUpstreamConnector.requestsProtocolUpgrade([
+            HTTPHeaderField(name: "Connection", value: "keep-alive, Upgrade"),
+            HTTPHeaderField(name: "Upgrade", value: "websocket")
+        ]))
+        XCTAssertFalse(HTTPUpstreamConnector.requestsProtocolUpgrade([
+            HTTPHeaderField(name: "Connection", value: "keep-alive"),
+            HTTPHeaderField(name: "Upgrade", value: "websocket")
+        ]), "Upgrade without the Connection option is not an upgrade request")
+    }
+
     /// Minimal loopback TCP listener that captures the first request's raw bytes (mirrors
     /// `MCPSelfValidationFixtureOrigin`'s connection-handling pattern) and replies with a bare
     /// 200 so the connector's `execute` completes normally.
