@@ -1322,7 +1322,7 @@ final class MCPMediaInspectionService: MCPMediaOperationServicing {
             throw MCPStructuredError(code: .busy, message: "Waterfall analysis busy or cancelled.")
         }
         guard epoch == snapshotService.captureEpoch else {
-            throw MCPStructuredError(code: .policyDenied, message: "Capture changed during waterfall analysis.")
+            throw ArtifactAnalysisFailure.sourceChanged
         }
 
         let segmentDTOs = report.segments.map { seg in

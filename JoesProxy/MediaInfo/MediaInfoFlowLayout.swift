@@ -75,6 +75,8 @@ struct FlowLayout: Layout {
                 origin.x = bounds.minX
                 origin.y += currentRowHeight + verticalSpacing
                 currentRowHeight = 0
+            } else if origin.x > bounds.minX {
+                origin.x += horizontalSpacing
             }
 
             subview.place(
@@ -82,7 +84,7 @@ struct FlowLayout: Layout {
                 proposal: ProposedViewSize(width: size.width, height: size.height)
             )
 
-            origin.x += (origin.x == bounds.minX ? size.width : horizontalSpacing + size.width)
+            origin.x += size.width
             currentRowHeight = max(currentRowHeight, size.height)
         }
     }

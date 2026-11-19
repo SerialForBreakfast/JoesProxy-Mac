@@ -573,6 +573,8 @@ struct JoesProxyApp: App {
                     Text("Settings…")
                 }
                 .keyboardShortcut(",", modifiers: .command)
+                Button("Setup & Repair…", action: openSetupAndRepair)
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
             }
 
             // MARK: Apple menu — About
@@ -819,11 +821,7 @@ struct JoesProxyApp: App {
 
             // MARK: Certificate menu
             CommandMenu("Certificate") {
-                Button(viewModel.certificateSetupEntryPointTitle) {
-                    compactModeController.performRequiringFullView {
-                        presentationState.presentCertificateSetup()
-                    }
-                }
+                Button("Setup & Repair…", action: openSetupAndRepair)
                 .keyboardShortcut("h", modifiers: [.command, .shift])
                 Button("Reset Certificate State") {
                     compactModeController.performRequiringFullView {
@@ -894,12 +892,7 @@ struct JoesProxyApp: App {
 
                 Divider()
 
-                Button("Guided Setup & Repair") {
-                    compactModeController.performRequiringFullView {
-                        presentationState.presentGuidedSetup()
-                    }
-                }
-                .keyboardShortcut("g", modifiers: [.command, .shift])
+                Button("Setup & Repair…", action: openSetupAndRepair)
                 .accessibilityIdentifier("joesProxyGuidedSetupMenuItem")
 
                 Divider()
@@ -941,7 +934,8 @@ struct JoesProxyApp: App {
                     routingModel: coordinator.systemProxyRoutingModel,
                     compactModeController: coordinator.compactModeController,
                     mcpServerController: coordinator.mcpServerController,
-                    presentationState: presentationState
+                    presentationState: presentationState,
+                    openSetupAndRepair: openSetupAndRepair
                 )
             }
         } label: {
@@ -951,6 +945,13 @@ struct JoesProxyApp: App {
             )
         }
         .menuBarExtraStyle(.menu)
+    }
+
+    private func openSetupAndRepair() {
+        MainWindowActivation.activateMainWindow()
+        compactModeController.performRequiringFullView {
+            presentationState.presentCertificateSetup()
+        }
     }
 
     @ViewBuilder

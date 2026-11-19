@@ -182,6 +182,7 @@ platform :mac do
     FileUtils.cp_r(app_path, File.join(staging_dir, "JoesProxy.app"))
     FileUtils.ln_s("/Applications", File.join(staging_dir, "Applications"))
     sh("bash", File.join(REPO_ROOT, "memlog/utility_scripts/stage_diagnostic_skill.sh"), staging_dir)
+    FileUtils.cp(File.join(REPO_ROOT, "docs", "Uninstall JoesProxy.txt"), staging_dir)
 
     sh("hdiutil create " \
        "-volname JoesProxy " \

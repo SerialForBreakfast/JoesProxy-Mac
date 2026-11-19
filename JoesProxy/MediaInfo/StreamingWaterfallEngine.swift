@@ -15,17 +15,21 @@ enum StreamingWaterfallEngine {
         allSessions: [SessionRecord]
     ) -> StreamingQualityWaterfallReport {
         // 1. Identify manifest and extract bitrate ladder
-        let (manifestSession, ladder, manifestKind, defaultSegmentDuration) = resolveManifestAndLadder(
-            target: target,
-            allSessions: allSessions
-        )
-
-        // 2. Identify and filter related media segments
-        let segmentSessions = resolveRelatedSegmentSessions(
-            target: target,
-            manifestSession: manifestSession,
-            allSessions: allSessions
-        )
+        let index = ManifestIndex(target: target, sessions: allSessions)
+        guard let targetURL = MediaDetector.absoluteURL(for: target.request) else { return .empty }
+        let selected = index.manifest(for: targetURL)
+        let manifestSession = selected?.session
+        let ladder = selected?.ladder ?? []
+        let manifestKind = selected?.kind ?? "Unknown Stream"
+        let defaultSegmentDuration = selected?.targetDuration ?? 6
+        let segmentSessions = allSessions.filter { session in
+            guard !Task.isCancelled, let url = MediaDetector.absoluteURL(for: session.request),
+                  !index.isPlaylist(url), isSegment(session, url: url, index: index) else { return false }
+            if let selected {
+                return index.belongs(url, to: selected)
+            }
+            return session.id == target.id
+        }.sorted { $0.timing.startedAt < $1.timing.startedAt }
         guard !Task.isCancelled else { return .empty }
 
         guard !segmentSessions.isEmpty else {
@@ -229,35 +233,89 @@ enum StreamingWaterfallEngine {
 
     // MARK: - Private Helpers
 
-    private static func resolveManifestAndLadder(
-        target: SessionRecord,
-        allSessions: [SessionRecord]
-    ) -> (manifestSession: SessionRecord?, ladder: [StreamingBitrateVariant], kind: String, targetDuration: Double) {
-        if let manifest = parseManifest(target) {
-            return (target, manifest.ladder, manifest.kind, manifest.targetDuration)
-        }
-        // A capture can contain playlist requests whose response was never retained.
-        // Only the outer lookup scans candidates; parsing one cannot restart that scan.
-        for candidate in allSessions where candidate.id != target.id {
-            if Task.isCancelled { break }
-            if let manifest = parseManifest(candidate), !manifest.ladder.isEmpty {
-                return (candidate, manifest.ladder, manifest.kind, manifest.targetDuration)
-            }
-        }
-        return (nil, [], "Unknown Stream", 6.0)
+    private struct Manifest {
+        let session: SessionRecord
+        let url: URL
+        let ladder: [StreamingBitrateVariant]
+        let kind: String
+        let targetDuration: Double
     }
 
-    private static func parseManifest(
-        _ target: SessionRecord
-    ) -> (ladder: [StreamingBitrateVariant], kind: String, targetDuration: Double)? {
-        let mediaType = MediaDetector.mediaType(for: target)
+    private struct ManifestIndex {
+        var manifests: [URL: Manifest] = [:]
+        var parents: [URL: Set<URL>] = [:]
+        var playlistsBySegment: [URL: Set<URL>] = [:]
+        var byDirectory: [URL: Set<URL>] = [:]
 
-        // Case A: Target is an HLS manifest
-        if mediaType == .hls || mediaType == .hlsDiscovery || target.request.path.contains(".m3u8") {
-            let manifestText = target.response.flatMap(MediaDetector.decodedResponseBody).flatMap { String(data: $0, encoding: .utf8) }
-            if let text = manifestText, text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("#EXTM3U") {
-                let baseURL = URL(string: "\(target.request.scheme.rawValue)://\(target.request.host)\(target.request.path)")
-                let manifest = HLSParser.parse(text, baseURL: baseURL)
+        init(target: SessionRecord, sessions: [SessionRecord]) {
+            for session in sessions {
+                if Task.isCancelled { return }
+                var type = MediaDetector.waterfallMediaType(for: session)
+                if session.id == target.id && type == .none {
+                    type = MediaDetector.mediaType(for: session)
+                }
+                guard type == .hls || type == .dash,
+                      let url = MediaDetector.absoluteURL(for: session.request),
+                      let bytes = session.response.flatMap(MediaDetector.decodedResponseBody),
+                      let text = String(data: bytes, encoding: .utf8),
+                      let manifest = parseManifest(session, url: url, type: type, text: text)
+                else { continue }
+                // Preserve the selected capture when a live playlist URL has multiple snapshots.
+                if manifests[url]?.session.id != target.id { manifests[url] = manifest }
+                if !manifest.ladder.isEmpty {
+                    byDirectory[Self.directory(url), default: []].insert(url)
+                }
+            }
+        }
+
+        private static func directory(_ url: URL) -> URL {
+            url.absoluteURL.deletingLastPathComponent().absoluteString.components(separatedBy: "?").first
+                .flatMap(URL.init(string:)) ?? url
+        }
+
+        func isPlaylist(_ url: URL) -> Bool { manifests[url] != nil || parents[url] != nil }
+
+        private func owners(of url: URL) -> Set<URL> {
+            if let playlists = playlistsBySegment[url] {
+                return playlists.reduce(into: []) { result, playlist in
+                    result.formUnion(parents[playlist] ?? [playlist])
+                }
+            }
+            var directory = Self.directory(url)
+            while true {
+                if let candidates = byDirectory[directory] { return candidates }
+                if directory.path.isEmpty || directory.path == "/" { break }
+                let parent = Self.directory(directory)
+                if parent == directory { break }
+                directory = parent
+            }
+            return []
+        }
+
+        func manifest(for url: URL) -> Manifest? {
+            if let direct = manifests[url] { return direct }
+            let matches = owners(of: url)
+            guard matches.count == 1, let owner = matches.first else { return nil }
+            return manifests[owner]
+        }
+
+        func belongs(_ url: URL, to manifest: Manifest) -> Bool {
+            if playlistsBySegment[url]?.contains(manifest.url) == true { return true }
+            return owners(of: url) == [manifest.url]
+        }
+
+        private mutating func parseManifest(_ session: SessionRecord, url: URL, type: MediaType, text: String) -> Manifest? {
+            if type == .hls, text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("#EXTM3U") {
+                let manifest = HLSParser.parse(text, baseURL: url)
+                for reference in manifest.variants.map(\.uri) + manifest.mediaGroups.compactMap(\.uri) {
+                    if let child = URL(string: reference) {
+                        parents[child, default: []].insert(url)
+                        byDirectory[Self.directory(child), default: []].insert(url)
+                    }
+                }
+                for reference in manifest.segments.map(\.uri) + [manifest.initializationSegmentURI].compactMap({ $0 }) {
+                    if let segment = URL(string: reference) { playlistsBySegment[segment, default: []].insert(url) }
+                }
                 let variants: [StreamingBitrateVariant] = manifest.variants.map { v in
                     StreamingBitrateVariant(
                         bandwidth: v.bandwidth ?? v.averageBandwidth ?? 0,
@@ -270,14 +328,9 @@ enum StreamingWaterfallEngine {
                 }.sorted(by: { $0.bandwidth < $1.bandwidth })
 
                 let kind = manifest.isMasterPlaylist ? "HLS Master Playlist" : "HLS Media Playlist"
-                return (variants, kind, manifest.targetDuration ?? 6.0)
+                return Manifest(session: session, url: url, ladder: variants, kind: kind, targetDuration: manifest.targetDuration ?? 6)
             }
-        }
-
-        // Case B: Target is a DASH manifest
-        if mediaType == .dash || target.request.path.contains(".mpd") {
-            let manifestText = target.response.flatMap(MediaDetector.decodedResponseBody).flatMap { String(data: $0, encoding: .utf8) }
-            if let text = manifestText, let manifest = DASHParser.parse(text) {
+            if type == .dash, let manifest = DASHParser.parse(text) {
                 var variants: [StreamingBitrateVariant] = []
                 for period in manifest.periods {
                     for set in period.adaptationSets {
@@ -302,38 +355,16 @@ enum StreamingWaterfallEngine {
                     }
                 }
                 variants.sort(by: { $0.bandwidth < $1.bandwidth })
-                return (variants, "DASH MPD Manifest", 6.0)
+                return Manifest(session: session, url: url, ladder: variants, kind: "DASH MPD Manifest", targetDuration: 6)
             }
+            return nil
         }
-
-        return nil
     }
 
-    private static func resolveRelatedSegmentSessions(
-        target: SessionRecord,
-        manifestSession: SessionRecord?,
-        allSessions: [SessionRecord]
-    ) -> [SessionRecord] {
-        let host = manifestSession?.request.host ?? target.request.host
-
-        return allSessions.filter { session in
-            guard !Task.isCancelled else { return false }
-            // Exclude manifests themselves from the segment list
-            if session.id == manifestSession?.id || session.request.path.contains(".m3u8") || session.request.path.contains(".mpd") {
-                return false
-            }
-            guard session.request.host == host || session.request.host.contains(host) || host.contains(session.request.host) else {
-                return false
-            }
-            let mediaType = MediaDetector.mediaType(for: session)
-            let path = session.request.path.lowercased()
-            return mediaType.isVideoOrStream
-                || path.contains(".ts")
-                || path.contains(".m4s")
-                || path.contains(".mp4")
-                || path.contains(".aac")
-                || path.contains(".vtt")
-        }.sorted(by: { $0.timing.startedAt < $1.timing.startedAt })
+    private static func isSegment(_ session: SessionRecord, url: URL, index: ManifestIndex) -> Bool {
+        if index.playlistsBySegment[url] != nil { return true }
+        if case .video = MediaDetector.waterfallMediaType(for: session) { return true }
+        return ["aac", "vtt"].contains(url.pathExtension.lowercased())
     }
 
     private static func matchVariant(
