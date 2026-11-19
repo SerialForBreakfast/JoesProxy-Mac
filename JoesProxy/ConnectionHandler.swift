@@ -188,7 +188,12 @@ final class ProxyConnectionHandler: ChannelDuplexHandler {
     func channelWritabilityChanged(context: ChannelHandlerContext) {
         if context.channel.isWritable {
             activeStreamingForwarder?.notifyDownstreamWritable()
-            if case .tunneling(let peer) = state {
+            if case .tunneling(let peer) = state, upgradedTunnelRequestID != nil {
+                // An upgraded tunnel's server-to-client bytes use this handler's downstream writer.
+                // Resume through it directly: the forwarder reference is set only if the request's
+                // send future finished before the 101, so it can be missing.
+                downstreamThrottleWriter.resumeReadsIfDrained(from: peer, to: context.channel)
+            } else if case .tunneling(let peer) = state {
                 peer.pipeline.handler(type: TunnelPeerRelayHandler.self).whenSuccess { handler in
                     handler.resumeReads(from: peer)
                 }

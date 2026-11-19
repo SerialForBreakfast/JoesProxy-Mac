@@ -268,6 +268,14 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         }
     }
 
+    /// The request URL that synthetic injection plans match against.
+    private var requestURLString: String {
+        let canonicalSchemePort = upstreamScheme == .https ? 443 : 80
+        return "\(upstreamScheme.rawValue)://\(request.host)"
+            + (request.port == canonicalSchemePort ? "" : ":\(request.port)")
+            + request.path
+    }
+
     /// A 101 answering a request that asked to upgrade. Anything else stays an ordinary response.
     private var isAcceptedProtocolUpgrade: Bool {
         guard parsedStatusCode == 101, onProtocolUpgraded != nil else { return false }
@@ -290,8 +298,12 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         hasReportedCaptureTerminal = true
         transportDiagnostics?.recordProgress(.responseComplete)
         logger.notice("Protocol upgrade accepted status=101; relaying bytes without capture")
-        // A collection mock cannot transform a protocol upgrade; settle its evidence like any ineligible response.
+        // Neither a collection mock nor a synthetic injection can transform a protocol upgrade.
+        // Record why, as the response-head path does for other ineligible responses.
         noteCollectionOutcome(.ineligibleResponse)
+        _ = SyntheticCollectionInjectionEngine.shared.observeEligibility(requestURL: requestURLString,
+            headers: request.headers, bypassReason: .protocolUpgrade, requestID: syntheticRequestID)
+        attachSyntheticCaptureID()
 
         var head = downstreamChannel.allocator.buffer(capacity: rawHeaders.count + initialBytes.count)
         head.writeBytes(rawHeaders)
@@ -424,10 +436,6 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
     private func evaluateMutationEligibilityAndTransition(rawHeaders: Data, initialBody: Data, context: ChannelHandlerContext) {
         noteCollectionOutcome(.ineligibleResponse)
         let isMedia = Self.isMediaContentType(headers: parsedHeaders, path: request.path)
-        let canonicalSchemePort = upstreamScheme == .https ? 443 : 80
-        let requestURLString = "\(upstreamScheme.rawValue)://\(request.host)"
-            + (request.port == canonicalSchemePort ? "" : ":\(request.port)")
-            + request.path
 
         let contentLength = parsedHeaders.first(where: {
             $0.name.caseInsensitiveCompare("Content-Length") == .orderedSame
@@ -526,10 +534,7 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
 
     private func tripMutationGuardAndStreamDirect(context: ChannelHandlerContext) {
         noteCollectionOutcome(.sizeLimit)
-        let canonicalPort = upstreamScheme == .https ? 443 : 80
-        let requestURL = "\(upstreamScheme.rawValue)://\(request.host)"
-            + (request.port == canonicalPort ? "" : ":\(request.port)") + request.path
-        SyntheticCollectionInjectionEngine.shared.recordBufferLimit(requestURL: requestURL, headers: request.headers, requestID: syntheticRequestID)
+        SyntheticCollectionInjectionEngine.shared.recordBufferLimit(requestURL: requestURLString, headers: request.headers, requestID: syntheticRequestID)
         attachSyntheticCaptureID()
         logger.warning("Trip mutation guard: response exceeded \(SyntheticInjectionBudget.maxResponseBodyBytes) bytes. Streaming unmodified.")
         state = .streamingDirect
@@ -746,10 +751,6 @@ final class StreamingUpstreamForwarder: ChannelInboundHandler, RemovableChannelH
         var responseHeaders = initialResponseHeaders
         var captureSource = initialCaptureSource
         var captureSourceDescription = initialCaptureSourceDescription
-        let canonicalSchemePort = upstreamScheme == .https ? 443 : 80
-        let requestURLString = "\(upstreamScheme.rawValue)://\(request.host)"
-            + (request.port == canonicalSchemePort ? "" : ":\(request.port)")
-            + request.path
         if let injected = SyntheticCollectionInjectionEngine.shared.processResponse(
             responseData: responseBody,
             requestURL: requestURLString,

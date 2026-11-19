@@ -172,6 +172,48 @@ final class StreamingUpstreamForwarderTests: XCTestCase {
         XCTAssertEqual(recorded?.transport?.deliveryState, "writes_completed")
     }
 
+    /// A synthetic injection plan that targets an upgraded endpoint records why it was skipped,
+    /// as it does for other ineligible responses, and its receipt is never left pending.
+    func testSyntheticInjectionPlanRecordsProtocolUpgradeSkip() throws {
+        let engine = SyntheticCollectionInjectionEngine.shared
+        engine.clearAllPlans()
+        defer { engine.clearAllPlans() }
+        let plan = SyntheticCollectionInjectionPlan(name: "Synthetic", urlPattern: "/socket", collectionKeypath: "$.items",
+            boundAssetKind: nil, clientScope: .allClients)
+        engine.registerPlan(plan)
+
+        let loop = EmbeddedEventLoop()
+        let downstream = EmbeddedChannel(loop: loop)
+        let upstream = EmbeddedChannel(loop: loop)
+        defer {
+            _ = try? upstream.finish(acceptAlreadyClosed: true)
+            _ = try? downstream.finish(acceptAlreadyClosed: true)
+        }
+        let request = HTTPProxyRequest(kind: .standard, method: "GET", version: "HTTP/1.1",
+            host: "socket.example.test", port: 443, path: "/socket",
+            headers: [HTTPHeaderField(name: "Upgrade", value: "websocket"),
+                      HTTPHeaderField(name: "Connection", value: "Upgrade")], body: Data())
+        let forwarder = StreamingUpstreamForwarder(request: request, upstreamScheme: .https,
+            keepConnectionOpen: true, downstreamChannel: downstream,
+            downstreamThrottleWriter: NetworkThrottleWriter(direction: .downstream, configurationProvider: { .defaults }),
+            responseParser: HTTPResponseParser(), timingRecorder: UpstreamWireTimingRecorder(startedAt: Date()),
+            boundedCaptureAccumulator: BoundedCaptureAccumulator(limit: 1024), sessionRecorder: nil,
+            sessionIDTask: Task { nil },
+            onSessionCompleted: { _, _ in },
+            onSessionFailed: { error in XCTFail("A 101 is not a failed session: \(error)") },
+            onConnectionDone: { _ in XCTFail("An upgraded connection does not return to HTTP") },
+            onProtocolUpgraded: { _ in })
+        try upstream.pipeline.addHandler(forwarder).wait()
+        var input = upstream.allocator.buffer(capacity: 96)
+        input.writeString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+        try upstream.writeInbound(input)
+        loop.run()
+
+        let receipt = try XCTUnwrap(engine.diagnostics(planID: plan.id)?.receipts.last)
+        XCTAssertEqual(receipt.reason, .protocolUpgrade)
+        XCTAssertEqual(receipt.deliveryState, .notApplied)
+    }
+
     /// A collection mock cannot transform a protocol upgrade. Its observation must be settled as
     /// ineligible, and its delivery receipt must follow the 101 write, not stay pending.
     @MainActor
