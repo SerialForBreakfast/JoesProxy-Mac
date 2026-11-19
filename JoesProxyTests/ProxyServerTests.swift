@@ -76,6 +76,95 @@ final class ProxyServerTests: XCTestCase {
         await origin.stop()
     }
 
+    /// Runs an inspected TLS upgrade end to end on real sockets: many round trips, a bulk transfer
+    /// through a slow client (relay backpressure), then teardown started by each side. The relay
+    /// backlog must drain and every upgraded origin connection must close.
+    @MainActor
+    func testInspectedUpgradeRelayLifetimeBackpressureAndTeardown() async throws {
+        let authority = PersistentCertificateAuthorityProvider(configuration: TestProxyConfiguration(proxyPort: 0,
+            logLevel: .info, certificateLabel: "UpgradeRelay-\(UUID().uuidString)"), certificateStore: UploadTLSCertificateStore())
+        let root = try authority.loadOrCreateRootCertificate()
+        let origin = SimpleHTTPSTestServer(leafCertificate: try authority.issueLeafCertificate(for: "localhost"))
+        try await origin.start()
+        let store = InMemorySessionStore()
+        let recorder = ProxySessionRecorder(sessionStore: store)
+        let proxy = ProxyServer(port: 0, bindHost: "127.0.0.1", httpsProxyMode: .intercepting,
+            certificateAuthority: authority, sessionRecorder: recorder,
+            upstreamConnectorConfiguration: .init(trustedRootCertificates: [root.certificateData]))
+        try await proxy.start()
+        let handshake = "GET /socket HTTP/1.1\r\nHost: localhost\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\nX-Synthetic-Upgrade: yes\r\nX-Synthetic-Upgrade-Mode: raw\r\n\r\n"
+        func drained() async throws {
+            try await withTimeout(seconds: 5) {
+                while RelayBacklogBudget.shared.snapshot.bytes != 0 || RelayBacklogBudget.shared.snapshot.operations != 0 {
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+            }
+        }
+        func connect(slow: Bool) async throws -> InterceptingHTTPSTestClient {
+            let client = try await InterceptingHTTPSTestClient.connect(port: proxy.port, trustedRootCertificates: [root.certificateData])
+            let reply = try await client.performBytes(targetHost: "localhost", targetPort: origin.port,
+                request: handshake, slowReceiver: slow, expectedBodyBytes: 5)
+            XCTAssertTrue(String(decoding: reply, as: UTF8.self).hasPrefix("HTTP/1.1 101 "))
+            return client
+        }
+        do {
+            // Lifetime: a long sequence of small messages on one upgraded connection.
+            let slowClient = try await connect(slow: true)
+            for index in 0..<200 {
+                let message = Data("message-\(index)".utf8)
+                let echoed = try await slowClient.exchangeRaw(message, expectedBytes: message.count)
+                XCTAssertEqual(echoed, message, "round trip \(index) must be byte-exact")
+            }
+            // Backpressure: 2 MiB each way through a client that reads slowly.
+            let bulk = Data((0..<(2 * 1_048_576)).map { UInt8(truncatingIfNeeded: $0 % 251) })
+            let echoedBulk = try await slowClient.exchangeRaw(bulk, expectedBytes: bulk.count)
+            XCTAssertEqual(echoedBulk.count, bulk.count)
+            XCTAssertTrue(echoedBulk == bulk, "the bulk transfer must arrive byte-exact")
+            let slowCycles = try await slowClient.observedSlowReadCycles()
+            XCTAssertGreaterThan(slowCycles, 0, "the slow reader must have paused the relay")
+            XCTAssertGreaterThanOrEqual(origin.rawUpgradeBytesReceived, bulk.count)
+            try await drained()
+
+            // Teardown started by the origin reaches the client.
+            try await slowClient.sendRaw(SimpleHTTPSResponder.closeMarker)
+            let originClosedClient = await slowClient.waitForPeerClose(seconds: 3)
+            XCTAssertTrue(originClosedClient, "an origin close must close the client side")
+            try await slowClient.close()
+
+            // Teardown started by the client reaches the origin.
+            let fastClient = try await connect(slow: false)
+            let ping = Data("ping".utf8)
+            let pong = try await fastClient.exchangeRaw(ping, expectedBytes: ping.count)
+            XCTAssertEqual(pong, ping)
+            await fastClient.closeConnection()
+            try await withTimeout(seconds: 3) {
+                while origin.upgradedConnections.closed < origin.upgradedConnections.opened {
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+            }
+            XCTAssertEqual(origin.upgradedConnections.opened, 2)
+            XCTAssertEqual(origin.upgradedConnections.closed, 2, "every upgraded origin connection must close")
+            try await fastClient.close()
+            try await drained()
+
+            try await withTimeout(seconds: 3) {
+                while store.sessions.filter({ $0.response?.statusCode == 101 }).count < 2 {
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+            }
+            for session in store.sessions where session.response?.statusCode == 101 {
+                XCTAssertNil(session.response?.bodyData)
+                XCTAssertEqual(session.timing.wireProfile?.transport?.pendingWrites, 0)
+            }
+        } catch {
+            await proxy.stop()
+            await origin.stop()
+            throw error
+        }
+        await proxy.stop()
+        await origin.stop()
+    }
+
     func testDelayedTLSAndOriginDoNotBlockHealthySiblingRequests() async throws {
         for stage in ["tls", "response"] { try await exerciseSequentialHTTPS(delayedStage: stage) }
     }
@@ -2673,6 +2762,8 @@ private final class SimpleHTTPSTestServer {
     private let upgradeObservation = UpgradeObservation()
     /// The `Connection` value the origin last saw on an upgrade request.
     var lastUpgradeConnectionHeader: String? { upgradeObservation.connectionHeader }
+    var upgradedConnections: (opened: Int, closed: Int) { upgradeObservation.upgradedConnections }
+    var rawUpgradeBytesReceived: Int { upgradeObservation.rawBytesReceived }
     private let pacedRanges: Bool
     private let echoDigest: Bool
     private let responseBody: String
@@ -2754,8 +2845,17 @@ private final class SimpleHTTPSTestServer {
 private final class UpgradeObservation: @unchecked Sendable {
     private let lock = NSLock()
     private var value: String?
+    private var openCount = 0
+    private var closeCount = 0
+    private var receivedCount = 0
     var connectionHeader: String? { lock.withLock { value } }
+    /// Upgraded connections the origin accepted, and how many of those it saw close.
+    var upgradedConnections: (opened: Int, closed: Int) { lock.withLock { (openCount, closeCount) } }
+    var rawBytesReceived: Int { lock.withLock { receivedCount } }
     func record(_ header: String?) { lock.withLock { value = header } }
+    func opened() { lock.withLock { openCount += 1 } }
+    func closed() { lock.withLock { closeCount += 1 } }
+    func received(_ count: Int) { lock.withLock { receivedCount += count } }
 }
 
 private final class SimpleHTTPSResponder: ChannelInboundHandler {
@@ -2772,7 +2872,14 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
     private let requestParser: HTTPRequestParser
     private var buffer = Data()
     private var upgraded = false
+    private var rawEcho = false
     private let upgradeObservation: UpgradeObservation?
+    static let closeMarker = Data("\u{0}CLOSE\u{0}".utf8)
+
+    func channelInactive(context: ChannelHandlerContext) {
+        if upgraded { upgradeObservation?.closed() }
+        context.fireChannelInactive()
+    }
 
     init(responseBody: String, requestParser: HTTPRequestParser, echoDigest: Bool = false, pacedRanges: Bool = false, scripted: [String: Data] = [:], counter: ScriptedOriginCounter? = nil, responseGate: ScriptedDeliveryGate? = nil, upgradeObservation: UpgradeObservation? = nil) {
         self.upgradeObservation = upgradeObservation
@@ -2788,6 +2895,18 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var byteBuffer = unwrapInboundIn(data)
         if upgraded {
+            if rawEcho {
+                // Raw mode echoes bytes unchanged so large transfers can be compared exactly.
+                // The marker below, which the bulk pattern never contains, asks the origin to close.
+                let bytes = Data(byteBuffer.readableBytesView)
+                upgradeObservation?.received(bytes.count)
+                if bytes.range(of: SimpleHTTPSResponder.closeMarker) != nil {
+                    context.close(promise: nil)
+                    return
+                }
+                context.writeAndFlush(wrapOutboundOut(byteBuffer), promise: nil)
+                return
+            }
             // After 101 the connection carries the new protocol: echo every byte with a marker.
             var echo = context.channel.allocator.buffer(capacity: byteBuffer.readableBytes + 5)
             echo.writeString("echo:")
@@ -2818,6 +2937,8 @@ private final class SimpleHTTPSResponder: ChannelInboundHandler {
             var wire = context.channel.allocator.buffer(capacity: 160)
             if accepted {
                 upgraded = true
+                rawEcho = lowered.contains("\r\nx-synthetic-upgrade-mode: raw")
+                upgradeObservation?.opened()
                 // The greeting shares the write with the 101 head, as real servers' first frames often do.
                 wire.writeString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: synthetic-echo\r\nConnection: Upgrade\r\n\r\nhello")
                 if !early.isEmpty {
@@ -3064,14 +3185,41 @@ private final class InterceptingHTTPSTestClient {
 
     /// Sends raw bytes on an already established connection and waits for `expectedBytes` back.
     func exchangeRaw(_ text: String, expectedBytes: Int) async throws -> Data {
+        try await exchangeRaw(Data(text.utf8), expectedBytes: expectedBytes)
+    }
+
+    func exchangeRaw(_ bytes: Data, expectedBytes: Int) async throws -> Data {
         let future = collector.nextData(matching: { $0.count >= expectedBytes }, on: channel)
-        try await write(text)
+        var buffer = channel.allocator.buffer(capacity: bytes.count)
+        buffer.writeBytes(bytes)
+        try await channel.writeAndFlush(buffer).get()
         let deadline = channel.eventLoop.scheduleTask(in: .seconds(10)) {
             self.collector.timeout()
             self.channel.close(promise: nil)
         }
         defer { deadline.cancel() }
         return try await future.get()
+    }
+
+    /// Writes bytes without waiting for a reply.
+    func sendRaw(_ bytes: Data) async throws {
+        var buffer = channel.allocator.buffer(capacity: bytes.count)
+        buffer.writeBytes(bytes)
+        try await channel.writeAndFlush(buffer).get()
+    }
+
+    /// True when the peer closes the connection within `seconds`.
+    func waitForPeerClose(seconds: Double) async -> Bool {
+        let deadline = ContinuousClock.now.advanced(by: .milliseconds(Int(seconds * 1_000)))
+        while channel.isActive, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return !channel.isActive
+    }
+
+    /// Closes only this connection, leaving the event loop group for `close()`.
+    func closeConnection() async {
+        try? await channel.close().get()
     }
 
     func close() async throws {
