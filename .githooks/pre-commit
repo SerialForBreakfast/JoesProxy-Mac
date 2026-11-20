@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks private JoesProxy-Pro content from being committed to this public repository.
+# Enable once per clone: git config core.hooksPath .githooks
+exec "$(git rev-parse --show-toplevel)/memlog/utility_scripts/check_private_content.sh" --staged
