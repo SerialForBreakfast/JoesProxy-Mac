@@ -1,6 +1,6 @@
 # JoesProxy contributor and agent guidance
 
-Revision: 2026-10-29 — portable source snapshot. CursorRules.md mirrors this file.
+Revision: 2026-11-19 — public and private content boundary. CursorRules.md mirrors this file.
 
 ## Authority and preservation
 
@@ -9,8 +9,10 @@ Revision: 2026-10-29 — portable source snapshot. CursorRules.md mirrors this f
 - No dependency installs, updates, lockfile changes or repair without specific approval.
 - Obtain explicit maintainer approval before Git writes. Approval applies only to the named operations and repository. Publication requires separate approval.
 - Ask the maintainer before opening any public issue. Keep benchmark results in versioned reports linked from the release notes.
+- This repository is public. Business, pricing, payments, licensing, Enterprise and Pro planning, and Pro source belong in the private JoesProxy-Pro repository, never in this checkout, not even as untracked files. Decide where a document belongs from its content before writing it; if unsure, ask the maintainer.
+- Review every untracked file before staging it; never stage files wholesale. Enable the pre-commit guard with `git config core.hooksPath .githooks`; it blocks `Pro/` paths and files carrying the private marker. Do not bypass it with `--no-verify`.
 
-- Keep authored artifacts in the checkout. Compiler-managed caches may be used only within the owner's existing permissions.
+- Keep authored artifacts in the checkout that matches their visibility. Compiler-managed caches may be used only within the owner's existing permissions.
 - Do not run arbitrary inline scripts or temporary programs through the shell. Use reviewed project helpers and dedicated tooling.
 - Scope authorization, exceptions to a rule and physical user interaction are distinct. Preserve approval for unchanged scope.
 - Host UI automation requires explicit local-user approval and the serial host wrapper; never infer permission from a build request. Do not operate the Xcode GUI.
