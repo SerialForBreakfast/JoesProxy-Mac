@@ -166,10 +166,14 @@ final class MCPSessionSnapshotService {
             .store(in: &cancellables)
     }
 
+    /// With a `disclosure` serializer, `domain` and `path` filters match the values a client is
+    /// shown (sanitized host and path) rather than the raw request, so a filter cannot be used to
+    /// confirm a redacted host or path segment. Without one, raw values are matched (internal use).
     func page(
         request: PageRequest,
         clientID: String,
-        policyRevision: MCPPolicyRevision
+        policyRevision: MCPPolicyRevision,
+        disclosure: MCPDisclosureSerializer? = nil
     ) throws -> PageResult {
         if let cursor = request.cursor {
             if let error = MCPCursorValidation.validate(
@@ -197,7 +201,7 @@ final class MCPSessionSnapshotService {
             guard entry.captureSequence > (request.includeAggregateInput ? request.minimumSequenceExclusive : startSequence) else { continue }
             guard entry.captureSequence <= highWater else { break }
             guard let record = sessionStore.record(for: entry.id),
-                  matchesFilter(record, filter: request.filter) else {
+                  Self.matchesFilter(record, filter: request.filter, disclosure: disclosure) else {
                 continue
             }
             let item = IndexedSession(record: record, captureSequence: entry.captureSequence)

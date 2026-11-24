@@ -354,6 +354,49 @@ final class MCPTransportLimitsTests: XCTestCase {
         )
     }
 
+    func testRetryAfterIsTheTimeUntilTheFullBucketFreesASlot() {
+        var configuration = MCPRateLimiter.Configuration()
+        configuration.globalRequestsPerMinute = 10
+        configuration.clientRequestsPerMinute = 2
+        var limiter = MCPRateLimiter(configuration: configuration)
+        let start = Date(timeIntervalSince1970: 1_000)
+
+        // Nothing is full: the floor is one second, never zero.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fingerprint", at: start), 1)
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start))
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(20)))
+        let rejectedAt = start.addingTimeInterval(45)
+        XCTAssertFalse(limiter.allowClientRequest(clientID: "client", at: rejectedAt))
+
+        // The first request leaves the 60-second window 15 seconds after the rejection, but the inclusive cutoff retains it at that instant.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: rejectedAt), 16)
+        XCTAssertFalse(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(60)))
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: start.addingTimeInterval(60)), 1)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, rateClass: .controlPlane, at: rejectedAt), 1)
+        // Another caller is not told about this client's bucket.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "other", fingerprint: nil, at: rejectedAt), 1)
+        // Reading the interval never consumes a slot.
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(60.5)))
+    }
+
+    func testRetryGuidanceUsesAllApplicableBucketsWithoutChargingThem() {
+        var configuration = MCPRateLimiter.Configuration()
+        configuration.globalRequestsPerMinute = 1
+        configuration.clientRequestsPerMinute = 1
+        var limiter = MCPRateLimiter(configuration: configuration)
+        let start = Date(timeIntervalSince1970: 1_000)
+        XCTAssertTrue(limiter.allowGlobalRequest(at: start))
+        XCTAssertTrue(limiter.allowFingerprintRequest("fp", at: start.addingTimeInterval(10)))
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(20)))
+        let now = start.addingTimeInterval(45)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: nil, fingerprint: nil, at: now), 16)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: nil, fingerprint: "fp", at: now), 26)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", at: now), 36)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", at: now), 36)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", rateClass: .controlPlane, at: now), 1)
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: now.addingTimeInterval(36)))
+    }
+
     func testControlPlanePollingDoesNotConsumeSubstantiveRateBudget() {
         var configuration = MCPRateLimiter.Configuration()
         configuration.globalRequestsPerMinute = 1

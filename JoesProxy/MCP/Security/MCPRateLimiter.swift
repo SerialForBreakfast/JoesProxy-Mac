@@ -147,6 +147,37 @@ struct MCPRateLimiter: Sendable {
         return allowed
     }
 
+    /// Whole seconds until every full bucket that applies to this caller has a free slot.
+    /// Reading guidance consumes no quota; admission may have charged an earlier bucket.
+    func retryAfterSeconds(
+        clientID: String?,
+        fingerprint: String?,
+        rateClass: MCPRequestRateClass = .substantive,
+        at suppliedDate: Date? = nil
+    ) -> Int {
+        let date = suppliedDate ?? now()
+        let controlPlane = rateClass == .controlPlane
+        let globalLimit = controlPlane ? configuration.controlPlaneGlobalRequestsPerMinute : configuration.globalRequestsPerMinute
+        let clientLimit = controlPlane ? configuration.controlPlaneClientRequestsPerMinute : configuration.clientRequestsPerMinute
+        var candidates: [(Bucket, Int)] = [(controlPlane ? controlPlaneGlobalBucket : globalBucket, globalLimit)]
+        if let fingerprint, let bucket = (controlPlane ? controlPlaneFingerprintBuckets : fingerprintBuckets)[fingerprint] {
+            candidates.append((bucket, clientLimit))
+        }
+        if let clientID, let bucket = (controlPlane ? controlPlaneClientBuckets : clientBuckets)[clientID] {
+            candidates.append((bucket, clientLimit))
+        }
+        let cutoff = date.addingTimeInterval(-configuration.window)
+        var wait: TimeInterval = 0
+        for (bucket, limit) in candidates {
+            let live = bucket.timestamps.filter { $0 >= cutoff }
+            // The slot frees when the request that filled the bucket to its limit leaves the window.
+            guard limit > 0, live.count >= limit else { continue }
+            let blocking = live.sorted()[live.count - limit]
+            wait = max(wait, configuration.window - date.timeIntervalSince(blocking))
+        }
+        return max(1, Int(wait.rounded(.down)) + 1)
+    }
+
     static func fingerprint(for bearerToken: String) -> String {
         let digest = SHA256.hash(data: Data(bearerToken.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
