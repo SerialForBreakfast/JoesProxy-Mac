@@ -489,7 +489,7 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
     /// the query string must not be matchable, and a profile that is not shown hosts or paths
     /// cannot filter on them; otherwise the result count would reveal the hidden value.
     func testSearchAndExportFiltersMatchOnlyDisclosedHostAndPath() async throws {
-        let token = "A1b2C3d4E5f6G7h8I9j0K1l2M3n4"
+        let token = String(repeating: "synthetic0", count: 4)
         func record(_ path: String) -> SessionRecord {
             SessionRecord(
                 request: CapturedRequest(method: "GET", scheme: .https, host: "api.example.com", port: 443,
