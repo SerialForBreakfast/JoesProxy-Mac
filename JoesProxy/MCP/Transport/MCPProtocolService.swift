@@ -1603,14 +1603,7 @@ final class MCPProtocolService {
 
             // Host and path filters match only what this client is shown. A profile that does not
             // disclose a host or path cannot filter on it, or the result would reveal it.
-            if filter?.domain != nil, !profile.allowedFieldClasses.contains(.sanitizedHost) {
-                throw MCPStructuredError(code: .policyDenied,
-                                         message: "The domain filter requires sanitizedHost disclosure.")
-            }
-            if filter?.pathContains != nil, !profile.allowedFieldClasses.contains(.sanitizedPath) {
-                throw MCPStructuredError(code: .policyDenied,
-                                         message: "The path filter requires sanitizedPath disclosure.")
-            }
+            try requireFilterDisclosure(filter, allowedFields: profile.allowedFieldClasses)
 
             let epoch = snapshotService.captureEpoch
             let policyRevision = policyStore.policyRevision
@@ -2489,8 +2482,7 @@ final class MCPProtocolService {
         }
         let profile = try policyStore.resolvedProfile(for: client.assignedProfileID)
         var fields: Set<MCPPolicyFieldClass> = [.timestamps]
-        if filter.pathContains != nil { fields.insert(.sanitizedPath) }
-        if filter.domain != nil { fields.insert(.sanitizedHost) }
+        try requireFilterDisclosure(filter, allowedFields: profile.allowedFieldClasses)
         if filter.method != nil { fields.insert(.method) }
         if query.kind == .groupCount || query.predicate?.fieldPointer == "/statusCode" { fields.insert(.statusCode) }
         guard policyEvaluator.effectiveAllows(capability: .sessionSearch, client: client),
@@ -2924,14 +2916,7 @@ final class MCPProtocolService {
 
             let filter = sessionsSearchFilter(arguments: arguments)
             // Same rule as sessions_search: filter only on what this client is shown.
-            if filter?.domain != nil, !exportProfile.allowedFieldClasses.contains(.sanitizedHost) {
-                throw MCPStructuredError(code: .policyDenied,
-                                         message: "The domain filter requires sanitizedHost disclosure.")
-            }
-            if filter?.pathContains != nil, !exportProfile.allowedFieldClasses.contains(.sanitizedPath) {
-                throw MCPStructuredError(code: .policyDenied,
-                                         message: "The path filter requires sanitizedPath disclosure.")
-            }
+            try requireFilterDisclosure(filter, allowedFields: exportProfile.allowedFieldClasses)
             let maxSessions = resolvedExportMaxSessions(arguments: arguments, deliverFile: deliverFile)
 
             var indexed: [MCPSessionSnapshotService.IndexedSession] = []
@@ -7885,8 +7870,20 @@ final class MCPProtocolService {
         MCPHTTPResponse.response(status: 401, headers: [:], body: Data("Unauthorized".utf8))
     }
 
-    /// A structured 429 so a client can back off for the right interval instead of guessing.
-    /// The interval comes from the fullest bucket that applies; no other client's state is disclosed.
+    private func requireFilterDisclosure(_ filter: MCPSessionSnapshotService.ListFilter?,
+                                         allowedFields: Set<MCPPolicyFieldClass>) throws {
+        if filter?.domain != nil, !allowedFields.contains(.sanitizedHost) {
+            throw MCPStructuredError(code: .policyDenied, message: "The domain filter requires sanitizedHost disclosure.")
+        }
+        if filter?.pathContains != nil, !allowedFields.contains(.sanitizedPath) {
+            throw MCPStructuredError(code: .policyDenied, message: "The path filter requires sanitizedPath disclosure.")
+        }
+    }
+
+    /// Authenticated callers receive guidance from applicable buckets, including shared capacity.
+    /// Unauthenticated callers receive the fixed window, independent of other clients' timing.
+    /// Structured error details are string-valued: retryAfterSeconds and limitWindowSeconds
+    /// are decimal integer strings. Retry-After is the same duration in HTTP delta-seconds.
     private func rateLimitedResponse(fingerprint: String, clientID: String? = nil,
                                      rateClass: MCPRequestRateClass = .substantive) -> MCPHTTPResponse {
         let retryAfter = rateLimiter.retryAfterSeconds(clientID: clientID, fingerprint: fingerprint, rateClass: rateClass)

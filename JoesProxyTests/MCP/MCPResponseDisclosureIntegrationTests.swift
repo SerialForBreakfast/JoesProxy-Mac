@@ -231,7 +231,7 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(object["code"] as? String, "rate_limited")
         let details = try XCTUnwrap(object["details"] as? [String: String])
         let retryAfter = try XCTUnwrap(details["retryAfterSeconds"].flatMap(Int.init))
-        XCTAssertTrue((1...61).contains(retryAfter))
+        XCTAssertTrue((1...60).contains(retryAfter))
         XCTAssertEqual(response.headers["Retry-After"], String(retryAfter))
     }
 
@@ -505,7 +505,10 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         func count(_ filter: [String: Any], tool: String = "sessions_search") async throws -> Int {
             let response = try await callSessionSummary(stack: stack, toolName: tool, toolArguments: filter)
             let payload = try summaryPayload(from: response)
-            return (payload["items"] as? [Any])?.count ?? payload["sessionCount"] as? Int ?? -1
+            if tool == "sessions_search" {
+                return try XCTUnwrap(payload["items"] as? [Any], "search must return items").count
+            }
+            return try XCTUnwrap(payload["sessionCount"] as? Int, "export must return sessionCount")
         }
         let disclosedSegment = try await count(["path": "/account/"])
         let redactedToken = try await count(["path": token])
@@ -523,6 +526,8 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
             XCTAssertEqual(allowed, 1)
             XCTAssertEqual(hidden, 0)
             XCTAssertEqual(query, 0)
+            let placeholder = try await count(["path": "<redacted>"], tool: tool)
+            XCTAssertEqual(placeholder, 1, "sanitization introduces searchable disclosed text")
         }
 
 

@@ -168,12 +168,12 @@ final class MCPSessionSnapshotService {
 
     /// With a `disclosure` serializer, `domain` and `path` filters match the values a client is
     /// shown (sanitized host and path) rather than the raw request, so a filter cannot be used to
-    /// confirm a redacted host or path segment. Without one, raw values are matched (internal use).
+    /// confirm a redacted host or path segment. The default also sanitizes; raw paging is unavailable.
     func page(
         request: PageRequest,
         clientID: String,
         policyRevision: MCPPolicyRevision,
-        disclosure: MCPDisclosureSerializer? = nil
+        disclosure: MCPDisclosureSerializer = MCPDisclosureSerializer()
     ) throws -> PageResult {
         if let cursor = request.cursor {
             if let error = MCPCursorValidation.validate(

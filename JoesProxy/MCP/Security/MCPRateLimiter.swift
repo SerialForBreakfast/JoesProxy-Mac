@@ -156,6 +156,9 @@ struct MCPRateLimiter: Sendable {
         at suppliedDate: Date? = nil
     ) -> Int {
         let date = suppliedDate ?? now()
+        // Before authentication, return fixed guidance rather than exposing shared traffic timing.
+        let maximumWait = max(1, Int(configuration.window.rounded(.up)))
+        guard clientID != nil else { return maximumWait }
         let controlPlane = rateClass == .controlPlane
         let globalLimit = controlPlane ? configuration.controlPlaneGlobalRequestsPerMinute : configuration.globalRequestsPerMinute
         let clientLimit = controlPlane ? configuration.controlPlaneClientRequestsPerMinute : configuration.clientRequestsPerMinute
@@ -169,13 +172,13 @@ struct MCPRateLimiter: Sendable {
         let cutoff = date.addingTimeInterval(-configuration.window)
         var wait: TimeInterval = 0
         for (bucket, limit) in candidates {
-            let live = bucket.timestamps.filter { $0 >= cutoff }
+            let live = bucket.timestamps.filter { $0 > cutoff }
             // The slot frees when the request that filled the bucket to its limit leaves the window.
             guard limit > 0, live.count >= limit else { continue }
             let blocking = live.sorted()[live.count - limit]
             wait = max(wait, configuration.window - date.timeIntervalSince(blocking))
         }
-        return max(1, Int(wait.rounded(.down)) + 1)
+        return min(maximumWait, max(1, Int(wait.rounded(.up))))
     }
 
     static func fingerprint(for bearerToken: String) -> String {
@@ -185,7 +188,8 @@ struct MCPRateLimiter: Sendable {
 
     private mutating func allowRequest(in bucket: inout Bucket, limit: Int, at date: Date) -> Bool {
         let cutoff = date.addingTimeInterval(-configuration.window)
-        bucket.timestamps.removeAll { $0 < cutoff }
+        // Half-open window (cutoff, now]: a request expires exactly at the advertised boundary.
+        bucket.timestamps.removeAll { $0 <= cutoff }
         guard bucket.timestamps.count < limit else { return false }
         bucket.timestamps.append(date)
         return true

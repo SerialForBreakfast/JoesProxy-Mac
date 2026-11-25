@@ -368,15 +368,15 @@ final class MCPTransportLimitsTests: XCTestCase {
         let rejectedAt = start.addingTimeInterval(45)
         XCTAssertFalse(limiter.allowClientRequest(clientID: "client", at: rejectedAt))
 
-        // The first request leaves the 60-second window 15 seconds after the rejection, but the inclusive cutoff retains it at that instant.
-        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: rejectedAt), 16)
-        XCTAssertFalse(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(60)))
+        // The request expires exactly at the advertised boundary, not one second afterward.
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: rejectedAt), 15)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: rejectedAt.addingTimeInterval(0.25)), 15)
         XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, at: start.addingTimeInterval(60)), 1)
         XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: nil, rateClass: .controlPlane, at: rejectedAt), 1)
         // Another caller is not told about this client's bucket.
         XCTAssertEqual(limiter.retryAfterSeconds(clientID: "other", fingerprint: nil, at: rejectedAt), 1)
         // Reading the interval never consumes a slot.
-        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(60.5)))
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(60)))
     }
 
     func testRetryGuidanceUsesAllApplicableBucketsWithoutChargingThem() {
@@ -389,12 +389,28 @@ final class MCPTransportLimitsTests: XCTestCase {
         XCTAssertTrue(limiter.allowFingerprintRequest("fp", at: start.addingTimeInterval(10)))
         XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: start.addingTimeInterval(20)))
         let now = start.addingTimeInterval(45)
-        XCTAssertEqual(limiter.retryAfterSeconds(clientID: nil, fingerprint: nil, at: now), 16)
-        XCTAssertEqual(limiter.retryAfterSeconds(clientID: nil, fingerprint: "fp", at: now), 26)
-        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", at: now), 36)
-        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", at: now), 36)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "authenticated", fingerprint: nil, at: now), 15)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "authenticated", fingerprint: "fp", at: now), 25)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", at: now), 35)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", at: now), 35)
         XCTAssertEqual(limiter.retryAfterSeconds(clientID: "client", fingerprint: "fp", rateClass: .controlPlane, at: now), 1)
-        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: now.addingTimeInterval(36)))
+        XCTAssertTrue(limiter.allowClientRequest(clientID: "client", at: now.addingTimeInterval(35)))
+    }
+
+    func testUnauthenticatedRetryGuidanceDoesNotRevealGlobalTiming() {
+        var configuration = MCPRateLimiter.Configuration()
+        configuration.globalRequestsPerMinute = 1
+        var limiter = MCPRateLimiter(configuration: configuration)
+        let start = Date(timeIntervalSince1970: 1_000)
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: nil, fingerprint: "invalid", at: start), 60)
+        XCTAssertTrue(limiter.allowGlobalRequest(at: start))
+        XCTAssertEqual(limiter.retryAfterSeconds(clientID: "authenticated", fingerprint: nil, at: start), 60)
+        for elapsed in [0.0, 15.0, 59.5, 60.0, 90.0] {
+            XCTAssertEqual(limiter.retryAfterSeconds(clientID: nil, fingerprint: "invalid",
+                                                    at: start.addingTimeInterval(elapsed)), 60)
+        }
+        XCTAssertFalse(limiter.allowGlobalRequest(at: start.addingTimeInterval(59.999)))
+        XCTAssertTrue(limiter.allowGlobalRequest(at: start.addingTimeInterval(60)))
     }
 
     func testControlPlanePollingDoesNotConsumeSubstantiveRateBudget() {
