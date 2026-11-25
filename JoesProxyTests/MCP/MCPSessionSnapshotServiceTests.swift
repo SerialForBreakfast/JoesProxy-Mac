@@ -4,6 +4,21 @@ import XCTest
 
 @MainActor
 final class MCPSessionSnapshotServiceTests: XCTestCase {
+    func testPagingDefaultsToDisclosedTextMatching() throws {
+        let store = InMemorySessionStore()
+        let service = MCPSessionSnapshotService(sessionStore: store)
+        let token = String(repeating: "synthetic0", count: 4)
+        store.append(SessionRecord(request: CapturedRequest(method: "GET", scheme: .https,
+            host: "api.example.com", port: 443, path: "/account/\(token)?id=42", headers: [], bodyData: nil, bodySize: nil),
+            timing: SessionTiming(startedAt: Date())))
+        for (query, expected) in [(token, 0), ("id=42", 0), ("<redacted>", 1), ("/account/", 1)] {
+            let page = try service.page(request: .init(limit: 10, cursor: nil,
+                queryDigest: "default-disclosure", orderingDigest: "sequence_asc",
+                filter: .init(pathContains: query)), clientID: "synthetic", policyRevision: .initial)
+            XCTAssertEqual(page.items.count, expected, query)
+        }
+    }
+
     func testSourceRevisionsTrackUpdatesReloadsAndReinsertionsWithoutTombstones() throws {
         let store = InMemorySessionStore()
         let service = MCPSessionSnapshotService(sessionStore: store)

@@ -205,6 +205,70 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         XCTAssertEqual(work.value, 3)
     }
 
+    func testRateLimitedRequestGetsStructuredRetryInterval() async throws {
+        let stack = try await makeStack()
+        let body = try JSONSerialization.data(withJSONObject: [
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": ["name": "sessions_list", "arguments": ["projection": "minimal", "limit": 1]]
+        ])
+        func send() async -> MCPHTTPResponse {
+            await stack.protocolService.handleHTTPRequest(
+                method: "POST", path: MCPNetworkConstants.endpointPath,
+                headers: ["authorization": "Bearer \(stack.enrollment.plaintextCredential)",
+                          "accept": "application/json, text/event-stream", "content-type": "application/json",
+                          "host": "127.0.0.1:\(NetworkConstants.mcpDefaultPort)",
+                          MCPNetworkConstants.sessionIDHeader.lowercased(): stack.transportSessionID,
+                          MCPNetworkConstants.protocolVersionHeader.lowercased(): "2025-11-25"],
+                body: body)
+        }
+        var limited: MCPHTTPResponse?
+        for _ in 0...MCPServerLimits.requestRatePerClientPerMinute {
+            let response = await send()
+            if response.status == 429 { limited = response; break }
+        }
+        let response = try XCTUnwrap(limited, "The per-client limit must reject within one window")
+        let object = try response.jsonBodyObject()
+        XCTAssertEqual(object["code"] as? String, "rate_limited")
+        let details = try XCTUnwrap(object["details"] as? [String: String])
+        let retryAfter = try XCTUnwrap(details["retryAfterSeconds"].flatMap(Int.init))
+        XCTAssertTrue((1...60).contains(retryAfter))
+        XCTAssertEqual(response.headers["Retry-After"], String(retryAfter))
+    }
+
+
+    func testRetryGuidanceOnControlPlaneAndStreamRejections() async throws {
+        for route in ["POST", "DELETE", "SSE"] {
+            let stack = try await makeStack()
+            let headers = [
+                "authorization": "Bearer \(stack.enrollment.plaintextCredential)",
+                "accept": "application/json, text/event-stream", "content-type": "application/json",
+                "host": "127.0.0.1:\(NetworkConstants.mcpDefaultPort)"
+            ]
+            let body = try JSONSerialization.data(withJSONObject: [
+                "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": [:]
+            ])
+            var limited: MCPHTTPResponse?
+            for _ in 0...MCPServerLimits.controlPlaneRequestRatePerClientPerMinute {
+                let response: MCPHTTPResponse
+                if route == "SSE" {
+                    guard case let .rejected(rejection) = await stack.protocolService.handleSSEListenRequest(headers: headers) else {
+                        XCTFail("Missing session must not reserve a stream"); break
+                    }
+                    response = rejection
+                } else {
+                    response = await stack.protocolService.handleHTTPRequest(
+                        method: route, path: MCPNetworkConstants.endpointPath, headers: headers, body: body)
+                }
+                if response.status == 429 { limited = response; break }
+            }
+            let response = try XCTUnwrap(limited, route)
+            let object = try response.jsonBodyObject()
+            XCTAssertEqual(object["code"] as? String, "rate_limited", route)
+            let details = try XCTUnwrap(object["details"] as? [String: String])
+            XCTAssertEqual(response.headers["Retry-After"], details["retryAfterSeconds"], route)
+        }
+    }
+
     func testArtifactWorkflowMeasuresEveryAttemptAndWarmCalculationEnvelope() async throws {
         let raw = Data(("[" + (0..<1000).map {
             "{\"price\":0.1,\"description\":\"synthetic mock item \($0)\"}"
@@ -419,6 +483,82 @@ final class MCPResponseDisclosureIntegrationTests: XCTestCase {
         let over = try summaryPayload(from: await callSessionSummary(stack: stack, toolName: "capture_calculate", toolArguments: args))
         XCTAssertEqual(over["rows"] as? Int, 10_001)
         XCTAssertEqual((over["result"] as? [String: Any])?["missing"] as? Int, 10_001)
+    }
+
+    /// Search and export filters match only what the client is shown. A redacted path token and
+    /// the query string must not be matchable, and a profile that is not shown hosts or paths
+    /// cannot filter on them; otherwise the result count would reveal the hidden value.
+    func testSearchAndExportFiltersMatchOnlyDisclosedHostAndPath() async throws {
+        let token = String(repeating: "synthetic0", count: 4)
+        func record(_ path: String) -> SessionRecord {
+            SessionRecord(
+                request: CapturedRequest(method: "GET", scheme: .https, host: "api.example.com", port: 443,
+                                         path: path, headers: [], bodyData: nil, bodySize: 0),
+                response: CapturedResponse(statusCode: 200, headers: [], bodyData: nil, bodySize: 0),
+                state: .completed,
+                timing: SessionTiming(startedAt: Date(timeIntervalSince1970: 0))
+            )
+        }
+        let stack = try await makeStack()
+        stack.sessionStore.load(sessions: [record("/account/\(token)/orders?id=42")])
+
+        func count(_ filter: [String: Any], tool: String = "sessions_search") async throws -> Int {
+            let response = try await callSessionSummary(stack: stack, toolName: tool, toolArguments: filter)
+            let payload = try summaryPayload(from: response)
+            if tool == "sessions_search" {
+                return try XCTUnwrap(payload["items"] as? [Any], "search must return items").count
+            }
+            return try XCTUnwrap(payload["sessionCount"] as? Int, "export must return sessionCount")
+        }
+        let disclosedSegment = try await count(["path": "/account/"])
+        let redactedToken = try await count(["path": token])
+        let queryString = try await count(["path": "id=42"])
+        let disclosedHost = try await count(["domain": "api.example"])
+        XCTAssertEqual(disclosedSegment, 1, "a disclosed path segment still matches")
+        XCTAssertEqual(redactedToken, 0, "a redacted path token must not be matchable")
+        XCTAssertEqual(queryString, 0, "the query string is never disclosed")
+        XCTAssertEqual(disclosedHost, 1, "the disclosed host still matches")
+
+        for tool in ["sessions_search", "sessions_export"] {
+            let allowed = try await count(["path": "/account/", "limit": 1], tool: tool)
+            let hidden = try await count(["path": token], tool: tool)
+            let query = try await count(["path": "id=42"], tool: tool)
+            XCTAssertEqual(allowed, 1)
+            XCTAssertEqual(hidden, 0)
+            XCTAssertEqual(query, 0)
+            let placeholder = try await count(["path": "<redacted>"], tool: tool)
+            XCTAssertEqual(placeholder, 1, "sanitization introduces searchable disclosed text")
+        }
+
+
+        stack.sessionStore.load(sessions: [
+            record("/account/\(token)/orders?id=42"), record("/account/\(token)/orders?id=43"),
+            record("/other/private")
+        ])
+        var pageArgs: [String: Any] = ["path": "/account/", "limit": 1, "projection": "minimal"]
+        var seen = 0
+        for _ in 0..<3 {
+            let response = try await callSessionSummary(stack: stack, toolName: "sessions_search", toolArguments: pageArgs)
+            let page = try summaryPayload(from: response)
+            seen += (page["items"] as? [Any])?.count ?? 0
+            guard let cursor = page["nextCursor"] as? String else { break }
+            pageArgs["cursor"] = cursor
+        }
+        XCTAssertEqual(seen, 2)
+        for (path, expected) in [("/account/", 2), (token, 0), ("id=42", 0)] {
+            let response = try await callSessionSummary(stack: stack, toolName: "sessions_search",
+                toolArguments: ["path": path, "limit": 1, "deduplicateBy": "endpoint"])
+            let page = try summaryPayload(from: response)
+            XCTAssertEqual(page["aggregateMatchCount"] as? Int, expected)
+        }
+
+        let restricted = try await makeStack(profile: .metadataOnly)
+        for (tool, filter) in [("sessions_search", ["domain": "api.example"]), ("sessions_search", ["path": "/app/"]),
+                               ("sessions_export", ["domain": "api.example"]), ("sessions_export", ["path": "/account/"])] {
+            let response = try await callSessionSummary(stack: restricted, toolName: tool, toolArguments: filter)
+            XCTAssertNil(response.result, "\(tool) \(filter) must be refused for a metadata-only client")
+            XCTAssertNotNil(response.errorData, "\(tool) \(filter) must return an error")
+        }
     }
 
     func testFilteredCalculationAgainstPagedSearchAndExplicitBatches() async throws {
